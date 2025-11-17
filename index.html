@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>لوحة مدير البرنامج - إنشاء مستخدمين للنظام</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Cairo', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f4f6fb;
+            min-height: 100vh;
+        }
+
+        .page {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 16px 20px 40px;
+        }
+
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+        }
+
+        .top-left a {
+            font-size: 13px;
+            text-decoration: none;
+            color: #555;
+        }
+
+        .top-left a:hover {
+            text-decoration: underline;
+        }
+
+        .admin-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .admin-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #00c853, #1a9bff);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 22px;
+        }
+
+        .admin-text .title {
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        .admin-text .welcome {
+            font-size: 12px;
+            color: #777;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 8px 18px rgba(15, 34, 58, 0.08);
+            padding: 18px 20px;
+            margin-bottom: 16px;
+        }
+
+        .card-header {
+            margin-bottom: 10px;
+        }
+
+        .card-header h2 {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .card-header p {
+            font-size: 12px;
+            color: #777;
+        }
+
+        .form-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .form-group {
+            flex: 1;
+            min-width: 180px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 12px;
+            margin-bottom: 3px;
+            color: #555;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 8px 10px;
+            border-radius: 10px;
+            border: 1px solid #dde2ef;
+            font-size: 13px;
+            outline: none;
+        }
+
+        .form-group input:focus {
+            border-color: #1a9bff;
+            box-shadow: 0 0 0 3px rgba(26,155,255,0.12);
+        }
+
+        .code-box input {
+            font-family: "Consolas", monospace;
+            text-align: center;
+            font-weight: 700;
+        }
+
+        .btn-primary {
+            margin-top: 16px;
+            padding: 9px 22px;
+            border-radius: 14px;
+            border: none;
+            background: linear-gradient(90deg, #00c853, #1a9bff, #0066ff);
+            color: #fff;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 8px 18px rgba(0, 102, 255, 0.25);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+        }
+
+        .hint {
+            font-size: 11px;
+            color: #999;
+            margin-top: 6px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            margin-top: 10px;
+        }
+
+        th, td {
+            padding: 8px 6px;
+            border-bottom: 1px solid #edf0f7;
+            text-align: center;
+        }
+
+        th {
+            font-size: 12px;
+            color: #777;
+        }
+
+        tbody tr:hover {
+            background: #fafbff;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 999px;
+            font-size: 12px;
+            background: #f1f3fa;
+        }
+
+        .action-icon {
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .no-data {
+            text-align: center;
+            font-size: 12px;
+            color: #888;
+            padding: 8px 0;
+        }
+
+        @media (max-width: 700px) {
+            .card {
+                padding: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="page">
+    <!-- الشريط العلوي -->
+    <div class="top-bar">
+        <div class="admin-info">
+            <div class="admin-icon">🛠️</div>
+            <div class="admin-text">
+                <div class="title">لوحة مدير البرنامج</div>
+                <div class="welcome">مرحباً، المهندس مختار قاسم</div>
+            </div>
+        </div>
+        <div class="top-left">
+            <!-- 🔥🔥 تم التعديل هنا 🔥🔥 -->
+            <a href="login.html">⬅ تسجيل الخروج</a>
+        </div>
+    </div>
+
+    <!-- كارت إنشاء مستخدم جديد للنظام -->
+    <div class="card">
+        <div class="card-header">
+            <h2>إنشاء مستخدم جديد للنظام</h2>
+            <p>من هنا تولد حساب للمستخدم (مسؤول مركز، مشرف محافظة، ...). يحصل على اسم مستخدم + كود دخول، وبواسطته يفتح صفحته الخاصة لإدارة المراقبين.</p>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label>اسم المستخدم (خاص بالمستخدم)</label>
+                <input type="text" id="userNameInput" placeholder="مثال: basim01" />
+            </div>
+
+            <div class="form-group">
+                <label>ملاحظة عن المستخدم</label>
+                <input type="text" id="userNoteInput" placeholder="مثال: مشرف الرميثة / قضاء كذا" />
+            </div>
+
+            <div class="form-group code-box">
+                <label>الكود / كلمة المرور (يتولد تلقائياً)</label>
+                <input type="text" id="userCodeInput" readonly />
+            </div>
+        </div>
+
+        <button class="btn-primary" id="addUserBtn">إضافة مستخدم وتوليد الكود</button>
+
+        <div class="hint">
+            🔹 احفظ اسم المستخدم مع الكود، وارسله لصاحب الحساب.<br>
+            🔹 في صفحة الدخول، عندما يكتب نفس الاسم والكود، يتم إدخاله على لوحة التحكم الخاصة به (قائمة المراقبين).
+        </div>
+    </div>
+
+    <!-- كارت قائمة المستخدمين -->
+    <div class="card">
+        <div class="card-header">
+            <h2>قائمة المستخدمين المسجَّلين</h2>
+            <p>يتم تخزين البيانات محلياً داخل المتصفح (localStorage) لأغراض التجربة.</p>
+        </div>
+
+        <div style="overflow-x:auto; margin-top:8px;">
+            <table>
+                <thead>
+                <tr>
+                    <th>#</th>
+                    <th>اسم المستخدم</th>
+                    <th>الكود / كلمة المرور</th>
+                    <th>الملاحظة</th>
+                    <th>الإجراءات</th>
+                </tr>
+                </thead>
+                <tbody id="usersTableBody">
+                </tbody>
+            </table>
+        </div>
+        <div id="noUsersMsg" class="no-data">لا توجد حسابات مستخدمين بعد.</div>
+    </div>
+</div>
+
+<script>
+    const SYSTEM_USERS_KEY = 'systemUsers';
+
+    let systemUsers = JSON.parse(localStorage.getItem(SYSTEM_USERS_KEY) || '[]');
+
+    const userNameInput  = document.getElementById('userNameInput');
+    const userNoteInput  = document.getElementById('userNoteInput');
+    const userCodeInput  = document.getElementById('userCodeInput');
+    const addUserBtn     = document.getElementById('addUserBtn');
+    const usersTableBody = document.getElementById('usersTableBody');
+    const noUsersMsg     = document.getElementById('noUsersMsg');
+
+    function generateUserCode() {
+        const letters = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+        const digits  = "0123456789";
+        let code = "";
+        for (let i = 0; i < 3; i++) {
+            code += letters[Math.floor(Math.random() * letters.length)];
+        }
+        for (let i = 0; i < 2; i++) {
+            code += digits[Math.floor(Math.random() * digits.length)];
+        }
+        return code;
+    }
+
+    function saveSystemUsers() {
+        localStorage.setItem(SYSTEM_USERS_KEY, JSON.stringify(systemUsers));
+    }
+
+    function renderUsersTable() {
+        usersTableBody.innerHTML = '';
+        if (systemUsers.length === 0) {
+            noUsersMsg.style.display = 'block';
+            return;
+        }
+        noUsersMsg.style.display = 'none';
+
+        systemUsers.forEach((u, index) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${index + 1}</td>
+                <td>${u.username}</td>
+                <td><span class="badge">${u.password}</span></td>
+                <td>${u.note || ''}</td>
+                <td>
+                    <span class="action-icon" data-action="delete" data-index="${index}" title="حذف المستخدم">🗑️</span>
+                </td>
+            `;
+            usersTableBody.appendChild(tr);
+        });
+    }
+
+    function resetCodeField() {
+        userCodeInput.value = generateUserCode();
+    }
+
+    addUserBtn.addEventListener('click', () => {
+        const username = userNameInput.value.trim();
+        const note     = userNoteInput.value.trim();
+        const password = userCodeInput.value.trim();
+
+        if (!username) {
+            alert('يرجى إدخال اسم المستخدم.');
+            return;
+        }
+
+        const exists = systemUsers.some(u => u.username.toLowerCase() === username.toLowerCase());
+        if (exists) {
+            alert('اسم المستخدم هذا مسجَّل مسبقاً. اختر اسماً آخر.');
+            return;
+        }
+
+        systemUsers.push({ username, password, note });
+        saveSystemUsers();
+        renderUsersTable();
+
+        userNameInput.value = '';
+        userNoteInput.value = '';
+        resetCodeField();
+
+        alert('تم إنشاء المستخدم بنجاح. لا تنسَ تسليم اسم المستخدم والكود لصاحب الحساب.');
+    });
+
+    usersTableBody.addEventListener('click', (e) => {
+        const action = e.target.dataset.action;
+        if (action !== 'delete') return;
+
+        const index = parseInt(e.target.dataset.index, 10);
+        if (isNaN(index)) return;
+
+        if (!confirm('هل تريد حذف هذا المستخدم؟')) return;
+
+        systemUsers.splice(index, 1);
+        saveSystemUsers();
+        renderUsersTable();
+    });
+
+    resetCodeField();
+    renderUsersTable();
+</script>
+
+</body>
+</html>
