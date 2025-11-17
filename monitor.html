@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>دخول المراقب - نظام مراقبة الانتخابات</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- خط عربي -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary: #1a9bff;
+            --accent: #00c853;
+            --card-radius: 22px;
+            --shadow: 0 20px 40px rgba(15, 34, 58, 0.18);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Cairo', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            min-height: 100vh;
+            background: radial-gradient(circle at top left,
+                     #e0f2ff 0,
+                     #f7fbff 40%,
+                     #e6fff4 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* كارت الدخول */
+
+        #loginSection {
+            width: 100%;
+            max-width: 420px;
+            padding: 20px;
+        }
+
+        .card {
+            background: #ffffff;
+            border-radius: var(--card-radius);
+            box-shadow: var(--shadow);
+            padding: 32px 28px 24px;
+            text-align: center;
+        }
+
+        .icon-circle {
+            width: 72px;
+            height: 72px;
+            margin: 0 auto 16px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #00c853, #1a9bff);
+            color: #ffffff;
+            font-size: 34px;
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        .subtitle {
+            color: #777;
+            font-size: 14px;
+            margin-bottom: 24px;
+        }
+
+        .form-group {
+            text-align: right;
+            margin-bottom: 18px;
+        }
+
+        label {
+            font-size: 13px;
+            color: #555;
+            margin-bottom: 6px;
+            display: block;
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        .input-wrapper input {
+            width: 100%;
+            border-radius: 12px;
+            border: 1px solid #dde3ee;
+            padding: 11px 40px 11px 12px;
+            font-size: 14px;
+            outline: none;
+            transition: border 0.2s, box-shadow 0.2s;
+        }
+
+        .input-wrapper input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(0, 132, 255, 0.08);
+        }
+
+        .input-icon {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 18px;
+            color: #9aa4bc;
+        }
+
+        button.primary {
+            width: 100%;
+            border: none;
+            border-radius: 12px;
+            padding: 11px 0;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            background: linear-gradient(90deg, #00c853, #1a9bff, #0066ff);
+            color: #ffffff;
+            box-shadow: 0 10px 20px rgba(0, 102, 255, 0.25);
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+
+        button.primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 14px 25px rgba(0, 102, 255, 0.32);
+        }
+
+        .error {
+            margin-top: 10px;
+            color: #d32f2f;
+            font-size: 13px;
+            display: none;
+        }
+
+        .footer {
+            margin-top: 18px;
+            font-size: 12px;
+            color: #aaa;
+        }
+
+        /* لوحة المراقب */
+
+        #monitorSection {
+            display: none;
+            width: 100%;
+            max-width: 450px;
+            padding: 20px;
+        }
+
+        .monitor-header {
+            text-align: center;
+            margin-bottom: 16px;
+        }
+
+        .monitor-header h2 {
+            font-size: 20px;
+            margin-bottom: 4px;
+        }
+
+        .monitor-header p {
+            font-size: 13px;
+            color: #777;
+        }
+
+        .btn-action {
+            width: 100%;
+            border: none;
+            border-radius: 14px;
+            padding: 12px 0;
+            margin-bottom: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            color: #fff;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-arrived { background: linear-gradient(90deg, #00c853, #4caf50); }
+        .btn-voted   { background: linear-gradient(90deg, #1a9bff, #0066ff); }
+        .btn-issue   { background: linear-gradient(90deg, #ff9800, #f44336); }
+        .btn-loc     { background: linear-gradient(90deg, #ff9800, #ff5722); }
+        .btn-photo   { background: linear-gradient(90deg, #7b1fa2, #512da8); }
+
+        .btn-action.inactive {
+            opacity: 0.5;
+            box-shadow: none;
+        }
+
+        .status-box {
+            margin-top: 14px;
+            font-size: 12px;
+            color: #555;
+            text-align: right;
+            line-height: 1.6;
+        }
+
+        .status-box span.label {
+            font-weight: 600;
+        }
+
+        .photo-preview {
+            margin-top: 8px;
+            text-align: right;
+        }
+
+        .photo-preview img {
+            max-width: 100%;
+            border-radius: 10px;
+            margin-top: 4px;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<!-- كارت دخول المراقب -->
+<div id="loginSection">
+    <div class="card">
+        <div class="icon-circle">👤</div>
+        <h1>نظام مراقبة الانتخابات</h1>
+        <p class="subtitle">تسجيل دخول المراقب</p>
+
+        <form id="monitorLoginForm">
+            <div class="form-group">
+                <label for="monitorName">اسم المراقب</label>
+                <div class="input-wrapper">
+                    <span class="input-icon">👤</span>
+                    <input id="monitorName" type="text" placeholder="أدخل اسمك (اختياري)">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="monitorCode">كود المراقب (يوصل من المدير)</label>
+                <div class="input-wrapper">
+                    <span class="input-icon">🔑</span>
+                    <input id="monitorCode" type="password" placeholder="أدخل الكود الخاص بك" required>
+                </div>
+            </div>
+
+            <button type="submit" class="primary">تسجيل الدخول</button>
+            <div id="loginError" class="error">الكود غير صحيح أو غير موجود ضمن المراقبين.</div>
+        </form>
+
+        <div class="footer">
+            تطوير وفكرة المهندس مختار قاسم
+        </div>
+    </div>
+</div>
+
+<!-- لوحة المراقب بعد تسجيل الدخول -->
+<div id="monitorSection">
+    <div class="card">
+        <div class="monitor-header">
+            <h2>لوحة المراقب</h2>
+            <p>
+                مرحباً، <span id="welcomeName">مراقب</span> – كودك:
+                <strong id="welcomeCode"></strong>
+            </p>
+        </div>
+
+        <!-- الأزرار -->
+        <button id="btnArrived" class="btn-action btn-arrived">✅ تم الوصول إلى مركز الاقتراع</button>
+        <button id="btnVoted" class="btn-action btn-voted">🗳 تم التصويت</button>
+
+        <!-- زر الإبلاغ عن مشكلة -->
+        <button id="btnIssue" class="btn-action btn-issue">⚠ الإبلاغ عن مشكلة</button>
+
+        <button id="btnLocation" class="btn-action btn-loc">📍 تشغيل الموقع (إرسال الإحداثيات)</button>
+
+        <label for="photoInput">
+            <button class="btn-action btn-photo" type="button">📷 التقاط / رفع صورة الشريط</button>
+        </label>
+        <input id="photoInput" type="file" accept="image/*" capture="environment">
+
+        <div class="status-box" id="statusBox">
+            <div><span class="label">حالة الوصول:</span> لم يتم التحديث بعد.</div>
+            <div><span class="label">حالة التصويت:</span> لم يتم التحديث بعد.</div>
+            <div><span class="label">آخر موقع مرسل:</span> لا يوجد.</div>
+            <div><span class="label">حالة المشكلة:</span> لا توجد مشكلة مبلَّغة.</div>
+            <div><span class="label">حالة الصورة:</span> لم تُرسل صورة بعد.</div>
+        </div>
+
+        <div class="photo-preview" id="photoPreview"></div>
+    </div>
+</div>
+
+<script>
+    const loginSection   = document.getElementById('loginSection');
+    const monitorSection = document.getElementById('monitorSection');
+
+    const loginForm  = document.getElementById('monitorLoginForm');
+    const loginError = document.getElementById('loginError');
+
+    const welcomeName = document.getElementById('welcomeName');
+    const welcomeCode = document.getElementById('welcomeCode');
+
+    const btnArrived  = document.getElementById('btnArrived');
+    const btnVoted    = document.getElementById('btnVoted');
+    const btnIssue    = document.getElementById('btnIssue');
+    const btnLocation = document.getElementById('btnLocation');
+    const photoInput  = document.getElementById('photoInput');
+    const statusBox   = document.getElementById('statusBox');
+    const photoPreview= document.getElementById('photoPreview');
+
+    let currentCode = "";
+    let statusData = {
+        arrived: false,
+        voted: false,
+        hasIssue: false,
+        issueText: "",
+        location: null,
+        photoSent: false
+    };
+
+    const STATUS_KEY_PREFIX = "monitor_status_";
+
+    function findMonitorByCode(code) {
+        let foundMonitor = null;
+
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+
+            if (key && key.startsWith("monitors_")) {
+                try {
+                    const arr = JSON.parse(localStorage.getItem(key) || "[]");
+                    if (Array.isArray(arr)) {
+                        for (const m of arr) {
+                            if (m && m.code === code) {
+                                foundMonitor = m;
+                                return foundMonitor;
+                            }
+                        }
+                    }
+                } catch (e) {}
+            }
+        }
+        return foundMonitor;
+    }
+
+    loginForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        const nameInput = document.getElementById('monitorName').value.trim();
+        const code = document.getElementById('monitorCode').value.trim();
+
+        if (!code) {
+            loginError.textContent = "يرجى إدخال الكود.";
+            loginError.style.display = "block";
+            return;
+        }
+
+        const monitorRecord = findMonitorByCode(code);
+        if (!monitorRecord) {
+            loginError.textContent = "الكود غير صحيح أو غير موجود ضمن المراقبين.";
+            loginError.style.display = "block";
+            return;
+        }
+
+        loginError.style.display = "none";
+
+        currentCode = code;
+        welcomeName.textContent = nameInput || monitorRecord.name || "مراقب";
+        welcomeCode.textContent = currentCode;
+
+        const saved = localStorage.getItem(STATUS_KEY_PREFIX + currentCode);
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                statusData = Object.assign({
+                    arrived: false,
+                    voted: false,
+                    hasIssue: false,
+                    issueText: "",
+                    location: null,
+                    photoSent: false
+                }, parsed);
+            } catch {}
+        }
+
+        localStorage.setItem("online_status_" + currentCode, "online");
+
+        updateStatusUI();
+        loginSection.style.display  = "none";
+        monitorSection.style.display = "block";
+    });
+
+    function saveStatus() {
+        if (!currentCode) return;
+
+        localStorage.setItem(STATUS_KEY_PREFIX + currentCode, JSON.stringify(statusData));
+
+        if (statusData.hasIssue) {
+            localStorage.setItem("monitor_issue_" + currentCode, statusData.issueText);
+        } else {
+            localStorage.removeItem("monitor_issue_" + currentCode);
+        }
+    }
+
+    function updateStatusUI() {
+        const lines = statusBox.querySelectorAll('div');
+
+        lines[0].innerHTML = '<span class="label">حالة الوصول:</span> ' +
+            (statusData.arrived ? '✅ تم الوصول.' : 'لم يتم التحديث بعد.');
+
+        lines[1].innerHTML = '<span class="label">حالة التصويت:</span> ' +
+            (statusData.voted ? '🗳 تم التصويت.' : 'لم يتم التحديث بعد.');
+
+        if (statusData.location) {
+            lines[2].innerHTML = '<span class="label">آخر موقع مرسل:</span> ' +
+                `خط العرض ${statusData.location.lat.toFixed(5)}, خط الطول ${statusData.location.lng.toFixed(5)}`;
+        } else {
+            lines[2].innerHTML = '<span class="label">آخر موقع مرسل:</span> لا يوجد.';
+        }
+
+        lines[3].innerHTML = '<span class="label">حالة المشكلة:</span> ' +
+            (statusData.hasIssue
+                ? ('⚠ يوجد إبلاغ – "' + (statusData.issueText || 'مشكلة') + '"')
+                : 'لا توجد مشكلة.');
+
+        lines[4].innerHTML = '<span class="label">حالة الصورة:</span> ' +
+            (statusData.photoSent ? '📷 تم إرسال صورة.' : 'لم تُرسل صورة بعد.');
+
+        btnArrived.classList.toggle('inactive', statusData.arrived);
+        btnVoted.classList.toggle('inactive', statusData.voted);
+        btnIssue.classList.toggle('inactive', statusData.hasIssue);
+    }
+
+    // 🔥🔥 فقرة زر الإبلاغ عن مشكلة (المعدّلة بالكامل حسب طلبك)
+    btnIssue.addEventListener('click', function () {
+
+        if (!statusData.hasIssue) {
+
+            const txt = prompt("اكتب وصف مختصر للمشكلة:");
+
+            if (txt && txt.trim() !== "") {
+
+                statusData.hasIssue = true;
+                statusData.issueText = txt.trim();
+
+                localStorage.setItem(
+                    "monitor_status_" + currentCode,
+                    JSON.stringify(statusData)
+                );
+
+                localStorage.setItem(
+                    "monitor_issue_" + currentCode,
+                    statusData.issueText
+                );
+
+                saveStatus();
+                updateStatusUI();
+
+                alert("✔ تم إرسال المشكلة إلى لوحة التحكم.");
+
+            }
+
+        } else {
+
+            const confirmRemove = confirm("هل تريد إلغاء علامة المشكلة؟");
+            if (!confirmRemove) return;
+
+            statusData.hasIssue = false;
+            statusData.issueText = "";
+
+            localStorage.removeItem("monitor_issue_" + currentCode);
+
+            localStorage.setItem(
+                "monitor_status_" + currentCode,
+                JSON.stringify(statusData)
+            );
+
+            saveStatus();
+            updateStatusUI();
+        }
+
+    });
+    // END OF MODIFIED SECTION
+
+    btnArrived.addEventListener('click', function () {
+        statusData.arrived = !statusData.arrived;
+        saveStatus();
+        updateStatusUI();
+    });
+
+    btnVoted.addEventListener('click', function () {
+        statusData.voted = !statusData.voted;
+        saveStatus();
+        updateStatusUI();
+    });
+
+    btnLocation.addEventListener('click', function () {
+        if (!navigator.geolocation) {
+            alert("المتصفح لا يدعم تحديد الموقع.");
+            return;
+        }
+
+        btnLocation.textContent = "📍 جاري الحصول على الموقع...";
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                statusData.location = {
+                    lat: pos.coords.latitude,
+                    lng: pos.coords.longitude,
+                    time: Date.now()
+                };
+
+                saveStatus();
+
+                localStorage.setItem(
+                    "monitor_location_" + currentCode,
+                    JSON.stringify(statusData.location)
+                );
+
+                localStorage.setItem("online_status_" + currentCode, "online");
+
+                updateStatusUI();
+                btnLocation.textContent = "📍 تم إرسال الموقع";
+            },
+            (err) => {
+                alert("تعذر الحصول على الموقع.");
+                btnLocation.textContent = "📍 تشغيل الموقع (إرسال الإحداثيات)";
+            }
+        );
+    });
+
+    photoInput.addEventListener('change', function () {
+        const file = this.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            statusData.photoSent = true;
+            saveStatus();
+            updateStatusUI();
+
+            if (currentCode) {
+                localStorage.setItem("monitor_photo_" + currentCode, e.target.result);
+            }
+
+            photoPreview.innerHTML = `
+                <div style="font-size:12px; color:#555;">آخر صورة مرفوعة:</div>
+                <img src="${e.target.result}" alt="صورة الشريط">
+            `;
+        };
+        reader.readAsDataURL(file);
+    });
+
+    window.addEventListener('beforeunload', function () {
+        if (currentCode) {
+            localStorage.setItem("online_status_" + currentCode, "offline");
+        }
+    });
+</script>
+
+</body>
+</html>
