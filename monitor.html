@@ -189,7 +189,7 @@
         .btn-issue   { background: linear-gradient(90deg, #ff9800, #f44336); }
         .btn-loc     { background: linear-gradient(90deg, #ff9800, #ff5722); }
         .btn-photo   { background: linear-gradient(90deg, #7b1fa2, #512da8); }
-        .btn-logout  { background: #eeeeee; color:#333; }
+        .btn-logout  { background: linear-gradient(90deg, #9e9e9e, #616161); }
 
         .btn-action.inactive {
             opacity: 0.5;
@@ -273,20 +273,18 @@
 
         <!-- الأزرار -->
         <button id="btnArrived" class="btn-action btn-arrived">✅ تم الوصول إلى مركز الاقتراع</button>
-        <button id="btnVoted"   class="btn-action btn-voted">🗳 تم التصويت</button>
-        <button id="btnIssue"   class="btn-action btn-issue">⚠ الإبلاغ عن مشكلة</button>
-        <button id="btnLocation"class="btn-action btn-loc">📍 تشغيل الموقع (إرسال الإحداثيات)</button>
+        <button id="btnVoted" class="btn-action btn-voted">🗳 تم التصويت</button>
 
-        <!-- زر الصورة (يفتح الكاميرا/الاستوديو) -->
-        <button id="btnPhoto" class="btn-action btn-photo" type="button">
-            📷 التقاط / رفع صورة الشريط
-        </button>
+        <!-- زر الإبلاغ عن مشكلة -->
+        <button id="btnIssue" class="btn-action btn-issue">⚠ الإبلاغ عن مشكلة</button>
+
+        <button id="btnLocation" class="btn-action btn-loc">📍 تشغيل الموقع (إرسال الإحداثيات)</button>
+
+        <label for="photoInput">
+            <button class="btn-action btn-photo" type="button">📷 التقاط / رفع صورة الشريط</button>
+        </label>
+        <!-- هذه تفتح الكاميرا في الموبايل (capture="environment") -->
         <input id="photoInput" type="file" accept="image/*" capture="environment">
-
-        <!-- زر تسجيل الخروج -->
-        <button id="btnLogout" class="btn-action btn-logout" type="button">
-            🚪 تسجيل الخروج
-        </button>
 
         <div class="status-box" id="statusBox">
             <div><span class="label">حالة الوصول:</span> لم يتم التحديث بعد.</div>
@@ -297,13 +295,15 @@
         </div>
 
         <div class="photo-preview" id="photoPreview"></div>
+
+        <!-- زر تسجيل الخروج -->
+        <button id="btnLogout" class="btn-action btn-logout">🚪 تسجيل الخروج</button>
     </div>
 </div>
 
 <!-- مكتبات Firebase (نسخة compat تناسب صفحة HTML عادية) -->
 <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-storage-compat.js"></script>
 
 <script>
     // إعداد Firebase الخاص بمشروعك
@@ -317,10 +317,9 @@
     };
 
     firebase.initializeApp(firebaseConfig);
-    const db       = firebase.firestore();
-    const storage  = firebase.storage();
+    const db = firebase.firestore();
 
-    // دالة تجيب المراقب من Firestore حسب الكود
+    // 🔍 دالة تجيب المراقب من Firestore حسب الكود
     async function findMonitorByCodeOnline(code) {
         const snap = await db
             .collection("monitors")
@@ -337,26 +336,23 @@
     const loginSection   = document.getElementById('loginSection');
     const monitorSection = document.getElementById('monitorSection');
 
-    const loginForm   = document.getElementById('monitorLoginForm');
-    const loginError  = document.getElementById('loginError');
+    const loginForm  = document.getElementById('monitorLoginForm');
+    const loginError = document.getElementById('loginError');
 
     const welcomeName = document.getElementById('welcomeName');
     const welcomeCode = document.getElementById('welcomeCode');
 
-    const btnArrived   = document.getElementById('btnArrived');
-    const btnVoted     = document.getElementById('btnVoted');
-    const btnIssue     = document.getElementById('btnIssue');
-    const btnLocation  = document.getElementById('btnLocation');
-    const btnPhoto     = document.getElementById('btnPhoto');
-    const btnLogout    = document.getElementById('btnLogout');
-    const photoInput   = document.getElementById('photoInput');
-    const statusBox    = document.getElementById('statusBox');
-    const photoPreview = document.getElementById('photoPreview');
+    const btnArrived  = document.getElementById('btnArrived');
+    const btnVoted    = document.getElementById('btnVoted');
+    const btnIssue    = document.getElementById('btnIssue');
+    const btnLocation = document.getElementById('btnLocation');
+    const btnLogout   = document.getElementById('btnLogout');
+    const photoInput  = document.getElementById('photoInput');
+    const statusBox   = document.getElementById('statusBox');
+    const photoPreview= document.getElementById('photoPreview');
 
-    let currentCode        = "";
-    let currentMonitorDocId= null;
-
-    const defaultStatus = {
+    let currentCode = "";
+    let statusData = {
         arrived: false,
         voted: false,
         hasIssue: false,
@@ -365,78 +361,11 @@
         photoSent: false
     };
 
-    let statusData = { ...defaultStatus };
+    const STATUS_KEY_PREFIX   = "monitor_status_";
+    const CURRENT_CODE_KEY    = "monitor_current_code";
+    const CURRENT_NAME_KEY    = "monitor_current_name";
 
-    const STATUS_KEY_PREFIX = "monitor_status_";
-
-    // 🔐 تسجيل دخول المراقب باستخدام Firestore
-    loginForm.addEventListener('submit', async function (e) {
-        e.preventDefault();
-
-        const nameInput = document.getElementById('monitorName').value.trim();
-        const code = document.getElementById('monitorCode').value.trim().toUpperCase();
-
-        if (!code) {
-            loginError.textContent = "يرجى إدخال الكود.";
-            loginError.style.display = "block";
-            return;
-        }
-
-        try {
-            const monitorRecord = await findMonitorByCodeOnline(code);
-
-            if (!monitorRecord) {
-                loginError.textContent = "الكود غير صحيح أو غير موجود ضمن المراقبين.";
-                loginError.style.display = "block";
-                return;
-            }
-
-            loginError.style.display = "none";
-
-            currentCode         = code;
-            currentMonitorDocId = monitorRecord.id;
-
-            welcomeName.textContent = nameInput || monitorRecord.monitorName || "مراقب";
-            welcomeCode.textContent = currentCode;
-
-            // تحميل حالة هذا المراقب من localStorage
-            const saved = localStorage.getItem(STATUS_KEY_PREFIX + currentCode);
-            if (saved) {
-                try {
-                    const parsed = JSON.parse(saved);
-                    statusData = Object.assign({}, defaultStatus, parsed);
-                } catch {
-                    statusData = { ...defaultStatus };
-                }
-            } else {
-                statusData = { ...defaultStatus };
-            }
-
-            localStorage.setItem("online_status_" + currentCode, "online");
-
-            updateStatusUI();
-            loginSection.style.display   = "none";
-            monitorSection.style.display = "block";
-
-        } catch (err) {
-            console.error(err);
-            loginError.textContent = "حدث خطأ أثناء الاتصال بالخادم، حاول مرة أخرى.";
-            loginError.style.display = "block";
-        }
-    });
-
-    function saveStatus() {
-        if (!currentCode) return;
-
-        localStorage.setItem(STATUS_KEY_PREFIX + currentCode, JSON.stringify(statusData));
-
-        if (statusData.hasIssue) {
-            localStorage.setItem("monitor_issue_" + currentCode, statusData.issueText);
-        } else {
-            localStorage.removeItem("monitor_issue_" + currentCode);
-        }
-    }
-
+    // 🔄 تحديث واجهة الحالة
     function updateStatusUI() {
         const lines = statusBox.querySelectorAll('div');
 
@@ -466,7 +395,80 @@
         btnIssue.classList.toggle('inactive', statusData.hasIssue);
     }
 
-    // زر الإبلاغ عن مشكلة
+    function saveStatus() {
+        if (!currentCode) return;
+
+        localStorage.setItem(STATUS_KEY_PREFIX + currentCode, JSON.stringify(statusData));
+
+        if (statusData.hasIssue) {
+            localStorage.setItem("monitor_issue_" + currentCode, statusData.issueText);
+        } else {
+            localStorage.removeItem("monitor_issue_" + currentCode);
+        }
+    }
+
+    // 🔐 تسجيل دخول المراقب باستخدام Firestore
+    loginForm.addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        const nameInput = document.getElementById('monitorName').value.trim();
+        const code = document.getElementById('monitorCode').value.trim().toUpperCase();
+
+        if (!code) {
+            loginError.textContent = "يرجى إدخال الكود.";
+            loginError.style.display = "block";
+            return;
+        }
+
+        try {
+            const monitorRecord = await findMonitorByCodeOnline(code);
+
+            if (!monitorRecord) {
+                loginError.textContent = "الكود غير صحيح أو غير موجود ضمن المراقبين.";
+                loginError.style.display = "block";
+                return;
+            }
+
+            loginError.style.display = "none";
+
+            currentCode = code;
+            const finalName = nameInput || monitorRecord.monitorName || "مراقب";
+            welcomeName.textContent = finalName;
+            welcomeCode.textContent = currentCode;
+
+            // ✅ نحفظ بيانات الدخول حتى يبقى مسجل
+            localStorage.setItem(CURRENT_CODE_KEY, currentCode);
+            localStorage.setItem(CURRENT_NAME_KEY, finalName);
+            localStorage.setItem("online_status_" + currentCode, "online");
+
+            // تحميل حالة هذا المراقب من localStorage
+            const saved = localStorage.getItem(STATUS_KEY_PREFIX + currentCode);
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    statusData = Object.assign({
+                        arrived: false,
+                        voted: false,
+                        hasIssue: false,
+                        issueText: "",
+                        location: null,
+                        photoSent: false
+                    }, parsed);
+                } catch {}
+            }
+
+            updateStatusUI();
+            loginSection.style.display  = "none";
+            monitorSection.style.display = "block";
+
+        } catch (err) {
+            console.error(err);
+            loginError.textContent = "حدث خطأ أثناء الاتصال بالخادم، حاول مرة أخرى.";
+            loginError.style.display = "block";
+        }
+    });
+
+    // ✅ زر الإبلاغ عن مشكلة
     btnIssue.addEventListener('click', function () {
         if (!statusData.hasIssue) {
             const txt = prompt("اكتب وصف مختصر للمشكلة:");
@@ -488,6 +490,7 @@
             statusData.hasIssue = false;
             statusData.issueText = "";
 
+            localStorage.removeItem("monitor_issue_" + currentCode);
             saveStatus();
             updateStatusUI();
         }
@@ -539,84 +542,106 @@
         );
     });
 
-    // 🔸 زر الكاميرا/الصورة -> يفتح input المخفي (في الموبايل يفتح الكاميرا)
-    btnPhoto.addEventListener('click', function () {
-        photoInput.click();
-    });
-
-    // عند اختيار/التقاط صورة
+    // 📷 رفع / التقاط الصورة (يفتح الكاميرا في الموبايل)
     photoInput.addEventListener('change', function () {
         const file = this.files[0];
         if (!file) return;
 
         const reader = new FileReader();
         reader.onload = function (e) {
-            const dataUrl = e.target.result;
-
             statusData.photoSent = true;
             saveStatus();
             updateStatusUI();
 
             if (currentCode) {
-                // نخزن نسخة محلياً (للنسخة اللي تعتمد localStorage)
-                localStorage.setItem("monitor_photo_" + currentCode, dataUrl);
-            }
-
-            // نرفع الصورة إلى Firebase Storage ونخزن الرابط في مستند المراقب
-            if (currentMonitorDocId) {
-                const fileName  = currentCode + "_" + Date.now() + ".jpg";
-                const storageRef = storage.ref("monitorStrips/" + fileName);
-
-                storageRef.putString(dataUrl, 'data_url')
-                    .then(snap => snap.ref.getDownloadURL())
-                    .then(url => {
-                        return db.collection("monitors")
-                                 .doc(currentMonitorDocId)
-                                 .update({
-                                     photoUrl: url,
-                                     photoSent: true,
-                                     photoUpdatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                                 });
-                    })
-                    .catch(err => {
-                        console.error("خطأ في رفع الصورة أو تحديث Firestore:", err);
-                    });
+                // تُخزن الصورة في localStorage حتى يقدر الأدمن ينزلها من لوحة التحكم
+                localStorage.setItem("monitor_photo_" + currentCode, e.target.result);
             }
 
             photoPreview.innerHTML = `
                 <div style="font-size:12px; color:#555;">آخر صورة مرفوعة:</div>
-                <img src="${dataUrl}" alt="صورة الشريط">
+                <img src="${e.target.result}" alt="صورة الشريط">
             `;
         };
         reader.readAsDataURL(file);
     });
 
-    // 🔚 زر تسجيل الخروج
+    // ✅ زر تسجيل الخروج
     btnLogout.addEventListener('click', function () {
+        if (!confirm("هل تريد تسجيل الخروج من الحساب؟")) return;
+
+        // نحدّث حالة الاتصال
         if (currentCode) {
             localStorage.setItem("online_status_" + currentCode, "offline");
         }
 
-        currentCode         = "";
-        currentMonitorDocId = null;
-        statusData          = { ...defaultStatus };
+        // نحذف بيانات الدخول المحفوظة
+        localStorage.removeItem(CURRENT_CODE_KEY);
+        localStorage.removeItem(CURRENT_NAME_KEY);
 
-        // إرجاع الواجهة لحالة تسجيل الدخول
-        monitorSection.style.display = "none";
-        loginSection.style.display   = "block";
-
-        // تفريغ الحقول
-        document.getElementById('monitorCode').value = "";
-        document.getElementById('monitorName').value = "";
+        // نرجّع كلشي للوضع الافتراضي
+        currentCode = "";
+        statusData = {
+            arrived: false,
+            voted: false,
+            hasIssue: false,
+            issueText: "",
+            location: null,
+            photoSent: false
+        };
+        updateStatusUI();
         photoPreview.innerHTML = "";
+
+        // نعرض صفحة الدخول
+        loginSection.style.display   = "block";
+        monitorSection.style.display = "none";
     });
 
-    // لو أغلق الصفحة نخليه أوفلاين
+    // قبل إغلاق الصفحة نعلّم أنه أوفلاين
     window.addEventListener('beforeunload', function () {
         if (currentCode) {
             localStorage.setItem("online_status_" + currentCode, "offline");
         }
     });
+
+    // ✅ عند فتح الصفحة: إذا كان المراقب مسجل دخول سابقاً، ندخله مباشرة
+    (function autoLoginIfSaved(){
+        const savedCode = localStorage.getItem(CURRENT_CODE_KEY);
+        const savedName = localStorage.getItem(CURRENT_NAME_KEY);
+
+        if (!savedCode) {
+            // ماكو تسجيل دخول سابق
+            loginSection.style.display   = "block";
+            monitorSection.style.display = "none";
+            return;
+        }
+
+        currentCode = savedCode;
+        welcomeCode.textContent = currentCode;
+        welcomeName.textContent = savedName || "مراقب";
+
+        // نحمّل الحالة السابقة لو موجودة
+        const savedStatus = localStorage.getItem(STATUS_KEY_PREFIX + currentCode);
+        if (savedStatus) {
+            try {
+                const parsed = JSON.parse(savedStatus);
+                statusData = Object.assign({
+                    arrived: false,
+                    voted: false,
+                    hasIssue: false,
+                    issueText: "",
+                    location: null,
+                    photoSent: false
+                }, parsed);
+            } catch {}
+        }
+
+        localStorage.setItem("online_status_" + currentCode, "online");
+
+        updateStatusUI();
+        loginSection.style.display   = "none";
+        monitorSection.style.display = "block";
+    })();
 </script>
 
 </body>
