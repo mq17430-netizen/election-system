@@ -2,1233 +2,578 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>لوحة تحكم المستخدم - نظام مراقبة الانتخابات</title>
+    <title>دخول المراقب - نظام مراقبة الانتخابات</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
+    <!-- خط عربي -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
 
     <style>
+        :root {
+            --primary: #1a9bff;
+            --accent: #00c853;
+            --card-radius: 22px;
+            --shadow: 0 20px 40px rgba(15, 34, 58, 0.18);
+        }
+
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
             font-family: 'Cairo', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: #f4f6fb;
             min-height: 100vh;
-        }
-
-        /* ====== صفحة تسجيل الدخول ====== */
-
-        #loginSection {
-            min-height: 100vh;
+            background: radial-gradient(circle at top left,
+                     #e0f2ff 0,
+                     #f7fbff 40%,
+                     #e6fff4 100%);
             display: flex;
             align-items: center;
             justify-content: center;
+        }
+
+        /* كارت الدخول */
+
+        #loginSection {
+            width: 100%;
+            max-width: 420px;
             padding: 20px;
         }
 
-        .login-card {
+        .card {
             background: #ffffff;
-            border-radius: 18px;
-            box-shadow: 0 18px 40px rgba(15,34,58,0.18);
-            max-width: 380px;
-            width: 100%;
-            padding: 26px 24px 20px;
+            border-radius: var(--card-radius);
+            box-shadow: var(--shadow);
+            padding: 32px 28px 24px;
             text-align: center;
         }
 
-        .login-icon {
-            width: 64px;
-            height: 64px;
+        .icon-circle {
+            width: 72px;
+            height: 72px;
+            margin: 0 auto 16px;
             border-radius: 50%;
-            margin: 0 auto 12px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 30px;
-            color: #fff;
             background: linear-gradient(135deg, #00c853, #1a9bff);
+            color: #ffffff;
+            font-size: 34px;
         }
 
-        .login-card h1 {
-            font-size: 20px;
-            margin-bottom: 6px;
+        h1 {
+            font-size: 24px;
+            margin-bottom: 8px;
+            font-weight: 700;
         }
 
-        .login-subtitle {
-            font-size: 13px;
+        .subtitle {
             color: #777;
-            margin-bottom: 16px;
-        }
-
-        .login-form-group {
-            text-align: right;
-            margin-bottom: 12px;
-        }
-
-        .login-form-group label {
-            display: block;
-            font-size: 12px;
-            margin-bottom: 4px;
-            color: #555;
-        }
-
-        .login-form-group input {
-            width: 100%;
-            padding: 9px 10px;
-            border-radius: 10px;
-            border: 1px solid #dde2ef;
-            font-size: 13px;
-            outline: none;
-        }
-
-        .login-form-group input:focus {
-            border-color: #1a9bff;
-            box-shadow: 0 0 0 3px rgba(26,155,255,0.12);
-        }
-
-        .login-btn {
-            width: 100%;
-            border: none;
-            border-radius: 12px;
-            padding: 10px 0;
             font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            background: linear-gradient(90deg, #00c853, #1a9bff, #0066ff);
-            color: #fff;
-            box-shadow: 0 10px 22px rgba(0,102,255,0.25);
-            margin-top: 4px;
+            margin-bottom: 24px;
         }
 
-        .login-error {
-            margin-top: 8px;
-            font-size: 12px;
-            color: #c62828;
-            display: none;
-        }
-
-        .login-hint {
-            margin-top: 10px;
-            font-size: 11px;
-            color: #888;
+        .form-group {
             text-align: right;
-            line-height: 1.5;
-        }
-
-        /* ✅ التوقيع أسفل كارت تسجيل الدخول */
-        .login-footer {
-            margin-top: 14px;
-            font-size: 11px;
-            color: #999;
-            text-align: center;
-            line-height: 1.6;
-        }
-
-        /* ====== لوحة التحكم الأصلية ====== */
-
-        #dashboardSection {
-            display: none; /* تظهر بعد تسجيل الدخول */
-        }
-
-        .page {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 16px 20px 40px;
-        }
-
-        .top-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
             margin-bottom: 18px;
         }
 
-        .top-left a {
+        label {
             font-size: 13px;
-            text-decoration: none;
             color: #555;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
+            margin-bottom: 6px;
+            display: block;
         }
 
-        .top-left a:hover {
-            text-decoration: underline;
-        }
-
-        .top-right {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .user-icon {
-            width: 38px;
-            height: 38px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #00c853, #1a9bff);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #fff;
-            font-size: 20px;
-        }
-
-        .user-info {
-            text-align: right;
-        }
-
-        .user-info .title {
-            font-size: 15px;
-            font-weight: 700;
-        }
-
-        .user-info .welcome {
-            font-size: 12px;
-            color: #777;
-        }
-
-        .card {
-            background: #fff;
-            border-radius: 16px;
-            box-shadow: 0 8px 18px rgba(15, 34, 58, 0.08);
-            padding: 14px 16px;
-            margin-bottom: 14px;
-        }
-
-        .tabs {
-            display: flex;
-            gap: 18px;
-            font-size: 13px;
-            border-bottom: 1px solid #e3e6f0;
-            padding-bottom: 8px;
-            margin-bottom: 10px;
-        }
-
-        .tab {
-            cursor: pointer;
-            padding-bottom: 6px;
-        }
-
-        .tab.active {
-            color: #00897b;
-            border-bottom: 2px solid #00c853;
-            font-weight: 600;
-        }
-
-        .tab:not(.active) {
-            color: #777;
-        }
-
-        .search-box {
-            margin-top: 10px;
-        }
-
-        .search-input {
+        .input-wrapper {
             position: relative;
         }
 
-        .search-input input {
+        .input-wrapper input {
             width: 100%;
-            padding: 10px 36px 10px 12px;
-            border-radius: 10px;
-            border: 1px solid #e0e4f0;
-            font-size: 13px;
+            border-radius: 12px;
+            border: 1px solid #dde3ee;
+            padding: 11px 40px 11px 12px;
+            font-size: 14px;
             outline: none;
+            transition: border 0.2s, box-shadow 0.2s;
         }
 
-        .search-input input:focus {
-            border-color: #1a9bff;
-            box-shadow: 0 0 0 3px rgba(26, 155, 255, 0.12);
+        .input-wrapper input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(0, 132, 255, 0.08);
         }
 
-        .search-input span {
+        .input-icon {
             position: absolute;
-            right: 10px;
+            right: 12px;
             top: 50%;
             transform: translateY(-50%);
-            color: #9aa4bc;
-            font-size: 16px;
-        }
-
-        .section-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin: 14px 2px 8px;
-        }
-
-        .section-header h2 {
-            font-size: 15px;
-            font-weight: 700;
-        }
-
-        .add-bar {
-            margin-top: 4px;
-            background: linear-gradient(90deg, #00c853, #1a9bff, #0066ff);
-            border-radius: 14px;
-            padding: 10px 18px;
-            color: #fff;
-            font-size: 13px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 6px;
-            cursor: pointer;
-            box-shadow: 0 10px 20px rgba(0, 128, 255, 0.25);
-        }
-
-        .add-bar span.plus {
             font-size: 18px;
-            margin-top: -2px;
+            color: #9aa4bc;
         }
 
-        .table-card {
-            background: #fff;
-            border-radius: 16px;
-            box-shadow: 0 8px 18px rgba(15, 34, 58, 0.08);
+        button.primary {
+            width: 100%;
+            border: none;
+            border-radius: 12px;
+            padding: 11px 0;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            background: linear-gradient(90deg, #00c853, #1a9bff, #0066ff);
+            color: #ffffff;
+            box-shadow: 0 10px 20px rgba(0, 102, 255, 0.25);
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+
+        button.primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 14px 25px rgba(0, 102, 255, 0.32);
+        }
+
+        .error {
             margin-top: 10px;
-            padding: 10px 12px;
+            color: #d32f2f;
+            font-size: 13px;
+            display: none;
         }
 
-        .table-header,
-        .table-row {
-            display: grid;
-            grid-template-columns: 1.3fr 1.2fr 1.1fr 0.9fr 0.9fr 0.9fr 0.9fr 1fr 0.9fr;
-            gap: 4px;
-            align-items: center;
+        .footer {
+            margin-top: 18px;
+            font-size: 12px;
+            color: #aaa;
         }
 
-        .table-header {
-            font-size: 11px;
-            color: #777;
-            border-bottom: 1px solid #edf0f7;
-            padding-bottom: 6px;
+        /* لوحة المراقب */
+
+        #monitorSection {
+            display: none;
+            width: 100%;
+            max-width: 450px;
+            padding: 20px;
+        }
+
+        .monitor-header {
+            text-align: center;
+            margin-bottom: 16px;
+        }
+
+        .monitor-header h2 {
+            font-size: 20px;
             margin-bottom: 4px;
         }
 
-        .table-row {
-            font-size: 12px;
-            padding: 6px 0;
-            border-bottom: 1px solid #f1f3fb;
-        }
-
-        .table-row:last-child {
-            border-bottom: none;
-        }
-
-        .monitor-name {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .monitor-avatar {
-            width: 26px;
-            height: 26px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #1a9bff, #00c853);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #fff;
-            font-size: 15px;
-        }
-
-        .monitor-name small {
-            font-size: 10px;
-            color: #888;
-        }
-
-        .badge-status {
-            font-size: 11px;
-            padding: 2px 6px;
-            border-radius: 999px;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            justify-content: center;
-        }
-
-        .badge-status.online {
-            background: #e8f5e9;
-            color: #2e7d32;
-        }
-
-        .badge-status.offline {
-            background: #ffeaea;
-            color: #c62828;
-        }
-
-        .bool-icon {
-            font-size: 16px;
-            cursor: pointer;
-        }
-
-        .bool-icon.true { color: #2e7d32; }
-        .bool-icon.false { color: #c62828; }
-        .bool-icon.neutral { color: #9e9e9e; }
-
-        .actions {
-            display: flex;
-            justify-content: center;
-            gap: 6px;
-            font-size: 16px;
-        }
-
-        .actions span { cursor: pointer; }
-
-        .no-data {
-            text-align: center;
-            font-size: 12px;
-            color: #888;
-            padding: 8px 0;
-        }
-
-        #mapSection iframe {
-            width: 100%;
-            height: 420px;
-            border: 0;
-            border-radius: 16px;
-            box-shadow: 0 6px 16px rgba(15, 34, 58, 0.12);
-        }
-
-        .report-item {
-            padding: 8px 10px;
-            border-radius: 10px;
-            background: #fff;
-            margin-bottom: 8px;
-            box-shadow: 0 4px 10px rgba(15,34,58,0.06);
+        .monitor-header p {
             font-size: 13px;
-        }
-
-        .report-item-title {
-            font-weight: 600;
-            margin-bottom: 3px;
-        }
-
-        .report-item small {
-            color: #777;
-            font-size: 11px;
-        }
-
-        /* صندوق ملخص التقارير */
-        .reports-summary {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0,1fr));
-            gap: 10px;
-            margin-bottom: 10px;
-        }
-
-        .summary-box {
-            background: #fff;
-            border-radius: 14px;
-            padding: 10px 12px;
-            box-shadow: 0 6px 14px rgba(15,34,58,0.06);
-            font-size: 13px;
-        }
-
-        .summary-title {
-            font-size: 12px;
             color: #777;
         }
 
-        .summary-value {
-            margin-top: 4px;
-            font-size: 20px;
-            font-weight: 700;
-            color: #244673;
-        }
-
-        .summary-note {
-            font-size: 11px;
-            color: #999;
-            margin-top: 2px;
-        }
-
-        .modal-backdrop {
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.35);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 50;
-        }
-
-        .modal {
-            background: #fff;
-            border-radius: 16px;
-            padding: 16px 18px;
-            max-width: 420px;
+        .btn-action {
             width: 100%;
-            box-shadow: 0 12px 30px rgba(0,0,0,0.25);
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-        }
-
-        .modal-header h3 { font-size: 15px; }
-        .modal-close { cursor: pointer; font-size: 18px; }
-
-        .form-group {
-            margin-bottom: 10px;
-        }
-
-        .form-group label {
-            display: block;
-            font-size: 12px;
-            margin-bottom: 3px;
-            color: #555;
-        }
-
-        .form-group input {
-            width: 100%;
-            padding: 8px 10px;
-            border-radius: 10px;
-            border: 1px solid #dde2ef;
-            font-size: 13px;
-            outline: none;
-        }
-
-        .form-group input:focus {
-            border-color: #1a9bff;
-            box-shadow: 0 0 0 3px rgba(26, 155, 255, 0.1);
-        }
-
-        .modal button {
             border: none;
-            border-radius: 12px;
-            padding: 9px 0;
-            font-size: 14px;
+            border-radius: 14px;
+            padding: 12px 0;
+            margin-bottom: 10px;
+            font-size: 15px;
             font-weight: 600;
             cursor: pointer;
-            width: 100%;
-            background: linear-gradient(90deg, #00c853, #1a9bff, #0066ff);
             color: #fff;
-            box-shadow: 0 8px 18px rgba(0, 102, 255, 0.25);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
 
-        @media (max-width: 900px) {
-            .table-header,
-            .table-row { font-size: 10px; }
+        .btn-arrived { background: linear-gradient(90deg, #00c853, #4caf50); }
+        .btn-voted   { background: linear-gradient(90deg, #1a9bff, #0066ff); }
+        .btn-issue   { background: linear-gradient(90deg, #ff9800, #f44336); }
+        .btn-loc     { background: linear-gradient(90deg, #ff9800, #ff5722); }
+        .btn-photo   { background: linear-gradient(90deg, #7b1fa2, #512da8); }
+
+        .btn-action.inactive {
+            opacity: 0.5;
+            box-shadow: none;
         }
 
-        @media (max-width: 600px) {
-            .table-header,
-            .table-row {
-                grid-template-columns: 1.4fr 1.4fr 1.2fr 1fr;
-                grid-auto-rows: auto;
-                row-gap: 4px;
-            }
+        .status-box {
+            margin-top: 14px;
+            font-size: 12px;
+            color: #555;
+            text-align: right;
+            line-height: 1.6;
+        }
 
-            .reports-summary {
-                grid-template-columns: 1fr;
-            }
+        .status-box span.label {
+            font-weight: 600;
+        }
+
+        .photo-preview {
+            margin-top: 8px;
+            text-align: right;
+        }
+
+        .photo-preview img {
+            max-width: 100%;
+            border-radius: 10px;
+            margin-top: 4px;
+        }
+
+        input[type="file"] {
+            display: none;
         }
     </style>
 </head>
 <body>
 
-<!-- ====== صفحة تسجيل الدخول ====== -->
+<!-- كارت دخول المراقب -->
 <div id="loginSection">
-    <div class="login-card">
-        <div class="login-icon">🔐</div>
-        <h1>دخول مدير / مستخدم النظام</h1>
-        <p class="login-subtitle">أدخل اسم المستخدم والكود الذي أنشأه مدير البرنامج من لوحة المدير.</p>
+    <div class="card">
+        <div class="icon-circle">👤</div>
+        <h1>نظام مراقبة الانتخابات</h1>
+        <p class="subtitle">تسجيل دخول المراقب</p>
 
-        <form id="loginForm">
-            <div class="login-form-group">
-                <label for="loginUser">اسم المستخدم</label>
-                <input type="text" id="loginUser" placeholder="مثال: basim01">
+        <form id="monitorLoginForm">
+            <div class="form-group">
+                <label for="monitorName">اسم المراقب</label>
+                <div class="input-wrapper">
+                    <span class="input-icon">👤</span>
+                    <input id="monitorName" type="text" placeholder="أدخل اسمك (اختياري)">
+                </div>
             </div>
-            <div class="login-form-group">
-                <label for="loginPass">الكود / كلمة المرور</label>
-                <input type="password" id="loginPass" placeholder="الكود الذي استلمته من مدير البرنامج">
+
+            <div class="form-group">
+                <label for="monitorCode">كود المراقب (يوصل من المدير)</label>
+                <div class="input-wrapper">
+                    <span class="input-icon">🔑</span>
+                    <input id="monitorCode" type="password" placeholder="أدخل الكود الخاص بك" required>
+                </div>
             </div>
-            <button type="submit" class="login-btn">تسجيل الدخول</button>
-            <div id="loginError" class="login-error"></div>
+
+            <button type="submit" class="primary">تسجيل الدخول</button>
+            <div id="loginError" class="error">الكود غير صحيح أو غير موجود ضمن المراقبين.</div>
         </form>
 
-        <div class="login-hint">
-            * لا يمكنك الدخول إلا باستخدام حساب تم إنشاؤه من لوحة مدير البرنامج (صفحة إنشاء المستخدمين).<br>
-            * بعد تسجيل الدخول يمكنك إدارة المراقبين لهذا المستخدم فقط.
-        </div>
-
-        <!-- ✅ التوقيع -->
-        <div class="login-footer">
-            فكرة وتصميم المهندس مختار قاسم<br>
-            07740707073
+        <div class="footer">
+            تطوير وفكرة المهندس مختار قاسم
         </div>
     </div>
 </div>
 
-<!-- ====== لوحة التحكم (بعد تسجيل الدخول) ====== -->
-<div id="dashboardSection">
-    <div class="page">
-        <!-- الشريط العلوي -->
-        <div class="top-bar">
-            <div class="top-left">
-                <!-- زر تسجيل الخروج -->
-                <a href="#" id="logoutLink">⬅ تسجيل الخروج</a>
-            </div>
-            <div class="top-right">
-           
-
-                 <div class="user-info">
-                    <div class="title">لوحة تحكم المستخدم</div>
-                    <div class="welcome">مرحباً، <span id="currentUserLabel">مستخدم</span></div>
-                </div>
-                <div class="user-icon">👤</div>
-            </div>
-        </div>
-
-        <!-- الكارت العلوي: التبويبات + البحث -->
-        <div class="card">
-            <div class="tabs">
-                <div class="tab active" data-target="monitorsSection">قائمة المراقبين</div>
-                <div class="tab" data-target="mapSection">الخريطة التفاعلية</div>
-                <div class="tab" data-target="reportsSection">التقارير</div>
-            </div>
-
-            <div class="search-box" id="searchBox">
-                <div class="search-input">
-                    <input id="searchInput" type="text" placeholder="البحث عن مراقب بالاسم أو مركز الاقتراع أو رقم الهاتف...">
-                    <span>🔍</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- تبويب: قائمة المراقبين -->
-        <section id="monitorsSection">
-            <div class="section-header">
-                <h2>قائمة المراقبين</h2>
-            </div>
-
-            <div class="add-bar" id="addMonitorBtn">
-                <span>إضافة مراقب</span>
-                <span class="plus">+</span>
-            </div>
-
-            <div class="table-card">
-                <div class="table-header">
-                    <div>المراقب</div>
-                    <div>مركز الاقتراع</div>
-                    <div>كود الدخول</div>
-                    <div>تم الوصول</div>
-                    <div>تم التصويت</div>
-                    <div>توجد مشكلة</div>
-                    <div>الحالة</div>
-                    <div>صورة الشريط</div>
-                    <div>الإجراءات</div>
-                </div>
-                <div id="monitorsBody"></div>
-                <div id="noMonitors" class="no-data">لا توجد بيانات مراقبين بعد، استخدم زر "إضافة مراقب".</div>
-            </div>
-        </section>
-
-        <!-- تبويب: الخريطة التفاعلية -->
-        <section id="mapSection" style="display:none;">
-            <div class="section-header">
-                <h2>الخريطة التفاعلية</h2>
-            </div>
-            <div class="card" style="padding:0; overflow:hidden;">
-                <iframe
-                    id="mainMap"
-                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d387190.2799130295!2d-74.25987368789875!3d40.69767006795592!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2z2YXYs9iq2Kog2KfZhNi52LXZitip!5e0!3m2!1sar!2s!4v1700000000000"
-                    allowfullscreen=""
-                    loading="lazy"
-                    referrerpolicy="no-referrer-when-downgrade">
-                </iframe>
-            </div>
-            <p style="font-size:11px; color:#777; margin-top:6px;">
-                * في النظام الحقيقي يتم ربط مواقع المراقبين بنقاط على الخريطة حسب الإحداثيات القادمة من هواتفهم.
+<!-- لوحة المراقب بعد تسجيل الدخول -->
+<div id="monitorSection">
+    <div class="card">
+        <div class="monitor-header">
+            <h2>لوحة المراقب</h2>
+            <p>
+                مرحباً، <span id="welcomeName">مراقب</span> – كودك:
+                <strong id="welcomeCode"></strong>
             </p>
-        </section>
-
-        <!-- تبويب: التقارير -->
-        <section id="reportsSection" style="display:none;">
-            <div class="section-header">
-                <h2>التقارير الواردة من المراقبين</h2>
-            </div>
-
-            <!-- ✅ ملخص إحصائي للمراقبين -->
-            <div class="reports-summary">
-                <div class="summary-box">
-                    <div class="summary-title">إجمالي المراقبين</div>
-                    <div class="summary-value" id="totalMonitorsCount">0</div>
-                    <div class="summary-note">عدد جميع المراقبين المسجّلين في هذه اللوحة.</div>
-                </div>
-                <div class="summary-box">
-                    <div class="summary-title">المراقبون الواصلون</div>
-                    <div class="summary-value" id="arrivedMonitorsCount">0</div>
-                    <div class="summary-note">عدد المراقبين الذين تم تحديدهم كـ "تم الوصول".</div>
-                </div>
-                <div class="summary-box">
-                    <div class="summary-title">المشاكل المبلَّغة</div>
-                    <div class="summary-value" id="issuesMonitorsCount">0</div>
-                    <div class="summary-note">عدد المراقبين الذين لديهم مشاكل معلّمة.</div>
-                </div>
-            </div>
-
-            <div id="reportsList"></div>
-            <div id="noReports" class="no-data">لا توجد تقارير حالياً.</div>
-        </section>
-    </div>
-</div>
-
-<!-- مودال إضافة مراقب -->
-<div class="modal-backdrop" id="modalBackdrop">
-    <div class="modal">
-        <div class="modal-header">
-            <h3>إضافة مراقب جديد</h3>
-            <span class="modal-close" id="modalClose">✖</span>
         </div>
-        <form id="addMonitorForm">
-            <div class="form-group">
-                <label>اسم المراقب</label>
-                <input type="text" id="monitorName" required>
-            </div>
-            <div class="form-group">
-                <label>رقم الهاتف</label>
-                <input type="text" id="monitorPhone" required>
-            </div>
-            <div class="form-group">
-                <label>مركز الاقتراع</label>
-                <input type="text" id="monitorCenter" required>
-            </div>
-            <div class="form-group">
-                <label>كود الدخول (يُسلّم للمراقب)</label>
-                <input type="text" id="monitorCode" required>
-            </div>
-            <button type="submit">حفظ المراقب</button>
-        </form>
+
+        <!-- الأزرار -->
+        <button id="btnArrived" class="btn-action btn-arrived">✅ تم الوصول إلى مركز الاقتراع</button>
+        <button id="btnVoted" class="btn-action btn-voted">🗳 تم التصويت</button>
+
+        <!-- زر الإبلاغ عن مشكلة -->
+        <button id="btnIssue" class="btn-action btn-issue">⚠ الإبلاغ عن مشكلة</button>
+
+        <button id="btnLocation" class="btn-action btn-loc">📍 تشغيل الموقع (إرسال الإحداثيات)</button>
+
+        <label for="photoInput">
+            <button class="btn-action btn-photo" type="button">📷 التقاط / رفع صورة الشريط</button>
+        </label>
+        <input id="photoInput" type="file" accept="image/*" capture="environment">
+
+        <div class="status-box" id="statusBox">
+            <div><span class="label">حالة الوصول:</span> لم يتم التحديث بعد.</div>
+            <div><span class="label">حالة التصويت:</span> لم يتم التحديث بعد.</div>
+            <div><span class="label">آخر موقع مرسل:</span> لا يوجد.</div>
+            <div><span class="label">حالة المشكلة:</span> لا توجد مشكلة مبلَّغة.</div>
+            <div><span class="label">حالة الصورة:</span> لم تُرسل صورة بعد.</div>
+        </div>
+
+        <div class="photo-preview" id="photoPreview"></div>
     </div>
 </div>
 
-<!-- ✅ Firebase (Compat SDK) -->
-<script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore-compat.js"></script>
+<!-- مكتبات Firebase (نسخة compat تناسب صفحة HTML عادية) -->
+<script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-app-compat.js"></script>
+script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore-compat.js"></script>
 
 <script>
-    // ✅ إعداد Firebase الخاص بمشروعك
+    // إعداد Firebase الخاص بمشروعك
     const firebaseConfig = {
-        apiKey: "AIzaSyDdiudUa5jjcZDwJgYBbLdC-YBNQ5rlqvU",
-        authDomain: "election-system-9cbb8.firebaseapp.com",
-        projectId: "election-system-9cbb8",
-        storageBucket: "election-system-9cbb8.firebasestorage.app",
-        messagingSenderId: "886706894008",
-        appId: "1:886706894008:web:270556771843614e56b04d"
+      apiKey: "AIzaSyDdiudUa5jjcZDwJgYBbLdC-YBNQ5rlqvU",
+      authDomain: "election-system-9cbb8.firebaseapp.com",
+      projectId: "election-system-9cbb8",
+      storageBucket: "election-system-9cbb8.firebasestorage.app",
+      messagingSenderId: "886706894008",
+      appId: "1:886706894008:web:270556771843614e56b04d"
     };
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    // ===== عناصر عامة =====
-    const loginSection     = document.getElementById('loginSection');
-    const dashboardSection = document.getElementById('dashboardSection');
-    const loginForm        = document.getElementById('loginForm');
-    const loginError       = document.getElementById('loginError');
-    const logoutLink       = document.getElementById('logoutLink');
-    const currentUserLabel = document.getElementById('currentUserLabel');
+    // ✅ دالة تجيب المراقب من Firestore حسب الكود المخزون بحقل monitorCode
+    async function findMonitorByCodeOnline(code) {
+        const snap = await db
+            .collection("monitors")
+            .where("monitorCode", "==", code) // ← هنا التعديل المهم
+            .limit(1)
+            .get();
 
-    const monitorsBody = document.getElementById('monitorsBody');
-    const noMonitors   = document.getElementById('noMonitors');
-    const reportsList  = document.getElementById('reportsList');
-    const noReports    = document.getElementById('noReports');
+        if (snap.empty) return null;
 
-    // ✅ عناصر الملخص
-    const totalMonitorsCount  = document.getElementById('totalMonitorsCount');
-    const arrivedMonitorsCount= document.getElementById('arrivedMonitorsCount');
-    const issuesMonitorsCount = document.getElementById('issuesMonitorsCount');
-
-    let currentUserName = null;
-    let STORAGE_KEY     = null;
-    let monitors        = [];
-
-    function showLogin() {
-        loginSection.style.display = 'flex';
-        dashboardSection.style.display = 'none';
+        const doc = snap.docs[0];
+        return { id: doc.id, ...doc.data() };
     }
 
-    function showDashboard() {
-        loginSection.style.display = 'none';
-        dashboardSection.style.display = 'block';
-    }
+    const loginSection   = document.getElementById('loginSection');
+    const monitorSection = document.getElementById('monitorSection');
 
-    // ✅ تحميل المراقبين من Firestore حسب المستخدم الحالي
-    function loadMonitorsFromFirestore() {
-        if (!currentUserName) return;
+    const loginForm  = document.getElementById('monitorLoginForm');
+    const loginError = document.getElementById('loginError');
 
-        db.collection('monitors')
-          .where('adminUsername', '==', currentUserName)
-          .get()
-          .then((snapshot) => {
-              const loaded = [];
-              snapshot.forEach((doc) => {
-                  const data = doc.data();
-                  loaded.push({
-                      id: doc.id,
-                      name:  data.monitorName  || '',
-                      phone: data.monitorPhone || '',
-                      center:data.monitorCenter|| '',
-                      code:  data.monitorCode  || '',
-                      arrived:   data.arrived   || false,
-                      voted:     data.voted     || false,
-                      hasIssue:  data.hasIssue  || false,
-                      issueText: data.issueText || '',
-                      online:    data.online    || false
-                  });
-              });
-              monitors = loaded;
-              // نخزن نسخة محلياً أيضاً (للاحتياط)
-              saveMonitors();
-              renderMonitors(document.getElementById('searchInput').value);
-          })
-          .catch((err) => {
-              console.error("خطأ في جلب المراقبين من Firestore:", err);
-          });
-    }
+    const welcomeName = document.getElementById('welcomeName');
+    const welcomeCode = document.getElementById('welcomeCode');
 
-    function initForUser(username) {
-        currentUserName = username;
-        currentUserLabel.textContent = username;
-        STORAGE_KEY = 'monitors_' + currentUserName;
+    const btnArrived  = document.getElementById('btnArrived');
+    const btnVoted    = document.getElementById('btnVoted');
+    const btnIssue    = document.getElementById('btnIssue');
+    const btnLocation = document.getElementById('btnLocation');
+    const photoInput  = document.getElementById('photoInput');
+    const statusBox   = document.getElementById('statusBox');
+    const photoPreview= document.getElementById('photoPreview');
 
-        // نحاول نقرأ النسخة المحلية (قديمة) أولاً
+    let currentCode = "";
+    let statusData = {
+        arrived: false,
+        voted: false,
+        hasIssue: false,
+        issueText: "",
+        location: null,
+        photoSent: false
+    };
+
+    const STATUS_KEY_PREFIX = "monitor_status_";
+
+    // 🔐 تسجيل دخول المراقب باستخدام Firestore
+    loginForm.addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        const nameInput = document.getElementById('monitorName').value.trim();
+        // نخلي الكود بحروف كبيرة حتى يطابق اللي خازنته من لوحة المدير
+        const code = document.getElementById('monitorCode').value.trim().toUpperCase();
+
+        if (!code) {
+            loginError.textContent = "يرجى إدخال الكود.";
+            loginError.style.display = "block";
+            return;
+        }
+
         try {
-            monitors = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-        } catch (e) {
-            monitors = [];
-        }
+            const monitorRecord = await findMonitorByCodeOnline(code);
 
-        renderMonitors();
-        // ثم نطلب النسخة الأحدث من Firestore
-        loadMonitorsFromFirestore();
-    }
-
-    // تسجيل الدخول
-    loginForm.addEventListener('submit', function (e) {
-        e.preventDefault();
-        loginError.style.display = 'none';
-
-        const username = document.getElementById('loginUser').value.trim();
-        const pass     = document.getElementById('loginPass').value.trim();
-
-        if (!username || !pass) {
-            loginError.textContent = 'يرجى إدخال اسم المستخدم والكود.';
-            loginError.style.display = 'block';
-            return;
-        }
-
-        let systemUsers = [];
-        try {
-            systemUsers = JSON.parse(localStorage.getItem('systemUsers') || '[]');
-        } catch (err) {
-            systemUsers = [];
-        }
-
-        const matchedUser = systemUsers.find(u =>
-            u.username.toLowerCase() === username.toLowerCase() &&
-            u.password === pass
-        );
-
-        if (!matchedUser) {
-            loginError.textContent = 'بيانات الدخول غير صحيحة. تأكد من اسم المستخدم والكود الذي أعطاك إياه مدير البرنامج.';
-            loginError.style.display = 'block';
-            return;
-        }
-
-        localStorage.setItem('currentUserName', matchedUser.username);
-        initForUser(matchedUser.username);
-        showDashboard();
-    });
-
-    logoutLink.addEventListener('click', function (e) {
-        e.preventDefault();
-        localStorage.removeItem('currentUserName');
-        currentUserName = null;
-        STORAGE_KEY = null;
-        monitors = [];
-        showLogin();
-    });
-
-    const tabs = document.querySelectorAll('.tab');
-    tabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            tabs.forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-
-            const target = tab.dataset.target;
-            document.getElementById('monitorsSection').style.display = (target === 'monitorsSection') ? 'block' : 'none';
-            document.getElementById('mapSection').style.display      = (target === 'mapSection') ? 'block' : 'none';
-            document.getElementById('reportsSection').style.display  = (target === 'reportsSection') ? 'block' : 'none';
-
-            document.getElementById('searchBox').style.display       = (target === 'monitorsSection') ? 'block' : 'none';
-        });
-    });
-
-    function saveMonitors() {
-        if (!STORAGE_KEY) return;
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(monitors));
-    }
-
-    function updateReportsSummary() {
-        if (!totalMonitorsCount) return;
-        const total   = monitors.length;
-        const arrived = monitors.filter(m => m.arrived).length;
-        const issues  = monitors.filter(m => m.hasIssue).length;
-
-        totalMonitorsCount.textContent   = total;
-        arrivedMonitorsCount.textContent = arrived;
-        issuesMonitorsCount.textContent  = issues;
-    }
-
-    function renderMonitors(filterText = '') {
-        monitorsBody.innerHTML = '';
-
-        const normalized = filterText.trim().toLowerCase();
-        const filtered = monitors.filter(m => {
-            if (!normalized) return true;
-            const hay = (m.name + ' ' + m.phone + ' ' + m.center).toLowerCase();
-            return hay.includes(normalized);
-        });
-
-        noMonitors.style.display = filtered.length === 0 ? 'block' : 'none';
-
-        filtered.forEach((m, idx) => {
-            const row = document.createElement('div');
-            row.className = 'table-row';
-
-            row.innerHTML = `
-                <div class="monitor-name">
-                    <div class="monitor-avatar">${m.name ? m.name.charAt(0) : '?'}</div>
-                    <div>
-                        <div>${m.name || '-'}</div>
-                        <small>${m.phone || ''}</small>
-                    </div>
-                </div>
-
-                <div>${m.center || '-'}</div>
-
-                <div>
-                    <code style="background:#f1f3fa; padding:2px 6px; border-radius:6px; font-size:11px;">${m.code || '-'}</code>
-                </div>
-
-                <div>
-                    <span class="bool-icon ${m.arrived ? 'true' : 'false'}" data-action="toggleArrived" data-index="${idx}">
-                        ${m.arrived ? '✔' : '✖'}
-                    </span>
-                </div>
-
-                <div>
-                    <span class="bool-icon ${m.voted ? 'true' : 'false'}" data-action="toggleVoted" data-index="${idx}">
-                        ${m.voted ? '✔' : '✖'}
-                    </span>
-                </div>
-
-                <!-- "توجد مشكلة" -->
-                <div>
-                    <span
-                        class="bool-icon ${m.hasIssue ? 'true' : 'neutral'}"
-                        data-action="viewIssue"
-                        data-index="${idx}"
-                        title="${m.hasIssue ? 'يوجد مشكلة مبلَّغة من المراقب، اضغط لعرض التفاصيل' : 'لا توجد مشكلة مبلَّغة من المراقب'}"
-                    >
-                        ${m.hasIssue ? '⚠' : '—'}
-                    </span>
-                </div>
-
-                <div>
-                    <span class="badge-status ${m.online ? 'online' : 'offline'}" data-action="toggleOnline" data-index="${idx}">
-                        ${m.online ? '📶 متصل' : '📶 غير متصل'}
-                    </span>
-                </div>
-
-                <div>
-                    <button type="button"
-                            data-action="downloadPhoto"
-                            data-index="${idx}"
-                            style="font-size:11px; padding:3px 8px; border-radius:6px; border:1px solid #dde2ef; background:#f9fafc; cursor:pointer;">
-                        تنزيل الصورة
-                    </button>
-                </div>
-
-                <div class="actions">
-                    <span title="عرض الموقع" data-action="showLocation" data-index="${idx}">📍</span>
-                    <span title="حذف المراقب" data-action="deleteMonitor" data-index="${idx}">🗑️</span>
-                </div>
-            `;
-
-            monitorsBody.appendChild(row);
-        });
-
-        renderReports();
-        updateReportsSummary();
-    }
-
-    function renderReports() {
-        reportsList.innerHTML = '';
-        const troubled = monitors.filter(m => m.hasIssue && m.issueText);
-        if (troubled.length === 0) {
-            noReports.style.display = 'block';
-            return;
-        }
-        noReports.style.display = 'none';
-
-        troubled.forEach(m => {
-            const div = document.createElement('div');
-            div.className = 'report-item';
-            div.innerHTML = `
-                <div class="report-item-title">مشكلة من المراقب: ${m.name}</div>
-                <div style="font-size:12px; margin-bottom:3px;">مركز الاقتراع: ${m.center}</div>
-                <div>${m.issueText}</div>
-                <small>رقم الهاتف: ${m.phone} – كود الدخول: ${m.code}</small>
-            `;
-            reportsList.appendChild(div);
-        });
-    }
-
-    document.getElementById('searchInput').addEventListener('input', function () {
-        renderMonitors(this.value);
-    });
-
-    const modalBackdrop = document.getElementById('modalBackdrop');
-    const addMonitorBtn = document.getElementById('addMonitorBtn');
-    const modalClose    = document.getElementById('modalClose');
-    const addMonitorForm= document.getElementById('addMonitorForm');
-
-    function generateMonitorCode() {
-        const letters = "ABCDEFGHJKLMNPQRSTUVWXYZ";
-        const digits  = "0123456789";
-        let code = "";
-        for (let i = 0; i < 4; i++) {
-            code += letters[Math.floor(Math.random() * letters.length)];
-        }
-        code += digits[Math.floor(Math.random() * digits.length)];
-        return code;
-    }
-
-    function openModal() {
-        document.getElementById('monitorCode').value = generateMonitorCode();
-        modalBackdrop.style.display = 'flex';
-    }
-    function closeModal() {
-        modalBackdrop.style.display = 'none';
-        addMonitorForm.reset();
-    }
-
-    addMonitorBtn.addEventListener('click', openModal);
-    modalClose.addEventListener('click', closeModal);
-    modalBackdrop.addEventListener('click', (e) => {
-        if (e.target === modalBackdrop) closeModal();
-    });
-
-    // ✅ إضافة مراقب جديد: نخزّنه في Firestore + في الذاكرة + نحفظ نسخة محلياً
-    addMonitorForm.addEventListener('submit', function (e) {
-        e.preventDefault();
-        if (!currentUserName) {
-            alert("يجب تسجيل دخول المستخدم أولاً.");
-            return;
-        }
-
-        const name   = document.getElementById('monitorName').value.trim();
-        const phone  = document.getElementById('monitorPhone').value.trim();
-        const center = document.getElementById('monitorCenter').value.trim();
-        const code   = document.getElementById('monitorCode').value.trim();
-        if (!name || !phone || !center || !code) return;
-
-        const docData = {
-            adminUsername: currentUserName,
-            monitorName:   name,
-            monitorPhone:  phone,
-            monitorCenter: center,
-            monitorCode:   code,
-            arrived:   false,
-            voted:     false,
-            hasIssue:  false,
-            issueText: '',
-            online:    false
-        };
-
-        db.collection('monitors').add(docData)
-          .then((docRef) => {
-              monitors.push({
-                  id: docRef.id,
-                  name,
-                  phone,
-                  center,
-                  code,
-                  arrived: false,
-                  voted: false,
-                  hasIssue: false,
-                  issueText: '',
-                  online: false
-              });
-
-              saveMonitors();
-              renderMonitors(document.getElementById('searchInput').value);
-              closeModal();
-              alert("تم حفظ المراقب وتخزينه في النظام.");
-          })
-          .catch((err) => {
-              console.error("خطأ في حفظ المراقب في Firestore:", err);
-              alert("حدث خطأ أثناء حفظ المراقب، حاول مرة أخرى.");
-          });
-    });
-
-    // التعامل مع الإجراءات
-    monitorsBody.addEventListener('click', function (e) {
-        const action = e.target.dataset.action;
-        if (!action) return;
-        const index = parseInt(e.target.dataset.index, 10);
-        const m = monitors[index];
-        if (!m) return;
-
-        if (action === 'toggleArrived') {
-            m.arrived = !m.arrived;
-
-        } else if (action === 'toggleVoted') {
-            m.voted = !m.voted;
-
-        } else if (action === 'viewIssue') {
-            if (m.hasIssue) {
-                alert(
-                    "مشكلة مبلَّغة من المراقب:\n\n" +
-                    (m.issueText && m.issueText.trim() !== "" ? m.issueText : "لا يوجد نص تفصيلي للمشكلة.")
-                );
-            } else {
-                alert("لا توجد مشكلة مبلَّغة من هذا المراقب حتى الآن.");
-            }
-
-        } else if (action === 'toggleOnline') {
-            m.online = !m.online;
-
-        } else if (action === 'deleteMonitor') {
-            if (confirm('هل تريد حذف هذا المراقب؟')) {
-                // نحذفه من Firestore أيضاً إذا له id
-                if (m.id) {
-                    db.collection('monitors').doc(m.id).delete().catch(err => {
-                        console.error("خطأ في حذف المراقب من Firestore:", err);
-                    });
-                }
-                monitors.splice(index, 1);
-            }
-
-        } else if (action === 'downloadPhoto') {
-            const photoKey = "monitor_photo_" + m.code;
-            const dataUrl = localStorage.getItem(photoKey);
-            if (!dataUrl) {
-                alert("لا توجد صورة مستلمة من هذا المراقب حتى الآن.");
-                return;
-            }
-            const a = document.createElement("a");
-            a.href = dataUrl;
-            a.download = "strip_" + m.code + ".png";
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-
-        } else if (action === 'showLocation') {
-            const locKey = "monitor_location_" + m.code;
-            const stored = localStorage.getItem(locKey);
-            if (!stored) {
-                alert("لا يوجد موقع مخزن لهذا المراقب حتى الآن.");
-                return;
-            }
-            let coords;
-            try {
-                coords = JSON.parse(stored);
-            } catch {
-                alert("صيغة بيانات الموقع غير صحيحة.");
-                return;
-            }
-            if (!coords.lat || !coords.lng) {
-                alert("إحداثيات الموقع غير مكتملة.");
+            if (!monitorRecord) {
+                loginError.textContent = "الكود غير صحيح أو غير موجود ضمن المراقبين.";
+                loginError.style.display = "block";
                 return;
             }
 
-            const mapIframe = document.getElementById('mainMap');
-            if (mapIframe) {
-                mapIframe.src = `https://www.google.com/maps?q=${coords.lat},${coords.lng}&z=17&output=embed`;
-            }
+            loginError.style.display = "none";
 
-            tabs.forEach(t => t.classList.remove('active'));
-            const mapTab = document.querySelector('.tab[data-target="mapSection"]');
-            if (mapTab) mapTab.classList.add('active');
+            currentCode = code;
+            // الاسم من الإدخال أو من قاعدة البيانات أو كلمة "مراقب"
+            welcomeName.textContent = nameInput || monitorRecord.monitorName || "مراقب";
+            welcomeCode.textContent = currentCode;
 
-            document.getElementById('monitorsSection').style.display = 'none';
-            document.getElementById('mapSection').style.display      = 'block';
-            document.getElementById('reportsSection').style.display  = 'none';
-            document.getElementById('searchBox').style.display       = 'none';
-        }
-
-        saveMonitors();
-        renderMonitors(document.getElementById('searchInput').value);
-    });
-
-    // تحديث حالة الاتصال والوصول/التصويت + قراءة المشكلة من صفحة المراقب (لا زالت محلية)
-    function updateOnlineStatusAuto() {
-        if (!currentUserName || !STORAGE_KEY) return;
-
-        monitors.forEach(monitor => {
-            const code = monitor.code;
-
-            const onlineStatus = localStorage.getItem("online_status_" + code);
-            if (onlineStatus === "online") {
-                monitor.online = true;
-            } else if (onlineStatus === "offline") {
-                monitor.online = false;
-            }
-
-            const rawStatus = localStorage.getItem("monitor_status_" + code);
-            if (rawStatus) {
+            // تحميل حالة هذا المراقب من localStorage
+            const saved = localStorage.getItem(STATUS_KEY_PREFIX + currentCode);
+            if (saved) {
                 try {
-                    const st = JSON.parse(rawStatus);
-                    if (typeof st.arrived   === "boolean") monitor.arrived   = st.arrived;
-                    if (typeof st.voted     === "boolean") monitor.voted     = st.voted;
-                    if (typeof st.hasIssue  === "boolean") monitor.hasIssue  = st.hasIssue;
-                    if (typeof st.issueText === "string")  monitor.issueText = st.issueText;
-                } catch (e) {
-                    console.error("خطأ في قراءة حالة المراقب:", e);
-                }
+                    const parsed = JSON.parse(saved);
+                    statusData = Object.assign({
+                        arrived: false,
+                        voted: false,
+                        hasIssue: false,
+                        issueText: "",
+                        location: null,
+                        photoSent: false
+                    }, parsed);
+                } catch {}
             }
-        });
 
-        saveMonitors();
-        renderMonitors(document.getElementById('searchInput').value);
+            localStorage.setItem("online_status_" + currentCode, "online");
+
+            updateStatusUI();
+            loginSection.style.display  = "none";
+            monitorSection.style.display = "block";
+
+        } catch (err) {
+            console.error(err);
+            loginError.textContent = "حدث خطأ أثناء الاتصال بالخادم، حاول مرة أخرى.";
+            loginError.style.display = "block";
+        }
+    });
+
+    function saveStatus() {
+        if (!currentCode) return;
+
+        localStorage.setItem(STATUS_KEY_PREFIX + currentCode, JSON.stringify(statusData));
+
+        if (statusData.hasIssue) {
+            localStorage.setItem("monitor_issue_" + currentCode, statusData.issueText);
+        } else {
+            localStorage.removeItem("monitor_issue_" + currentCode);
+        }
     }
 
-    setInterval(updateOnlineStatusAuto, 3000);
+    function updateStatusUI() {
+        const lines = statusBox.querySelectorAll('div');
 
-    (function initialCheck() {
-        const savedUser = localStorage.getItem('currentUserName');
-        if (!savedUser) {
-            showLogin();
+        lines[0].innerHTML = '<span class="label">حالة الوصول:</span> ' +
+            (statusData.arrived ? '✅ تم الوصول.' : 'لم يتم التحديث بعد.');
+
+        lines[1].innerHTML = '<span class="label">حالة التصويت:</span> ' +
+            (statusData.voted ? '🗳 تم التصويت.' : 'لم يتم التحديث بعد.');
+
+        if (statusData.location) {
+            lines[2].innerHTML = '<span class="label">آخر موقع مرسل:</span> ' +
+                `خط العرض ${statusData.location.lat.toFixed(5)}, خط الطول ${statusData.location.lng.toFixed(5)}`;
+        } else {
+            lines[2].innerHTML = '<span class="label">آخر موقع مرسل:</span> لا يوجد.';
+        }
+
+        lines[3].innerHTML = '<span class="label">حالة المشكلة:</span> ' +
+            (statusData.hasIssue
+                ? ('⚠ يوجد إبلاغ – "' + (statusData.issueText || 'مشكلة') + '"')
+                : 'لا توجد مشكلة.');
+
+        lines[4].innerHTML = '<span class="label">حالة الصورة:</span> ' +
+            (statusData.photoSent ? '📷 تم إرسال صورة.' : 'لم تُرسل صورة بعد.');
+
+        btnArrived.classList.toggle('inactive', statusData.arrived);
+        btnVoted.classList.toggle('inactive', statusData.voted);
+        btnIssue.classList.toggle('inactive', statusData.hasIssue);
+    }
+
+    // زر الإبلاغ عن مشكلة
+    btnIssue.addEventListener('click', function () {
+        if (!statusData.hasIssue) {
+            const txt = prompt("اكتب وصف مختصر للمشكلة:");
+
+            if (txt && txt.trim() !== "") {
+                statusData.hasIssue = true;
+                statusData.issueText = txt.trim();
+
+                localStorage.setItem(
+                    "monitor_status_" + currentCode,
+                    JSON.stringify(statusData)
+                );
+
+                localStorage.setItem(
+                    "monitor_issue_" + currentCode,
+                    statusData.issueText
+                );
+
+                saveStatus();
+                updateStatusUI();
+
+                alert("✔ تم إرسال المشكلة إلى لوحة التحكم.");
+            }
+
+        } else {
+            const confirmRemove = confirm("هل تريد إلغاء علامة المشكلة؟");
+            if (!confirmRemove) return;
+
+            statusData.hasIssue = false;
+            statusData.issueText = "";
+
+            localStorage.removeItem("monitor_issue_" + currentCode);
+
+            localStorage.setItem(
+                "monitor_status_" + currentCode,
+                JSON.stringify(statusData)
+            );
+
+            saveStatus();
+            updateStatusUI();
+        }
+    });
+
+    btnArrived.addEventListener('click', function () {
+        statusData.arrived = !statusData.arrived;
+        saveStatus();
+        updateStatusUI();
+    });
+
+    btnVoted.addEventListener('click', function () {
+        statusData.voted = !statusData.voted;
+        saveStatus();
+        updateStatusUI();
+    });
+
+    btnLocation.addEventListener('click', function () {
+        if (!navigator.geolocation) {
+            alert("المتصفح لا يدعم تحديد الموقع.");
             return;
         }
 
-        let systemUsers = [];
-        try {
-            systemUsers = JSON.parse(localStorage.getItem('systemUsers') || '[]');
-        } catch {
-            systemUsers = [];
-        }
+        btnLocation.textContent = "📍 جاري الحصول على الموقع...";
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                statusData.location = {
+                    lat: pos.coords.latitude,
+                    lng: pos.coords.longitude,
+                    time: Date.now()
+                };
 
-        const exists = systemUsers.some(u => u.username.toLowerCase() === savedUser.toLowerCase());
-        if (!exists) {
-            localStorage.removeItem('currentUserName');
-            showLogin();
-            return;
-        }
+                saveStatus();
 
-        initForUser(savedUser);
-        showDashboard();
-    })();
+                localStorage.setItem(
+                    "monitor_location_" + currentCode,
+                    JSON.stringify(statusData.location)
+                );
+
+                localStorage.setItem("online_status_" + currentCode, "online");
+
+                updateStatusUI();
+                btnLocation.textContent = "📍 تم إرسال الموقع";
+            },
+            () => {
+                alert("تعذر الحصول على الموقع.");
+                btnLocation.textContent = "📍 تشغيل الموقع (إرسال الإحداثيات)";
+            }
+        );
+    });
+
+    photoInput.addEventListener('change', function () {
+        const file = this.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            statusData.photoSent = true;
+            saveStatus();
+            updateStatusUI();
+
+            if (currentCode) {
+                localStorage.setItem("monitor_photo_" + currentCode, e.target.result);
+            }
+
+            photoPreview.innerHTML = `
+                <div style="font-size:12px; color:#555;">آخر صورة مرفوعة:</div>
+                <img src="${e.target.result}" alt="صورة الشريط">
+            `;
+        };
+        reader.readAsDataURL(file);
+    });
+
+    window.addEventListener('beforeunload', function () {
+        if (currentCode) {
+            localStorage.setItem("online_status_" + currentCode, "offline");
+        }
+    });
 </script>
 
 </body>
