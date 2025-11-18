@@ -764,6 +764,7 @@
                       name:   data.monitorName  || '',
                       phone:  data.monitorPhone || '',
                       center: data.monitorCenter|| '',
+                      // نقرأ من code أو monitorCode (للبيانات القديمة)
                       code:   data.code || data.monitorCode || '',
                       arrived:   data.arrived   || false,
                       voted:     data.voted     || false,
@@ -796,21 +797,20 @@
         loadMonitorsFromFirestore();
     }
 
-    // تسجيل الدخول (محلي + Firestore)
-    loginForm.addEventListener('submit', async function (e) {
+    // تسجيل الدخول
+    loginForm.addEventListener('submit', function (e) {
         e.preventDefault();
         loginError.style.display = 'none';
 
-        const usernameInput = document.getElementById('loginUser').value.trim();
-        const passInput     = document.getElementById('loginPass').value.trim();
+        const username = document.getElementById('loginUser').value.trim();
+        const pass     = document.getElementById('loginPass').value.trim();
 
-        if (!usernameInput || !passInput) {
+        if (!username || !pass) {
             loginError.textContent = 'يرجى إدخال اسم المستخدم والكود.';
             loginError.style.display = 'block';
             return;
         }
 
-        // 1) نحاول أولاً من localStorage
         let systemUsers = [];
         try {
             systemUsers = JSON.parse(localStorage.getItem('systemUsers') || '[]');
@@ -818,51 +818,17 @@
             systemUsers = [];
         }
 
-        let matchedUser = systemUsers.find(u =>
-            u.username.toLowerCase() === usernameInput.toLowerCase() &&
-            u.password === passInput
+        const matchedUser = systemUsers.find(u =>
+            u.username.toLowerCase() === username.toLowerCase() &&
+            u.password === pass
         );
 
-        // 2) إذا ما لگيناه محلياً، نبحث في Firestore
-        if (!matchedUser) {
-            try {
-                const snap = await db
-                    .collection('systemUsers')
-                    .where('username', '==', usernameInput)
-                    .where('password', '==', passInput)
-                    .limit(1)
-                    .get();
-
-                if (!snap.empty) {
-                    const docu = snap.docs[0];
-                    const data = docu.data();
-
-                    matchedUser = {
-                        username: data.username,
-                        password: data.password,
-                        note: data.note || ''
-                    };
-
-                    // نخزنه أيضاً في localStorage حتى يشتغل بدون نت لاحقاً
-                    systemUsers.push(matchedUser);
-                    localStorage.setItem('systemUsers', JSON.stringify(systemUsers));
-                }
-            } catch (err) {
-                console.error('خطأ في الاتصال بـ Firestore أثناء تسجيل الدخول:', err);
-                loginError.textContent = 'حدث خطأ أثناء الاتصال بالخادم، حاول مرة أخرى.';
-                loginError.style.display = 'block';
-                return;
-            }
-        }
-
-        // 3) إذا بعد كل شيء ماكو يوزر مطابق
         if (!matchedUser) {
             loginError.textContent = 'بيانات الدخول غير صحيحة. تأكد من اسم المستخدم والكود الذي أعطاك إياه مدير البرنامج.';
             loginError.style.display = 'block';
             return;
         }
 
-        // 4) تسجيل الدخول
         localStorage.setItem('currentUserName', matchedUser.username);
         initForUser(matchedUser.username);
         showDashboard();
@@ -970,10 +936,10 @@
 
                 <div>
                     <button type="button"
-                            data-action="downloadPhoto"
+                            data-action="viewPhotos"
                             data-index="${idx}"
                             style="font-size:11px; padding:3px 8px; border-radius:6px; border:1px solid #dde2ef; background:#f9fafc; cursor:pointer;">
-                        تنزيل الصورة
+                        عرض الصور
                     </button>
                 </div>
 
@@ -1066,7 +1032,7 @@
             monitorName:   name,
             monitorPhone:  phone,
             monitorCenter: center,
-            code:          code,
+            code:          code,   // هنا نخزن الكود بحقل اسمه code
             arrived:   false,
             voted:     false,
             hasIssue:  false,
@@ -1099,6 +1065,24 @@
               alert("حدث خطأ أثناء حفظ المراقب، حاول مرة أخرى.");
           });
     });
+
+    // ✅ دالة تجيب كل الصور الخاصة بمراقب (لحد 20 صورة)
+    function getMonitorPhotos(code) {
+        const photos = [];
+        const baseKey = "monitor_photo_" + code;
+
+        // صورة واحدة قديمة بدون رقم
+        const single = localStorage.getItem(baseKey);
+        if (single) photos.push(single);
+
+        // صور مرقمة: monitor_photo_CODE_1 .. monitor_photo_CODE_20
+        for (let i = 1; i <= 20; i++) {
+            const dataUrl = localStorage.getItem(baseKey + "_" + i);
+            if (dataUrl) photos.push(dataUrl);
+        }
+
+        return photos;
+    }
 
     // التعامل مع الإجراءات في جدول المراقبين
     monitorsBody.addEventListener('click', function (e) {
@@ -1137,19 +1121,40 @@
                 monitors.splice(index, 1);
             }
 
-        } else if (action === 'downloadPhoto') {
-            const photoKey = "monitor_photo_" + m.code;
-            const dataUrl = localStorage.getItem(photoKey);
-            if (!dataUrl) {
-                alert("لا توجد صورة مستلمة من هذا المراقب حتى الآن.");
+        } else if (action === 'viewPhotos') {
+            // ✅ عرض كل صور المراقب (لحد 20 صورة) في نافذة جديدة
+            const photos = getMonitorPhotos(m.code);
+            if (!photos.length) {
+                alert("لا توجد صور مستلمة من هذا المراقب حتى الآن.");
                 return;
             }
-            const a = document.createElement("a");
-            a.href = dataUrl;
-            a.download = "strip_" + m.code + ".png";
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
+
+            const win = window.open("", "_blank");
+            if (!win) {
+                alert("المتصفح منع فتح نافذة جديدة. فعّل السماح بالنوافذ المنبثقة (Popup) ثم حاول مرة أخرى.");
+                return;
+            }
+
+            win.document.write(
+                "<html dir='rtl'><head><meta charset='utf-8'><title>صور المراقب " + (m.name || '') + "</title></head>" +
+                "<body style='font-family:Tahoma,Arial,sans-serif; background:#f4f6fb; padding:10px;'>" +
+                "<h3 style='margin-bottom:10px;'>صور المراقب: " + (m.name || '-') + " – كود: " + (m.code || '-') + "</h3>"
+            );
+
+            photos.slice(0, 20).forEach(function(src, idx) {
+                win.document.write(
+                    "<div style='margin:10px 0; padding:8px; background:#ffffff; border-radius:8px; " +
+                    "box-shadow:0 2px 6px rgba(0,0,0,0.12);'>" +
+                        "<div style='font-size:12px; margin-bottom:4px;'>صورة رقم " + (idx + 1) + "</div>" +
+                        "<img src='" + src + "' style='max-width:100%; border-radius:6px; display:block; margin-bottom:4px;'>" +
+                        "<a href='" + src + "' download='strip_" + (m.code || 'monitor') + "_" + (idx + 1) + ".png' " +
+                        "style='font-size:12px; color:#1a73e8; text-decoration:none;'>تنزيل هذه الصورة</a>" +
+                    "</div>"
+                );
+            });
+
+            win.document.write("</body></html>");
+            win.document.close();
 
         } else if (action === 'showLocation') {
             const locKey = "monitor_location_" + m.code;
