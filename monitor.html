@@ -328,10 +328,6 @@
         return { id: doc.id, ...doc.data() };
     }
 
-    // --------------------------------------------------------------------
-    // بقية كود الصفحة (مع تعديل جزء تسجيل الدخول فقط ليصبح async على Firestore)
-    // --------------------------------------------------------------------
-
     const loginSection   = document.getElementById('loginSection');
     const monitorSection = document.getElementById('monitorSection');
 
@@ -366,7 +362,8 @@
         e.preventDefault();
 
         const nameInput = document.getElementById('monitorName').value.trim();
-        const code = document.getElementById('monitorCode').value.trim();
+        // 🔹 هنا التعديل: نخلي الكود بحروف كبيرة
+        const code = document.getElementById('monitorCode').value.trim().toUpperCase();
 
         if (!code) {
             loginError.textContent = "يرجى إدخال الكود.";
@@ -390,7 +387,7 @@
             welcomeName.textContent = nameInput || monitorRecord.monitorName || "مراقب";
             welcomeCode.textContent = currentCode;
 
-            // تحميل حالة هذا المراقب من localStorage (وصول/تصويت/صورة/مشكلة...)
+            // تحميل حالة هذا المراقب من localStorage
             const saved = localStorage.getItem(STATUS_KEY_PREFIX + currentCode);
             if (saved) {
                 try {
