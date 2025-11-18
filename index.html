@@ -218,7 +218,7 @@
             </div>
         </div>
         <div class="top-left">
-            <!-- 🔥🔥 تم التعديل هنا 🔥🔥 -->
+            <!-- زر تسجيل الخروج -->
             <a href="login.html">⬅ تسجيل الخروج</a>
         </div>
     </div>
@@ -259,7 +259,7 @@
     <div class="card">
         <div class="card-header">
             <h2>قائمة المستخدمين المسجَّلين</h2>
-            <p>يتم تخزين البيانات محلياً داخل المتصفح (localStorage) لأغراض التجربة.</p>
+            <p>يتم تخزين البيانات في قاعدة بيانات Firebase Firestore، مع نسخة احتياطية محلياً داخل المتصفح (localStorage).</p>
         </div>
 
         <div style="overflow-x:auto; margin-top:8px;">
@@ -281,10 +281,36 @@
     </div>
 </div>
 
-<script>
-    const SYSTEM_USERS_KEY = 'systemUsers';
+<!-- 🔥 ربط Firebase + Firestore + منطق إنشاء / حذف المستخدمين -->
+<script type="module">
+    // استيراد Firebase (نسخة الموديول من CDN)
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
+    import {
+        getFirestore,
+        collection,
+        getDocs,
+        addDoc,
+        deleteDoc,
+        doc
+    } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
 
-    let systemUsers = JSON.parse(localStorage.getItem(SYSTEM_USERS_KEY) || '[]');
+    // إعدادات Firebase الخاصة بمشروعك
+    const firebaseConfig = {
+        apiKey: "AIzaSyDdiudUa5jjcZDwJgYBbLdC-YBNQ5rlqvU",
+        authDomain: "election-system-9cbb8.firebaseapp.com",
+        projectId: "election-system-9cbb8",
+        storageBucket: "election-system-9cbb8.firebasestorage.app",
+        messagingSenderId: "886706894008",
+        appId: "1:886706894008:web:270556771843614e56b04d"
+    };
+
+    // تهيئة Firebase و Firestore
+    const app  = initializeApp(firebaseConfig);
+    const db   = getFirestore(app);
+    const usersColRef = collection(db, "systemUsers");
+
+    // مفاتيح HTML
+    const SYSTEM_USERS_KEY = "systemUsers";
 
     const userNameInput  = document.getElementById('userNameInput');
     const userNoteInput  = document.getElementById('userNoteInput');
@@ -292,6 +318,9 @@
     const addUserBtn     = document.getElementById('addUserBtn');
     const usersTableBody = document.getElementById('usersTableBody');
     const noUsersMsg     = document.getElementById('noUsersMsg');
+
+    // مصفوفة المستخدمين (من Firestore)
+    let systemUsers = [];
 
     function generateUserCode() {
         const letters = "ABCDEFGHJKLMNPQRSTUVWXYZ";
@@ -306,13 +335,19 @@
         return code;
     }
 
-    function saveSystemUsers() {
+    function resetCodeField() {
+        userCodeInput.value = generateUserCode();
+    }
+
+    function saveSystemUsersToLocal() {
+        // نخزن نسخة من المستخدمين في localStorage (بدون أو مع الـ id، ما يضر)
         localStorage.setItem(SYSTEM_USERS_KEY, JSON.stringify(systemUsers));
     }
 
     function renderUsersTable() {
         usersTableBody.innerHTML = '';
-        if (systemUsers.length === 0) {
+
+        if (!systemUsers || systemUsers.length === 0) {
             noUsersMsg.style.display = 'block';
             return;
         }
@@ -326,18 +361,48 @@
                 <td><span class="badge">${u.password}</span></td>
                 <td>${u.note || ''}</td>
                 <td>
-                    <span class="action-icon" data-action="delete" data-index="${index}" title="حذف المستخدم">🗑️</span>
+                    <span class="action-icon"
+                          data-action="delete"
+                          data-index="${index}"
+                          title="حذف المستخدم">🗑️</span>
                 </td>
             `;
             usersTableBody.appendChild(tr);
         });
     }
 
-    function resetCodeField() {
-        userCodeInput.value = generateUserCode();
+    async function loadSystemUsersFromFirestore() {
+        try {
+            const snapshot = await getDocs(usersColRef);
+            const result = [];
+            snapshot.forEach(docSnap => {
+                const data = docSnap.data();
+                result.push({
+                    id: docSnap.id,
+                    username: data.username,
+                    password: data.password,
+                    note: data.note || ""
+                });
+            });
+
+            systemUsers = result;
+            saveSystemUsersToLocal();  // مزامنة مع localStorage
+            renderUsersTable();
+        } catch (e) {
+            console.error("خطأ في جلب المستخدمين من Firestore:", e);
+            // في حال فشل الاتصال نرجع لـ localStorage
+            try {
+                systemUsers = JSON.parse(localStorage.getItem(SYSTEM_USERS_KEY) || "[]");
+            } catch {
+                systemUsers = [];
+            }
+            renderUsersTable();
+        } finally {
+            resetCodeField();
+        }
     }
 
-    addUserBtn.addEventListener('click', () => {
+    addUserBtn.addEventListener('click', async () => {
         const username = userNameInput.value.trim();
         const note     = userNoteInput.value.trim();
         const password = userCodeInput.value.trim();
@@ -347,39 +412,73 @@
             return;
         }
 
-        const exists = systemUsers.some(u => u.username.toLowerCase() === username.toLowerCase());
+        // التأكد من عدم تكرار اسم المستخدم (داخل المصفوفة الحالية)
+        const exists = systemUsers.some(
+            u => u.username.toLowerCase() === username.toLowerCase()
+        );
         if (exists) {
             alert('اسم المستخدم هذا مسجَّل مسبقاً. اختر اسماً آخر.');
             return;
         }
 
-        systemUsers.push({ username, password, note });
-        saveSystemUsers();
-        renderUsersTable();
+        try {
+            // إضافة المستخدم إلى Firestore
+            const docRef = await addDoc(usersColRef, {
+                username,
+                password,
+                note
+            });
 
-        userNameInput.value = '';
-        userNoteInput.value = '';
-        resetCodeField();
+            // تحديث المصفوفة في الواجهة
+            systemUsers.push({
+                id: docRef.id,
+                username,
+                password,
+                note
+            });
 
-        alert('تم إنشاء المستخدم بنجاح. لا تنسَ تسليم اسم المستخدم والكود لصاحب الحساب.');
+            saveSystemUsersToLocal();
+            renderUsersTable();
+
+            // تفريغ الحقول + توليد كود جديد
+            userNameInput.value = '';
+            userNoteInput.value = '';
+            resetCodeField();
+
+            alert('تم إنشاء المستخدم بنجاح. لا تنسَ تسليم اسم المستخدم والكود لصاحب الحساب.');
+        } catch (e) {
+            console.error("خطأ في إضافة المستخدم إلى Firestore:", e);
+            alert('حدث خطأ أثناء الحفظ في قاعدة البيانات. تحقق من الاتصال بالإنترنت ثم أعد المحاولة.');
+        }
     });
 
-    usersTableBody.addEventListener('click', (e) => {
+    usersTableBody.addEventListener('click', async (e) => {
         const action = e.target.dataset.action;
         if (action !== 'delete') return;
 
         const index = parseInt(e.target.dataset.index, 10);
-        if (isNaN(index)) return;
+        if (isNaN(index) || !systemUsers[index]) return;
 
         if (!confirm('هل تريد حذف هذا المستخدم؟')) return;
 
-        systemUsers.splice(index, 1);
-        saveSystemUsers();
-        renderUsersTable();
+        const user = systemUsers[index];
+
+        try {
+            if (user.id) {
+                await deleteDoc(doc(db, "systemUsers", user.id));
+            }
+            // إزالة من المصفوفة ومن localStorage
+            systemUsers.splice(index, 1);
+            saveSystemUsersToLocal();
+            renderUsersTable();
+        } catch (e) {
+            console.error("خطأ في حذف المستخدم من Firestore:", e);
+            alert('حدث خطأ أثناء الحذف من قاعدة البيانات.');
+        }
     });
 
-    resetCodeField();
-    renderUsersTable();
+    // تحميل المستخدمين عند فتح الصفحة
+    loadSystemUsersFromFirestore();
 </script>
 
 </body>
