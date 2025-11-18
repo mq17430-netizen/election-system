@@ -115,7 +115,6 @@
             line-height: 1.5;
         }
 
-        /* ✅ التوقيع أسفل كارت تسجيل الدخول */
         .login-footer {
             margin-top: 14px;
             font-size: 11px;
@@ -127,7 +126,7 @@
         /* ====== لوحة التحكم الأصلية ====== */
 
         #dashboardSection {
-            display: none; /* تظهر بعد تسجيل الدخول */
+            display: none;
         }
 
         .page {
@@ -412,7 +411,6 @@
             font-size: 11px;
         }
 
-        /* صندوق ملخص التقارير */
         .reports-summary {
             display: grid;
             grid-template-columns: repeat(3, minmax(0,1fr));
@@ -424,7 +422,7 @@
             background: #fff;
             border-radius: 14px;
             padding: 10px 12px;
-        box-shadow: 0 6px 14px rgba(15,34,58,0.06);
+            box-shadow: 0 6px 14px rgba(15,34,58,0.06);
             font-size: 13px;
         }
 
@@ -559,7 +557,6 @@
             * بعد تسجيل الدخول يمكنك إدارة المراقبين لهذا المستخدم فقط.
         </div>
 
-        <!-- ✅ التوقيع -->
         <div class="login-footer">
             فكرة وتصميم المهندس مختار قاسم<br>
             07740707073
@@ -570,10 +567,8 @@
 <!-- ====== لوحة التحكم (بعد تسجيل الدخول) ====== -->
 <div id="dashboardSection">
     <div class="page">
-        <!-- الشريط العلوي -->
         <div class="top-bar">
             <div class="top-left">
-                <!-- زر تسجيل الخروج -->
                 <a href="#" id="logoutLink">⬅ تسجيل الخروج</a>
             </div>
             <div class="top-right">
@@ -585,7 +580,6 @@
             </div>
         </div>
 
-        <!-- الكارت العلوي: التبويبات + البحث -->
         <div class="card">
             <div class="tabs">
                 <div class="tab active" data-target="monitorsSection">قائمة المراقبين</div>
@@ -654,7 +648,6 @@
                 <h2>التقارير الواردة من المراقبين</h2>
             </div>
 
-            <!-- ✅ ملخص إحصائي للمراقبين -->
             <div class="reports-summary">
                 <div class="summary-box">
                     <div class="summary-title">إجمالي المراقبين</div>
@@ -708,12 +701,11 @@
     </div>
 </div>
 
-<!-- ✅ Firebase (Compat SDK) -->
+<!-- Firebase (Compat SDK) -->
 <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore-compat.js"></script>
 
 <script>
-    // ✅ إعداد Firebase الخاص بمشروعك
     const firebaseConfig = {
         apiKey: "AIzaSyDdiudUa5jjcZDwJgYBbLdC-YBNQ5rlqvU",
         authDomain: "election-system-9cbb8.firebaseapp.com",
@@ -726,7 +718,6 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    // ===== عناصر عامة =====
     const loginSection     = document.getElementById('loginSection');
     const dashboardSection = document.getElementById('dashboardSection');
     const loginForm        = document.getElementById('loginForm');
@@ -739,7 +730,6 @@
     const reportsList  = document.getElementById('reportsList');
     const noReports    = document.getElementById('noReports');
 
-    // ✅ عناصر الملخص
     const totalMonitorsCount  = document.getElementById('totalMonitorsCount');
     const arrivedMonitorsCount= document.getElementById('arrivedMonitorsCount');
     const issuesMonitorsCount = document.getElementById('issuesMonitorsCount');
@@ -758,7 +748,7 @@
         dashboardSection.style.display = 'block';
     }
 
-    // ✅ تحميل المراقبين من Firestore حسب المستخدم الحالي
+    // تحميل المراقبين من Firestore حسب المستخدم الحالي
     function loadMonitorsFromFirestore() {
         if (!currentUserName) return;
 
@@ -771,11 +761,11 @@
                   const data = doc.data();
                   loaded.push({
                       id: doc.id,
-                      name:  data.monitorName  || '',
-                      phone: data.monitorPhone || '',
-                      center:data.monitorCenter|| '',
-                      // 🟢 نقرأ من code أو monitorCode حتى نضمن القديم والجديد
-                      code:  data.code || data.monitorCode || '',
+                      name:   data.monitorName  || '',
+                      phone:  data.monitorPhone || '',
+                      center: data.monitorCenter|| '',
+                      // نقرأ من code أو monitorCode (للبيانات القديمة)
+                      code:   data.code || data.monitorCode || '',
                       arrived:   data.arrived   || false,
                       voted:     data.voted     || false,
                       hasIssue:  data.hasIssue  || false,
@@ -784,7 +774,6 @@
                   });
               });
               monitors = loaded;
-              // نخزن نسخة محلياً أيضاً (للاحتياط)
               saveMonitors();
               renderMonitors(document.getElementById('searchInput').value);
           })
@@ -798,7 +787,6 @@
         currentUserLabel.textContent = username;
         STORAGE_KEY = 'monitors_' + currentUserName;
 
-        // نحاول نقرأ النسخة المحلية (قديمة) أولاً
         try {
             monitors = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
         } catch (e) {
@@ -806,7 +794,6 @@
         }
 
         renderMonitors();
-        // ثم نطلب النسخة الأحدث من Firestore
         loadMonitorsFromFirestore();
     }
 
@@ -930,7 +917,6 @@
                     </span>
                 </div>
 
-                <!-- "توجد مشكلة" -->
                 <div>
                     <span
                         class="bool-icon ${m.hasIssue ? 'true' : 'neutral'}"
@@ -1027,7 +1013,7 @@
         if (e.target === modalBackdrop) closeModal();
     });
 
-    // ✅ إضافة مراقب جديد: نخزّنه في Firestore + في الذاكرة + نحفظ نسخة محلياً
+    // إضافة مراقب جديد (يُحفظ في Firestore + النسخة المحلية)
     addMonitorForm.addEventListener('submit', function (e) {
         e.preventDefault();
         if (!currentUserName) {
@@ -1046,8 +1032,7 @@
             monitorName:   name,
             monitorPhone:  phone,
             monitorCenter: center,
-            // 🟢 نخزّن الكود في حقل اسمه code حتى صفحة المراقب تقدر تلقاه
-            code:          code,
+            code:          code,   // هنا نخزن الكود بحقل اسمه code
             arrived:   false,
             voted:     false,
             hasIssue:  false,
@@ -1081,7 +1066,7 @@
           });
     });
 
-    // التعامل مع الإجراءات
+    // التعامل مع الإجراءات في جدول المراقبين
     monitorsBody.addEventListener('click', function (e) {
         const action = e.target.dataset.action;
         if (!action) return;
@@ -1110,7 +1095,6 @@
 
         } else if (action === 'deleteMonitor') {
             if (confirm('هل تريد حذف هذا المراقب؟')) {
-                // نحذفه من Firestore أيضاً إذا له id
                 if (m.id) {
                     db.collection('monitors').doc(m.id).delete().catch(err => {
                         console.error("خطأ في حذف المراقب من Firestore:", err);
@@ -1171,7 +1155,7 @@
         renderMonitors(document.getElementById('searchInput').value);
     });
 
-    // تحديث حالة الاتصال والوصول/التصويت + قراءة المشكلة من صفحة المراقب (لا زالت محلية)
+    // مزامنة حالة المراقبين من localStorage (من صفحة المراقب)
     function updateOnlineStatusAuto() {
         if (!currentUserName || !STORAGE_KEY) return;
 
