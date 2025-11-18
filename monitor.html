@@ -296,7 +296,42 @@
     </div>
 </div>
 
+<!-- مكتبات Firebase (نسخة compat تناسب صفحة HTML عادية) -->
+<script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore-compat.js"></script>
+
 <script>
+    // إعداد Firebase الخاص بمشروعك
+    const firebaseConfig = {
+      apiKey: "AIzaSyDdiudUa5jjcZDwJgYBbLdC-YBNQ5rlqvU",
+      authDomain: "election-system-9cbb8.firebaseapp.com",
+      projectId: "election-system-9cbb8",
+      storageBucket: "election-system-9cbb8.firebasestorage.app",
+      messagingSenderId: "886706894008",
+      appId: "1:886706894008:web:270556771843614e56b04d"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // دالة تجيب المراقب من Firestore حسب الكود
+    async function findMonitorByCodeOnline(code) {
+        const snap = await db
+            .collection("monitors")
+            .where("code", "==", code)
+            .limit(1)
+            .get();
+
+        if (snap.empty) return null;
+
+        const doc = snap.docs[0];
+        return { id: doc.id, ...doc.data() };
+    }
+
+    // --------------------------------------------------------------------
+    // بقية كود الصفحة (مع تعديل جزء تسجيل الدخول فقط ليصبح async على Firestore)
+    // --------------------------------------------------------------------
+
     const loginSection   = document.getElementById('loginSection');
     const monitorSection = document.getElementById('monitorSection');
 
@@ -326,30 +361,8 @@
 
     const STATUS_KEY_PREFIX = "monitor_status_";
 
-    function findMonitorByCode(code) {
-        let foundMonitor = null;
-
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-
-            if (key && key.startsWith("monitors_")) {
-                try {
-                    const arr = JSON.parse(localStorage.getItem(key) || "[]");
-                    if (Array.isArray(arr)) {
-                        for (const m of arr) {
-                            if (m && m.code === code) {
-                                foundMonitor = m;
-                                return foundMonitor;
-                            }
-                        }
-                    }
-                } catch (e) {}
-            }
-        }
-        return foundMonitor;
-    }
-
-    loginForm.addEventListener('submit', function (e) {
+    // 🔐 تسجيل دخول المراقب باستخدام Firestore
+    loginForm.addEventListener('submit', async function (e) {
         e.preventDefault();
 
         const nameInput = document.getElementById('monitorName').value.trim();
@@ -361,39 +374,49 @@
             return;
         }
 
-        const monitorRecord = findMonitorByCode(code);
-        if (!monitorRecord) {
-            loginError.textContent = "الكود غير صحيح أو غير موجود ضمن المراقبين.";
+        try {
+            const monitorRecord = await findMonitorByCodeOnline(code);
+
+            if (!monitorRecord) {
+                loginError.textContent = "الكود غير صحيح أو غير موجود ضمن المراقبين.";
+                loginError.style.display = "block";
+                return;
+            }
+
+            loginError.style.display = "none";
+
+            currentCode = code;
+            // الاسم من الإدخال أو من قاعدة البيانات أو كلمة "مراقب"
+            welcomeName.textContent = nameInput || monitorRecord.monitorName || "مراقب";
+            welcomeCode.textContent = currentCode;
+
+            // تحميل حالة هذا المراقب من localStorage (وصول/تصويت/صورة/مشكلة...)
+            const saved = localStorage.getItem(STATUS_KEY_PREFIX + currentCode);
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    statusData = Object.assign({
+                        arrived: false,
+                        voted: false,
+                        hasIssue: false,
+                        issueText: "",
+                        location: null,
+                        photoSent: false
+                    }, parsed);
+                } catch {}
+            }
+
+            localStorage.setItem("online_status_" + currentCode, "online");
+
+            updateStatusUI();
+            loginSection.style.display  = "none";
+            monitorSection.style.display = "block";
+
+        } catch (err) {
+            console.error(err);
+            loginError.textContent = "حدث خطأ أثناء الاتصال بالخادم، حاول مرة أخرى.";
             loginError.style.display = "block";
-            return;
         }
-
-        loginError.style.display = "none";
-
-        currentCode = code;
-        welcomeName.textContent = nameInput || monitorRecord.name || "مراقب";
-        welcomeCode.textContent = currentCode;
-
-        const saved = localStorage.getItem(STATUS_KEY_PREFIX + currentCode);
-        if (saved) {
-            try {
-                const parsed = JSON.parse(saved);
-                statusData = Object.assign({
-                    arrived: false,
-                    voted: false,
-                    hasIssue: false,
-                    issueText: "",
-                    location: null,
-                    photoSent: false
-                }, parsed);
-            } catch {}
-        }
-
-        localStorage.setItem("online_status_" + currentCode, "online");
-
-        updateStatusUI();
-        loginSection.style.display  = "none";
-        monitorSection.style.display = "block";
     });
 
     function saveStatus() {
@@ -437,15 +460,12 @@
         btnIssue.classList.toggle('inactive', statusData.hasIssue);
     }
 
-    // 🔥🔥 فقرة زر الإبلاغ عن مشكلة (المعدّلة بالكامل حسب طلبك)
+    // زر الإبلاغ عن مشكلة
     btnIssue.addEventListener('click', function () {
-
         if (!statusData.hasIssue) {
-
             const txt = prompt("اكتب وصف مختصر للمشكلة:");
 
             if (txt && txt.trim() !== "") {
-
                 statusData.hasIssue = true;
                 statusData.issueText = txt.trim();
 
@@ -463,11 +483,9 @@
                 updateStatusUI();
 
                 alert("✔ تم إرسال المشكلة إلى لوحة التحكم.");
-
             }
 
         } else {
-
             const confirmRemove = confirm("هل تريد إلغاء علامة المشكلة؟");
             if (!confirmRemove) return;
 
@@ -484,9 +502,7 @@
             saveStatus();
             updateStatusUI();
         }
-
     });
-    // END OF MODIFIED SECTION
 
     btnArrived.addEventListener('click', function () {
         statusData.arrived = !statusData.arrived;
@@ -527,7 +543,7 @@
                 updateStatusUI();
                 btnLocation.textContent = "📍 تم إرسال الموقع";
             },
-            (err) => {
+            () => {
                 alert("تعذر الحصول على الموقع.");
                 btnLocation.textContent = "📍 تشغيل الموقع (إرسال الإحداثيات)";
             }
