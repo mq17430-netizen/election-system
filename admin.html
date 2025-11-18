@@ -577,7 +577,9 @@
                 <a href="#" id="logoutLink">⬅ تسجيل الخروج</a>
             </div>
             <div class="top-right">
-                <div class="user-info">
+           
+
+                 <div class="user-info">
                     <div class="title">لوحة تحكم المستخدم</div>
                     <div class="welcome">مرحباً، <span id="currentUserLabel">مستخدم</span></div>
                 </div>
@@ -708,7 +710,24 @@
     </div>
 </div>
 
+<!-- ✅ Firebase (Compat SDK) -->
+<script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore-compat.js"></script>
+
 <script>
+    // ✅ إعداد Firebase الخاص بمشروعك
+    const firebaseConfig = {
+        apiKey: "AIzaSyDdiudUa5jjcZDwJgYBbLdC-YBNQ5rlqvU",
+        authDomain: "election-system-9cbb8.firebaseapp.com",
+        projectId: "election-system-9cbb8",
+        storageBucket: "election-system-9cbb8.firebasestorage.app",
+        messagingSenderId: "886706894008",
+        appId: "1:886706894008:web:270556771843614e56b04d"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
     // ===== عناصر عامة =====
     const loginSection     = document.getElementById('loginSection');
     const dashboardSection = document.getElementById('dashboardSection');
@@ -741,11 +760,46 @@
         dashboardSection.style.display = 'block';
     }
 
+    // ✅ تحميل المراقبين من Firestore حسب المستخدم الحالي
+    function loadMonitorsFromFirestore() {
+        if (!currentUserName) return;
+
+        db.collection('monitors')
+          .where('adminUsername', '==', currentUserName)
+          .get()
+          .then((snapshot) => {
+              const loaded = [];
+              snapshot.forEach((doc) => {
+                  const data = doc.data();
+                  loaded.push({
+                      id: doc.id,
+                      name:  data.monitorName  || '',
+                      phone: data.monitorPhone || '',
+                      center:data.monitorCenter|| '',
+                      code:  data.monitorCode  || '',
+                      arrived:   data.arrived   || false,
+                      voted:     data.voted     || false,
+                      hasIssue:  data.hasIssue  || false,
+                      issueText: data.issueText || '',
+                      online:    data.online    || false
+                  });
+              });
+              monitors = loaded;
+              // نخزن نسخة محلياً أيضاً (للاحتياط)
+              saveMonitors();
+              renderMonitors(document.getElementById('searchInput').value);
+          })
+          .catch((err) => {
+              console.error("خطأ في جلب المراقبين من Firestore:", err);
+          });
+    }
+
     function initForUser(username) {
         currentUserName = username;
         currentUserLabel.textContent = username;
         STORAGE_KEY = 'monitors_' + currentUserName;
 
+        // نحاول نقرأ النسخة المحلية (قديمة) أولاً
         try {
             monitors = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
         } catch (e) {
@@ -753,6 +807,8 @@
         }
 
         renderMonitors();
+        // ثم نطلب النسخة الأحدث من Firestore
+        loadMonitorsFromFirestore();
     }
 
     // تسجيل الدخول
@@ -850,17 +906,17 @@
 
             row.innerHTML = `
                 <div class="monitor-name">
-                    <div class="monitor-avatar">${m.name.charAt(0) || '?'}</div>
+                    <div class="monitor-avatar">${m.name ? m.name.charAt(0) : '?'}</div>
                     <div>
-                        <div>${m.name}</div>
-                        <small>${m.phone}</small>
+                        <div>${m.name || '-'}</div>
+                        <small>${m.phone || ''}</small>
                     </div>
                 </div>
 
-                <div>${m.center}</div>
+                <div>${m.center || '-'}</div>
 
                 <div>
-                    <code style="background:#f1f3fa; padding:2px 6px; border-radius:6px; font-size:11px;">${m.code}</code>
+                    <code style="background:#f1f3fa; padding:2px 6px; border-radius:6px; font-size:11px;">${m.code || '-'}</code>
                 </div>
 
                 <div>
@@ -875,7 +931,7 @@
                     </span>
                 </div>
 
-                <!-- 🔶 فقرة "توجد مشكلة" المعدّلة: تستقبل من صفحة المراقب -->
+                <!-- "توجد مشكلة" -->
                 <div>
                     <span
                         class="bool-icon ${m.hasIssue ? 'true' : 'neutral'}"
@@ -886,7 +942,6 @@
                         ${m.hasIssue ? '⚠' : '—'}
                     </span>
                 </div>
-                <!-- نهاية الفقرة المعدّلة -->
 
                 <div>
                     <span class="badge-status ${m.online ? 'online' : 'offline'}" data-action="toggleOnline" data-index="${idx}">
@@ -973,29 +1028,57 @@
         if (e.target === modalBackdrop) closeModal();
     });
 
+    // ✅ إضافة مراقب جديد: نخزّنه في Firestore + في الذاكرة + نحفظ نسخة محلياً
     addMonitorForm.addEventListener('submit', function (e) {
         e.preventDefault();
+        if (!currentUserName) {
+            alert("يجب تسجيل دخول المستخدم أولاً.");
+            return;
+        }
+
         const name   = document.getElementById('monitorName').value.trim();
         const phone  = document.getElementById('monitorPhone').value.trim();
         const center = document.getElementById('monitorCenter').value.trim();
         const code   = document.getElementById('monitorCode').value.trim();
         if (!name || !phone || !center || !code) return;
 
-        monitors.push({
-            name,
-            phone,
-            center,
-            code,
-            arrived: false,
-            voted: false,
-            hasIssue: false,
+        const docData = {
+            adminUsername: currentUserName,
+            monitorName:   name,
+            monitorPhone:  phone,
+            monitorCenter: center,
+            monitorCode:   code,
+            arrived:   false,
+            voted:     false,
+            hasIssue:  false,
             issueText: '',
-            online: false
-        });
+            online:    false
+        };
 
-        saveMonitors();
-        renderMonitors(document.getElementById('searchInput').value);
-        closeModal();
+        db.collection('monitors').add(docData)
+          .then((docRef) => {
+              monitors.push({
+                  id: docRef.id,
+                  name,
+                  phone,
+                  center,
+                  code,
+                  arrived: false,
+                  voted: false,
+                  hasIssue: false,
+                  issueText: '',
+                  online: false
+              });
+
+              saveMonitors();
+              renderMonitors(document.getElementById('searchInput').value);
+              closeModal();
+              alert("تم حفظ المراقب وتخزينه في النظام.");
+          })
+          .catch((err) => {
+              console.error("خطأ في حفظ المراقب في Firestore:", err);
+              alert("حدث خطأ أثناء حفظ المراقب، حاول مرة أخرى.");
+          });
     });
 
     // التعامل مع الإجراءات
@@ -1012,7 +1095,6 @@
         } else if (action === 'toggleVoted') {
             m.voted = !m.voted;
 
-        // 🔶 بدل toggleIssue صار viewIssue فقط (المشكلة تأتي من صفحة المراقب)
         } else if (action === 'viewIssue') {
             if (m.hasIssue) {
                 alert(
@@ -1028,6 +1110,12 @@
 
         } else if (action === 'deleteMonitor') {
             if (confirm('هل تريد حذف هذا المراقب؟')) {
+                // نحذفه من Firestore أيضاً إذا له id
+                if (m.id) {
+                    db.collection('monitors').doc(m.id).delete().catch(err => {
+                        console.error("خطأ في حذف المراقب من Firestore:", err);
+                    });
+                }
                 monitors.splice(index, 1);
             }
 
@@ -1083,7 +1171,7 @@
         renderMonitors(document.getElementById('searchInput').value);
     });
 
-    // تحديث حالة الاتصال والوصول/التصويت + قراءة المشكلة من صفحة المراقب
+    // تحديث حالة الاتصال والوصول/التصويت + قراءة المشكلة من صفحة المراقب (لا زالت محلية)
     function updateOnlineStatusAuto() {
         if (!currentUserName || !STORAGE_KEY) return;
 
