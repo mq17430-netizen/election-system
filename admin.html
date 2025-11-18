@@ -8,464 +8,139 @@
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
 
     <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: 'Cairo', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: #f4f6fb;
-            min-height: 100vh;
-        }
-
-        .page {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 16px 20px 40px;
-        }
-
-        .top-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 18px;
-        }
-
-        .top-left a {
-            font-size: 13px;
-            text-decoration: none;
-            color: #555;
-        }
-
-        .top-left a:hover {
-            text-decoration: underline;
-        }
-
-        .admin-info {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .admin-icon {
-            width: 42px;
-            height: 42px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #00c853, #1a9bff);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #fff;
-            font-size: 22px;
-        }
-
-        .admin-text .title {
-            font-size: 16px;
-            font-weight: 700;
-        }
-
-        .admin-text .welcome {
-            font-size: 12px;
-            color: #777;
-        }
-
-        .card {
-            background: #fff;
-            border-radius: 16px;
-            box-shadow: 0 8px 18px rgba(15, 34, 58, 0.08);
-            padding: 18px 20px;
-            margin-bottom: 16px;
-        }
-
-        .card-header {
-            margin-bottom: 10px;
-        }
-
-        .card-header h2 {
-            font-size: 16px;
-            font-weight: 700;
-            margin-bottom: 4px;
-        }
-
-        .card-header p {
-            font-size: 12px;
-            color: #777;
-        }
-
-        .form-row {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-top: 10px;
-        }
-
-        .form-group {
-            flex: 1;
-            min-width: 180px;
-        }
-
-        .form-group label {
-            display: block;
-            font-size: 12px;
-            margin-bottom: 3px;
-            color: #555;
-        }
-
-        .form-group input {
-            width: 100%;
-            padding: 8px 10px;
-            border-radius: 10px;
-            border: 1px solid #dde2ef;
-            font-size: 13px;
-            outline: none;
-        }
-
-        .form-group input:focus {
-            border-color: #1a9bff;
-            box-shadow: 0 0 0 3px rgba(26,155,255,0.12);
-        }
-
-        .code-box input {
-            font-family: "Consolas", monospace;
-            text-align: center;
-            font-weight: 700;
-        }
-
-        .btn-primary {
-            margin-top: 16px;
-            padding: 9px 22px;
-            border-radius: 14px;
-            border: none;
-            background: linear-gradient(90deg, #00c853, #1a9bff, #0066ff);
-            color: #fff;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            box-shadow: 0 8px 18px rgba(0, 102, 255, 0.25);
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-1px);
-        }
-
-        .hint {
-            font-size: 11px;
-            color: #999;
-            margin-top: 6px;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 13px;
-            margin-top: 10px;
-        }
-
-        th, td {
-            padding: 8px 6px;
-            border-bottom: 1px solid #edf0f7;
-            text-align: center;
-        }
-
-        th {
-            font-size: 12px;
-            color: #777;
-        }
-
-        tbody tr:hover {
-            background: #fafbff;
-        }
-
-        .badge {
-            display: inline-block;
-            padding: 3px 8px;
-            border-radius: 999px;
-            font-size: 12px;
-            background: #f1f3fa;
-        }
-
-        .action-icon {
-            cursor: pointer;
-            font-size: 16px;
-        }
-
-        .no-data {
-            text-align: center;
-            font-size: 12px;
-            color: #888;
-            padding: 8px 0;
-        }
-
-        @media (max-width: 700px) {
-            .card {
-                padding: 14px;
-            }
-        }
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{font-family:'Cairo',sans-serif;background:#f4f6fb;}
+        .page{max-width:1200px;margin:0 auto;padding:20px;}
+        .top-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;}
+        .admin-info{display:flex;align-items:center;gap:10px;}
+        .admin-icon{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#00c853,#1a9bff);color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;}
+        .card{background:#fff;border-radius:16px;box-shadow:0 8px 18px rgba(15,34,58,0.08);padding:20px;margin-bottom:20px;}
+        label{font-size:12px;color:#555;margin-bottom:3px;display:block;}
+        input{width:100%;padding:8px 10px;border-radius:10px;border:1px solid #dde2ef;font-size:13px;outline:none;}
+        input:focus{border-color:#1a9bff;box-shadow:0 0 0 3px rgba(26,155,255,0.12);}
+        .btn-primary{padding:10px 20px;border:none;border-radius:12px;background:linear-gradient(90deg,#00c853,#1a9bff,#0066ff);color:white;font-weight:600;font-size:14px;cursor:pointer;box-shadow:0 6px 14px rgba(0,102,255,0.25);}
+        table{width:100%;border-collapse:collapse;margin-top:10px;}
+        th,td{padding:8px;border-bottom:1px solid #eee;text-align:center;}
+        th{color:#777;}
+        .badge{padding:4px 8px;border-radius:999px;background:#f1f3fa;font-size:12px;}
+        .action-icon{cursor:pointer;font-size:16px;}
     </style>
 </head>
 <body>
 
 <div class="page">
-    <!-- الشريط العلوي -->
+
     <div class="top-bar">
         <div class="admin-info">
             <div class="admin-icon">🛠️</div>
-            <div class="admin-text">
-                <div class="title">لوحة مدير البرنامج</div>
-                <div class="welcome">مرحباً، المهندس مختار قاسم</div>
+            <div>
+                <div style="font-weight:700;">لوحة مدير البرنامج</div>
+                <div style="font-size:12px;color:#777;">مرحباً، المهندس مختار قاسم</div>
             </div>
         </div>
-        <div class="top-left">
-            <!-- تقدر تربطها لاحقاً بصفحة login الرئيسية إذا تحب -->
-            <a href="index.html">⬅ رجوع إلى صفحة المستخدمين</a>
+        <a href="index.html">⬅ رجوع لصفحة المستخدم</a>
+    </div>
+
+    <div class="card">
+        <h3>إنشاء مستخدم جديد</h3>
+        <div style="margin-top:10px;">
+            <label>اسم المستخدم</label>
+            <input id="username">
+            <label style="margin-top:10px;">ملاحظة</label>
+            <input id="note">
+            <label style="margin-top:10px;">الكود (يتولد تلقائياً)</label>
+            <input id="password" readonly>
+            <button class="btn-primary" style="margin-top:15px;" id="addUser">إضافة مستخدم</button>
         </div>
     </div>
 
-    <!-- كارت إنشاء مستخدم جديد للنظام -->
     <div class="card">
-        <div class="card-header">
-            <h2>إنشاء مستخدم جديد للنظام</h2>
-            <p>من هنا تولد حساب للمستخدم (مسؤول مركز، مشرف محافظة، ...). يحصل على اسم مستخدم + كود دخول، وبواسطته يفتح صفحته الخاصة لإدارة المراقبين.</p>
-        </div>
-
-        <div class="form-row">
-            <div class="form-group">
-                <label>اسم المستخدم (خاص بالمستخدم)</label>
-                <input type="text" id="userNameInput" placeholder="مثال: basim01" />
-            </div>
-
-            <div class="form-group">
-                <label>ملاحظة عن المستخدم</label>
-                <input type="text" id="userNoteInput" placeholder="مثال: مشرف الرميثة / قضاء كذا" />
-            </div>
-
-            <div class="form-group code-box">
-                <label>الكود / كلمة المرور (يتولد تلقائياً)</label>
-                <input type="text" id="userCodeInput" readonly />
-            </div>
-        </div>
-
-        <button class="btn-primary" id="addUserBtn">إضافة مستخدم وتوليد الكود</button>
-
-        <div class="hint">
-            🔹 احفظ اسم المستخدم مع الكود، وارسله لصاحب الحساب.<br>
-            🔹 في صفحة الدخول، عندما يكتب نفس الاسم والكود، يتم إدخاله على لوحة التحكم الخاصة به (قائمة المراقبين).
-        </div>
-    </div>
-
-    <!-- كارت قائمة المستخدمين -->
-    <div class="card">
-        <div class="card-header">
-            <h2>قائمة المستخدمين المسجَّلين</h2>
-            <p>يتم تخزين البيانات في قاعدة بيانات Firebase Firestore، مع نسخة احتياطية محلياً داخل المتصفح (localStorage).</p>
-        </div>
-
-        <div style="overflow-x:auto; margin-top:8px;">
-            <table>
-                <thead>
+        <h3>قائمة المستخدمين</h3>
+        <table>
+            <thead>
                 <tr>
-                    <th>#</th>
-                    <th>اسم المستخدم</th>
-                    <th>الكود / كلمة المرور</th>
-                    <th>الملاحظة</th>
-                    <th>الإجراءات</th>
+                    <th>#</th><th>اسم المستخدم</th><th>الكود</th><th>ملاحظة</th><th>إجراء</th>
                 </tr>
-                </thead>
-                <tbody id="usersTableBody">
-                </tbody>
-            </table>
-        </div>
-        <div id="noUsersMsg" class="no-data">لا توجد حسابات مستخدمين بعد.</div>
+            </thead>
+            <tbody id="usersTable"></tbody>
+        </table>
     </div>
+
 </div>
 
-<!-- 🔥 ربط Firebase + Firestore + منطق إنشاء / حذف المستخدمين -->
 <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
-    import {
-        getFirestore,
-        collection,
-        getDocs,
-        addDoc,
-        deleteDoc,
-        doc
-    } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
 
-    const firebaseConfig = {
-        apiKey: "AIzaSyDdiudUa5jjcZDwJgYBbLdC-YBNQ5rlqvU",
-        authDomain: "election-system-9cbb8.firebaseapp.com",
-        projectId: "election-system-9cbb8",
-        storageBucket: "election-system-9cbb8.firebasestorage.app",
-        messagingSenderId: "886706894008",
-        appId: "1:886706894008:web:270556771843614e56b04d"
-    };
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
+import {
+    getFirestore, collection, addDoc, getDocs, deleteDoc, doc
+} from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
 
-    const app  = initializeApp(firebaseConfig);
-    const db   = getFirestore(app);
-    const usersColRef = collection(db, "systemUsers");
+const firebaseConfig = {
+    apiKey: "AIzaSyDdiudUa5jjcZDwJgYBbLdC-YBNQ5rlqvU",
+    authDomain: "election-system-9cbb8.firebaseapp.com",
+    projectId: "election-system-9cbb8",
+    storageBucket: "election-system-9cbb8.firebasestorage.app",
+    messagingSenderId: "886706894008",
+    appId: "1:886706894008:web:270556771843614e56b04d"
+};
 
-    const SYSTEM_USERS_KEY = "systemUsers";
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
+const col = collection(db,"systemUsers");
 
-    const userNameInput  = document.getElementById('userNameInput');
-    const userNoteInput  = document.getElementById('userNoteInput');
-    const userCodeInput  = document.getElementById('userCodeInput');
-    const addUserBtn     = document.getElementById('addUserBtn');
-    const usersTableBody = document.getElementById('usersTableBody');
-    const noUsersMsg     = document.getElementById('noUsersMsg');
+const username = document.getElementById("username");
+const note = document.getElementById("note");
+const password = document.getElementById("password");
+const usersTable = document.getElementById("usersTable");
 
-    let systemUsers = [];
+function generateCode(){
+    let L="ABCDEFGHJKLMNPQRSTUVWXYZ",D="0123456789",c="";
+    for(let i=0;i<3;i++) c+=L[Math.floor(Math.random()*L.length)];
+    for(let i=0;i<2;i++) c+=D[Math.floor(Math.random()*D.length)];
+    return c;
+}
+password.value = generateCode();
 
-    function generateUserCode() {
-        const letters = "ABCDEFGHJKLMNPQRSTUVWXYZ";
-        const digits  = "0123456789";
-        let code = "";
-        for (let i = 0; i < 3; i++) {
-            code += letters[Math.floor(Math.random() * letters.length)];
-        }
-        for (let i = 0; i < 2; i++) {
-            code += digits[Math.floor(Math.random() * digits.length)];
-        }
-        return code;
-    }
-
-    function resetCodeField() {
-        userCodeInput.value = generateUserCode();
-    }
-
-    function saveSystemUsersToLocal() {
-        localStorage.setItem(SYSTEM_USERS_KEY, JSON.stringify(systemUsers));
-    }
-
-    function renderUsersTable() {
-        usersTableBody.innerHTML = '';
-
-        if (!systemUsers || systemUsers.length === 0) {
-            noUsersMsg.style.display = 'block';
-            return;
-        }
-        noUsersMsg.style.display = 'none';
-
-        systemUsers.forEach((u, index) => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${index + 1}</td>
+async function loadUsers(){
+    usersTable.innerHTML="";
+    const snap = await getDocs(col);
+    let i=1;
+    snap.forEach(docu=>{
+        let u = docu.data();
+        usersTable.innerHTML += `
+            <tr>
+                <td>${i++}</td>
                 <td>${u.username}</td>
                 <td><span class="badge">${u.password}</span></td>
-                <td>${u.note || ''}</td>
-                <td>
-                    <span class="action-icon"
-                          data-action="delete"
-                          data-index="${index}"
-                          title="حذف المستخدم">🗑️</span>
-                </td>
-            `;
-            usersTableBody.appendChild(tr);
-        });
-    }
-
-    async function loadSystemUsersFromFirestore() {
-        try {
-            const snapshot = await getDocs(usersColRef);
-            const result = [];
-            snapshot.forEach(docSnap => {
-                const data = docSnap.data();
-                result.push({
-                    id: docSnap.id,
-                    username: data.username,
-                    password: data.password,
-                    note: data.note || ""
-                });
-            });
-
-            systemUsers = result;
-            saveSystemUsersToLocal();
-            renderUsersTable();
-        } catch (e) {
-            console.error("خطأ في جلب المستخدمين من Firestore:", e);
-            try {
-                systemUsers = JSON.parse(localStorage.getItem(SYSTEM_USERS_KEY) || "[]");
-            } catch {
-                systemUsers = [];
-            }
-            renderUsersTable();
-        } finally {
-            resetCodeField();
-        }
-    }
-
-    addUserBtn.addEventListener('click', async () => {
-        const username = userNameInput.value.trim();
-        const note     = userNoteInput.value.trim();
-        const password = userCodeInput.value.trim();
-
-        if (!username) {
-            alert('يرجى إدخال اسم المستخدم.');
-            return;
-        }
-
-        const exists = systemUsers.some(
-            u => u.username.toLowerCase() === username.toLowerCase()
-        );
-        if (exists) {
-            alert('اسم المستخدم هذا مسجَّل مسبقاً. اختر اسماً آخر.');
-            return;
-        }
-
-        try {
-            const docRef = await addDoc(usersColRef, {
-                username,
-                password,
-                note
-            });
-
-            systemUsers.push({
-                id: docRef.id,
-                username,
-                password,
-                note
-            });
-
-            saveSystemUsersToLocal();
-            renderUsersTable();
-
-            userNameInput.value = '';
-            userNoteInput.value = '';
-            resetCodeField();
-
-            alert('تم إنشاء المستخدم بنجاح. لا تنسَ تسليم اسم المستخدم والكود لصاحب الحساب.');
-        } catch (e) {
-            console.error("خطأ في إضافة المستخدم إلى Firestore:", e);
-            alert('حدث خطأ أثناء الحفظ في قاعدة البيانات. تحقق من الاتصال بالإنترنت ثم أعد المحاولة.');
-        }
+                <td>${u.note||""}</td>
+                <td><span class="action-icon" onclick="deleteUser('${docu.id}')">🗑️</span></td>
+            </tr>
+        `;
     });
+}
+loadUsers();
 
-    usersTableBody.addEventListener('click', async (e) => {
-        const action = e.target.dataset.action;
-        if (action !== 'delete') return;
-
-        const index = parseInt(e.target.dataset.index, 10);
-        if (isNaN(index) || !systemUsers[index]) return;
-
-        if (!confirm('هل تريد حذف هذا المستخدم؟')) return;
-
-        const user = systemUsers[index];
-
-        try {
-            if (user.id) {
-                await deleteDoc(doc(db, "systemUsers", user.id));
-            }
-            systemUsers.splice(index, 1);
-            saveSystemUsersToLocal();
-            renderUsersTable();
-        } catch (e) {
-            console.error("خطأ في حذف المستخدم من Firestore:", e);
-            alert('حدث خطأ أثناء الحذف من قاعدة البيانات.');
-        }
+document.getElementById("addUser").onclick = async()=>{
+    if(!username.value.trim()){ alert("اكتب اسم المستخدم"); return; }
+    await addDoc(col,{
+        username: username.value.trim(),
+        password: password.value.trim(),
+        note: note.value.trim()
     });
+    alert("تمت إضافة المستخدم");
+    username.value="";
+    note.value="";
+    password.value=generateCode();
+    loadUsers();
+};
 
-    loadSystemUsersFromFirestore();
+window.deleteUser = async(id)=>{
+    if(confirm("حذف المستخدم؟")){
+        await deleteDoc(doc(db,"systemUsers",id));
+        loadUsers();
+    }
+};
+
 </script>
 
 </body>
