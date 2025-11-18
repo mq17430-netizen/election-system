@@ -167,24 +167,6 @@
             color: #777;
         }
 
-        .top-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-        }
-
-        .logout-btn {
-            border: none;
-            background: transparent;
-            color: #666;
-            font-size: 13px;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-        }
-
         .btn-action {
             width: 100%;
             border: none;
@@ -207,6 +189,7 @@
         .btn-issue   { background: linear-gradient(90deg, #ff9800, #f44336); }
         .btn-loc     { background: linear-gradient(90deg, #ff9800, #ff5722); }
         .btn-photo   { background: linear-gradient(90deg, #7b1fa2, #512da8); }
+        .btn-logout  { background: #eeeeee; color:#333; }
 
         .btn-action.inactive {
             opacity: 0.5;
@@ -280,11 +263,6 @@
 <!-- لوحة المراقب بعد تسجيل الدخول -->
 <div id="monitorSection">
     <div class="card">
-        <div class="top-row">
-            <div></div>
-            <button id="btnLogout" class="logout-btn">⬅ تسجيل الخروج</button>
-        </div>
-
         <div class="monitor-header">
             <h2>لوحة المراقب</h2>
             <p>
@@ -295,16 +273,20 @@
 
         <!-- الأزرار -->
         <button id="btnArrived" class="btn-action btn-arrived">✅ تم الوصول إلى مركز الاقتراع</button>
-        <button id="btnVoted" class="btn-action btn-voted">🗳 تم التصويت</button>
+        <button id="btnVoted"   class="btn-action btn-voted">🗳 تم التصويت</button>
+        <button id="btnIssue"   class="btn-action btn-issue">⚠ الإبلاغ عن مشكلة</button>
+        <button id="btnLocation"class="btn-action btn-loc">📍 تشغيل الموقع (إرسال الإحداثيات)</button>
 
-        <!-- زر الإبلاغ عن مشكلة -->
-        <button id="btnIssue" class="btn-action btn-issue">⚠ الإبلاغ عن مشكلة</button>
-
-        <button id="btnLocation" class="btn-action btn-loc">📍 تشغيل الموقع (إرسال الإحداثيات)</button>
-
-        <!-- زر التقاط / رفع صورة -->
-        <button id="btnPhoto" class="btn-action btn-photo" type="button">📷 التقاط / رفع صورة الشريط</button>
+        <!-- زر الصورة (يفتح الكاميرا/الاستوديو) -->
+        <button id="btnPhoto" class="btn-action btn-photo" type="button">
+            📷 التقاط / رفع صورة الشريط
+        </button>
         <input id="photoInput" type="file" accept="image/*" capture="environment">
+
+        <!-- زر تسجيل الخروج -->
+        <button id="btnLogout" class="btn-action btn-logout" type="button">
+            🚪 تسجيل الخروج
+        </button>
 
         <div class="status-box" id="statusBox">
             <div><span class="label">حالة الوصول:</span> لم يتم التحديث بعد.</div>
@@ -321,6 +303,7 @@
 <!-- مكتبات Firebase (نسخة compat تناسب صفحة HTML عادية) -->
 <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-storage-compat.js"></script>
 
 <script>
     // إعداد Firebase الخاص بمشروعك
@@ -334,7 +317,8 @@
     };
 
     firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+    const db       = firebase.firestore();
+    const storage  = firebase.storage();
 
     // دالة تجيب المراقب من Firestore حسب الكود
     async function findMonitorByCodeOnline(code) {
@@ -353,27 +337,26 @@
     const loginSection   = document.getElementById('loginSection');
     const monitorSection = document.getElementById('monitorSection');
 
-    const loginForm  = document.getElementById('monitorLoginForm');
-    const loginError = document.getElementById('loginError');
+    const loginForm   = document.getElementById('monitorLoginForm');
+    const loginError  = document.getElementById('loginError');
 
     const welcomeName = document.getElementById('welcomeName');
     const welcomeCode = document.getElementById('welcomeCode');
 
-    const btnArrived  = document.getElementById('btnArrived');
-    const btnVoted    = document.getElementById('btnVoted');
-    const btnIssue    = document.getElementById('btnIssue');
-    const btnLocation = document.getElementById('btnLocation');
-    const btnPhoto    = document.getElementById('btnPhoto');
-    const btnLogout   = document.getElementById('btnLogout');
+    const btnArrived   = document.getElementById('btnArrived');
+    const btnVoted     = document.getElementById('btnVoted');
+    const btnIssue     = document.getElementById('btnIssue');
+    const btnLocation  = document.getElementById('btnLocation');
+    const btnPhoto     = document.getElementById('btnPhoto');
+    const btnLogout    = document.getElementById('btnLogout');
+    const photoInput   = document.getElementById('photoInput');
+    const statusBox    = document.getElementById('statusBox');
+    const photoPreview = document.getElementById('photoPreview');
 
-    const photoInput  = document.getElementById('photoInput');
-    const statusBox   = document.getElementById('statusBox');
-    const photoPreview= document.getElementById('photoPreview');
+    let currentCode        = "";
+    let currentMonitorDocId= null;
 
-    let currentCode = "";
-    let currentMonitorId = null; // 🔴 لحفظ ID وثيقة المراقب في Firestore
-
-    const initialStatus = {
+    const defaultStatus = {
         arrived: false,
         voted: false,
         hasIssue: false,
@@ -382,7 +365,7 @@
         photoSent: false
     };
 
-    let statusData = { ...initialStatus };
+    let statusData = { ...defaultStatus };
 
     const STATUS_KEY_PREFIX = "monitor_status_";
 
@@ -410,26 +393,29 @@
 
             loginError.style.display = "none";
 
-            currentCode = code;
-            currentMonitorId = monitorRecord.id || null;
+            currentCode         = code;
+            currentMonitorDocId = monitorRecord.id;
 
             welcomeName.textContent = nameInput || monitorRecord.monitorName || "مراقب";
             welcomeCode.textContent = currentCode;
 
             // تحميل حالة هذا المراقب من localStorage
-            statusData = { ...initialStatus };
             const saved = localStorage.getItem(STATUS_KEY_PREFIX + currentCode);
             if (saved) {
                 try {
                     const parsed = JSON.parse(saved);
-                    statusData = Object.assign({ ...initialStatus }, parsed);
-                } catch {}
+                    statusData = Object.assign({}, defaultStatus, parsed);
+                } catch {
+                    statusData = { ...defaultStatus };
+                }
+            } else {
+                statusData = { ...defaultStatus };
             }
 
             localStorage.setItem("online_status_" + currentCode, "online");
 
             updateStatusUI();
-            loginSection.style.display  = "none";
+            loginSection.style.display   = "none";
             monitorSection.style.display = "block";
 
         } catch (err) {
@@ -437,32 +423,6 @@
             loginError.textContent = "حدث خطأ أثناء الاتصال بالخادم، حاول مرة أخرى.";
             loginError.style.display = "block";
         }
-    });
-
-    // 🔚 تسجيل خروج المراقب
-    btnLogout.addEventListener('click', function () {
-        if (currentCode) {
-            localStorage.setItem("online_status_" + currentCode, "offline");
-        }
-        currentCode = "";
-        currentMonitorId = null;
-        statusData = { ...initialStatus };
-
-        loginForm.reset();
-        document.getElementById('monitorCode').value = "";
-        loginError.style.display = "none";
-        photoPreview.innerHTML = "";
-
-        // إعادة نص الحالة الافتراضي
-        const defaultLines = statusBox.querySelectorAll('div');
-        defaultLines[0].innerHTML = '<span class="label">حالة الوصول:</span> لم يتم التحديث بعد.';
-        defaultLines[1].innerHTML = '<span class="label">حالة التصويت:</span> لم يتم التحديث بعد.';
-        defaultLines[2].innerHTML = '<span class="label">آخر موقع مرسل:</span> لا يوجد.';
-        defaultLines[3].innerHTML = '<span class="label">حالة المشكلة:</span> لا توجد مشكلة مبلَّغة.';
-        defaultLines[4].innerHTML = '<span class="label">حالة الصورة:</span> لم تُرسل صورة بعد.';
-
-        monitorSection.style.display = "none";
-        loginSection.style.display = "block";
     });
 
     function saveStatus() {
@@ -508,27 +468,12 @@
 
     // زر الإبلاغ عن مشكلة
     btnIssue.addEventListener('click', function () {
-        if (!currentCode) {
-            alert("يجب تسجيل الدخول أولاً.");
-            return;
-        }
-
         if (!statusData.hasIssue) {
             const txt = prompt("اكتب وصف مختصر للمشكلة:");
 
             if (txt && txt.trim() !== "") {
                 statusData.hasIssue = true;
                 statusData.issueText = txt.trim();
-
-                localStorage.setItem(
-                    "monitor_status_" + currentCode,
-                    JSON.stringify(statusData)
-                );
-
-                localStorage.setItem(
-                    "monitor_issue_" + currentCode,
-                    statusData.issueText
-                );
 
                 saveStatus();
                 updateStatusUI();
@@ -543,35 +488,24 @@
             statusData.hasIssue = false;
             statusData.issueText = "";
 
-            localStorage.removeItem("monitor_issue_" + currentCode);
-
-            localStorage.setItem(
-                "monitor_status_" + currentCode,
-                JSON.stringify(statusData)
-            );
-
             saveStatus();
             updateStatusUI();
         }
     });
 
     btnArrived.addEventListener('click', function () {
-        if (!currentCode) { alert("يجب تسجيل الدخول أولاً."); return; }
         statusData.arrived = !statusData.arrived;
         saveStatus();
         updateStatusUI();
     });
 
     btnVoted.addEventListener('click', function () {
-        if (!currentCode) { alert("يجب تسجيل الدخول أولاً."); return; }
         statusData.voted = !statusData.voted;
         saveStatus();
         updateStatusUI();
     });
 
     btnLocation.addEventListener('click', function () {
-        if (!currentCode) { alert("يجب تسجيل الدخول أولاً."); return; }
-
         if (!navigator.geolocation) {
             alert("المتصفح لا يدعم تحديد الموقع.");
             return;
@@ -605,40 +539,48 @@
         );
     });
 
-    // 👈 هذا الزر يفتح كاميرا الموبايل / معرض الصور
+    // 🔸 زر الكاميرا/الصورة -> يفتح input المخفي (في الموبايل يفتح الكاميرا)
     btnPhoto.addEventListener('click', function () {
-        if (!currentCode) {
-            alert("يجب تسجيل الدخول أولاً.");
-            return;
-        }
-        photoInput.click(); // يفتح الكاميرا (بسبب capture=environment) أو المعرض حسب الجهاز
+        photoInput.click();
     });
 
+    // عند اختيار/التقاط صورة
     photoInput.addEventListener('change', function () {
         const file = this.files[0];
-        if (!file || !currentCode) return;
+        if (!file) return;
 
         const reader = new FileReader();
-        reader.onload = async function (e) {
+        reader.onload = function (e) {
             const dataUrl = e.target.result;
 
             statusData.photoSent = true;
             saveStatus();
             updateStatusUI();
 
-            // نخزن نسخة محلية (تُستخدم لو حبيت من نفس الجهاز)
-            localStorage.setItem("monitor_photo_" + currentCode, dataUrl);
+            if (currentCode) {
+                // نخزن نسخة محلياً (للنسخة اللي تعتمد localStorage)
+                localStorage.setItem("monitor_photo_" + currentCode, dataUrl);
+            }
 
-            // نرسل الصورة إلى Firestore داخل وثيقة هذا المراقب (حتى يقدر الأدمن يستلمها)
-            if (currentMonitorId) {
-                try {
-                    await db.collection("monitors").doc(currentMonitorId).update({
-                        photoData: dataUrl,
-                        photoUploadedAt: firebase.firestore.FieldValue.serverTimestamp()
+            // نرفع الصورة إلى Firebase Storage ونخزن الرابط في مستند المراقب
+            if (currentMonitorDocId) {
+                const fileName  = currentCode + "_" + Date.now() + ".jpg";
+                const storageRef = storage.ref("monitorStrips/" + fileName);
+
+                storageRef.putString(dataUrl, 'data_url')
+                    .then(snap => snap.ref.getDownloadURL())
+                    .then(url => {
+                        return db.collection("monitors")
+                                 .doc(currentMonitorDocId)
+                                 .update({
+                                     photoUrl: url,
+                                     photoSent: true,
+                                     photoUpdatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                                 });
+                    })
+                    .catch(err => {
+                        console.error("خطأ في رفع الصورة أو تحديث Firestore:", err);
                     });
-                } catch (err) {
-                    console.error("خطأ في حفظ الصورة في Firestore:", err);
-                }
             }
 
             photoPreview.innerHTML = `
@@ -649,6 +591,27 @@
         reader.readAsDataURL(file);
     });
 
+    // 🔚 زر تسجيل الخروج
+    btnLogout.addEventListener('click', function () {
+        if (currentCode) {
+            localStorage.setItem("online_status_" + currentCode, "offline");
+        }
+
+        currentCode         = "";
+        currentMonitorDocId = null;
+        statusData          = { ...defaultStatus };
+
+        // إرجاع الواجهة لحالة تسجيل الدخول
+        monitorSection.style.display = "none";
+        loginSection.style.display   = "block";
+
+        // تفريغ الحقول
+        document.getElementById('monitorCode').value = "";
+        document.getElementById('monitorName').value = "";
+        photoPreview.innerHTML = "";
+    });
+
+    // لو أغلق الصفحة نخليه أوفلاين
     window.addEventListener('beforeunload', function () {
         if (currentCode) {
             localStorage.setItem("online_status_" + currentCode, "offline");
