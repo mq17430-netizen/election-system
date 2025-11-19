@@ -140,7 +140,7 @@
         <label for="photoInput">
             <button class="btn-action btn-photo" type="button">📷 التقاط / رفع صورة</button>
         </label>
-        <!-- 🔴 هنا التعديل: السماح بأكثر من صورة -->
+        <!-- ⬅⬅ مهم: multiple + كامرة -->
         <input id="photoInput" type="file" accept="image/*" capture="environment" multiple>
 
         <div class="status-box" id="statusBox">
@@ -171,6 +171,8 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+
+const MAX_PHOTOS = 20;
 
 async function findMonitorByCodeOnline(code){
     const snap = await db.collection("monitors").where("code","==",code).limit(1).get();
@@ -219,23 +221,28 @@ loginForm.addEventListener("submit",async e=>{
     welcomeCode.textContent=currentCode;
 
     const saved=localStorage.getItem(STATUS_KEY+currentCode);
-    if(saved) statusData=JSON.parse(saved);
-
-    // نعلّم لوحة المستخدم أن هذا المراقب متصل
-    localStorage.setItem("online_status_"+currentCode,"online");
+    if(saved){
+        try{ statusData=JSON.parse(saved); }catch(e){}
+    }
 
     loginSection.style.display="none";
     monitorSection.style.display="block";
+
+    // علّم أنه أونلاين
+    localStorage.setItem("online_status_"+currentCode,"online");
+    updateUI();
 });
 
 // زر تسجيل خروج
 document.getElementById("logoutBtn").addEventListener("click",()=>{
-    localStorage.setItem("online_status_"+currentCode,"offline");
-    // لا نحذف حالة المراقب حتى تبقى الأيقونات ✓ ظاهرة
+    if(currentCode){
+        localStorage.setItem("online_status_"+currentCode,"offline");
+    }
+    // ما نمسح حالة الأزرار حتى المدير يظل يشوف آخر حالة
     location.reload();
 });
 
-// فتح الكاميرا / المعرض
+// فتح الكاميرا/المعرض
 document.querySelector(".btn-photo").addEventListener("click",()=>{
     photoInput.click();
 });
@@ -243,7 +250,11 @@ document.querySelector(".btn-photo").addEventListener("click",()=>{
 // حفظ التغييرات
 function saveStatus(){
     if(!currentCode) return;
-    localStorage.setItem(STATUS_KEY+currentCode,JSON.stringify(statusData));
+    try{
+        localStorage.setItem(STATUS_KEY+currentCode,JSON.stringify(statusData));
+    }catch(e){
+        alert("لا يمكن حفظ الحالة، مساحة التخزين في المتصفح ممتلئة.");
+    }
 }
 
 function updateUI(){
@@ -254,7 +265,7 @@ function updateUI(){
         statusData.location?statusData.location.lat.toFixed(4)+", "+statusData.location.lng.toFixed(4):"—"
     }`;
     lines[3].innerHTML=`<span class="label">المشكلة:</span> ${
-        statusData.hasIssue?statusData.issueText:"—"
+        statusData.hasIssue?(statusData.issueText||"مشكلة"): "—"
     }`;
     lines[4].innerHTML=`<span class="label">الصورة:</span> ${statusData.photoSent?"📷 موجودة":"—"}`;
 }
@@ -265,13 +276,25 @@ btnVoted.onclick=()=>{statusData.voted=!statusData.voted;saveStatus();updateUI()
 btnIssue.onclick=()=>{
     if(!statusData.hasIssue){
         const t=prompt("وصف المشكلة:");
-        if(t){statusData.hasIssue=true;statusData.issueText=t;saveStatus();updateUI();}
+        if(t){
+            statusData.hasIssue=true;
+            statusData.issueText=t.trim();
+            saveStatus();updateUI();
+        }
     }else{
-        statusData.hasIssue=false;statusData.issueText="";saveStatus();updateUI();
+        const ok=confirm("إلغاء علامة المشكلة؟");
+        if(!ok) return;
+        statusData.hasIssue=false;
+        statusData.issueText="";
+        saveStatus();updateUI();
     }
 };
 
 btnLocation.onclick=()=>{
+    if(!navigator.geolocation){
+        alert("المتصفح لا يدعم تحديد الموقع.");
+        return;
+    }
     navigator.geolocation.getCurrentPosition(
         pos=>{
             statusData.location={
@@ -279,60 +302,77 @@ btnLocation.onclick=()=>{
                 lng:pos.coords.longitude
             };
             saveStatus();updateUI();
+            if(currentCode){
+                try{
+                    localStorage.setItem("monitor_location_"+currentCode,JSON.stringify(statusData.location));
+                }catch(e){}
+            }
         },
         ()=>alert("فشل الحصول على الموقع")
     );
 };
 
-/* 🔴 هنا التعديل الكبير: دعم عدة صور + حد 20 صورة + معالجة امتلاء التخزين */
-photoInput.addEventListener("change",function(){
-    const files = Array.from(this.files || []);
-    if(!files.length || !currentCode) return;
+// 🟣 حفظ صورة واحدة في أحد الأماكن 1..20
+function saveOnePhoto(dataUrl){
+    if(!currentCode) return;
+    const baseKey = "monitor_photo_"+currentCode;
 
-    const baseKey   = "monitor_photo_" + currentCode;
-    const countKey  = "monitor_photo_count_" + currentCode;
-
-    let count = parseInt(localStorage.getItem(countKey) || "0", 10);
-    if(isNaN(count)) count = 0;
-
-    for(const file of files){
-        if(count >= 20){
-            alert("وصلت إلى الحد الأقصى (20 صورة) لهذا المراقب.");
+    // نحاول نلاقي اوّل خانة فاضية
+    let slot = -1;
+    for(let i=1;i<=MAX_PHOTOS;i++){
+        if(!localStorage.getItem(baseKey+"_"+i)){
+            slot = i;
             break;
         }
-
-        const reader = new FileReader();
-        reader.onload = (e)=>{
-            try{
-                count++;
-
-                // نخزن نسخة مرقمة
-                localStorage.setItem(baseKey + "_" + count, e.target.result);
-
-                // ونخلي آخر صورة أيضاً في المفتاح القديم للمتوافقية
-                localStorage.setItem(baseKey, e.target.result);
-
-                localStorage.setItem(countKey, String(count));
-
-                statusData.photoSent = true;
-                saveStatus();
-                updateUI();
-
-                // نعرض آخر صورة فقط (للتذكير)
-                photoPreview.innerHTML = `<img src="${e.target.result}" />`;
-            }catch(err){
-                console.error(err);
-                alert("لا يمكن حفظ الصورة، يبدو أن مساحة التخزين في المتصفح ممتلئة.\nامسح بعض الصور القديمة أو استخدم متصفحاً آخر.");
-            }
-        };
-        reader.readAsDataURL(file);
     }
 
-    // نفرغ القيمة حتى يسمح باختيار نفس الملف مرة ثانية لو أحب
+    // إذا كلها مليانة، نزحلق الصور (1 ← تمسح، 2→1، 3→2 ... 20→19، والجديدة تصير 20)
+    if(slot === -1){
+        try{
+            for(let i=1;i<MAX_PHOTOS;i++){
+                const next = localStorage.getItem(baseKey+"_"+(i+1));
+                if(next){
+                    localStorage.setItem(baseKey+"_"+i,next);
+                }
+            }
+            slot = MAX_PHOTOS;
+        }catch(e){
+            alert("لا يمكن حفظ الصورة، يبدو أن مساحة التخزين في المتصفح ممتلئة.");
+            return;
+        }
+    }
+
+    try{
+        localStorage.setItem(baseKey+"_"+slot,dataUrl);
+        // توافقاً مع الكود القديم: نخزن آخر صورة أيضاً بدون رقم
+        localStorage.setItem(baseKey,dataUrl);
+    }catch(e){
+        alert("لا يمكن حفظ الصورة، يبدو أن مساحة التخزين في المتصفح ممتلئة.");
+    }
+}
+
+// لما يختار صور (وحدة أو أكثر)
+photoInput.addEventListener("change",function(){
+    const files = Array.from(this.files || []);
+    if(!files.length) return;
+
+    files.forEach(file=>{
+        const reader=new FileReader();
+        reader.onload=e=>{
+            statusData.photoSent=true;
+            saveOnePhoto(e.target.result);
+            saveStatus();
+            updateUI();
+            photoPreview.innerHTML=`<img src="${e.target.result}" />`;
+        };
+        reader.readAsDataURL(file);
+    });
+
+    // نرجع نسمح باختيار نفس الصورة مرة ثانية إذا حب
     this.value = "";
 });
 
-// إذا أغلق المتصفح بدون ضغط تسجيل خروج نعتبره أوفلاين
+// لما يطلع من الصفحة نخزن أنه أوفلاين
 window.addEventListener("beforeunload",()=>{
     if(currentCode){
         localStorage.setItem("online_status_"+currentCode,"offline");
