@@ -140,7 +140,8 @@
         <label for="photoInput">
             <button class="btn-action btn-photo" type="button">📷 التقاط / رفع صورة</button>
         </label>
-        <input id="photoInput" type="file" accept="image/*" capture="environment">
+        <!-- 🔴 هنا التعديل: السماح بأكثر من صورة -->
+        <input id="photoInput" type="file" accept="image/*" capture="environment" multiple>
 
         <div class="status-box" id="statusBox">
             <div><span class="label">الوصول:</span> —</div>
@@ -171,234 +172,171 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// جلب المراقب من Firestore حسب الكود
 async function findMonitorByCodeOnline(code){
-    const snap = await db.collection("monitors")
-                         .where("code","==",code)
-                         .limit(1)
-                         .get();
-    if (snap.empty) return null;
+    const snap = await db.collection("monitors").where("code","==",code).limit(1).get();
+    if(snap.empty) return null;
     const d = snap.docs[0];
     return {id:d.id, ...d.data()};
 }
 
-const loginSection   = document.getElementById("loginSection");
-const monitorSection = document.getElementById("monitorSection");
+const loginSection=document.getElementById("loginSection");
+const monitorSection=document.getElementById("monitorSection");
 
-const loginForm  = document.getElementById("monitorLoginForm");
-const loginError = document.getElementById("loginError");
+const loginForm=document.getElementById("monitorLoginForm");
+const loginError=document.getElementById("loginError");
 
-const welcomeName = document.getElementById("welcomeName");
-const welcomeCode = document.getElementById("welcomeCode");
+const welcomeName=document.getElementById("welcomeName");
+const welcomeCode=document.getElementById("welcomeCode");
 
-const btnArrived   = document.getElementById("btnArrived");
-const btnVoted     = document.getElementById("btnVoted");
-const btnIssue     = document.getElementById("btnIssue");
-const btnLocation  = document.getElementById("btnLocation");
-const photoInput   = document.getElementById("photoInput");
-const photoPreview = document.getElementById("photoPreview");
+const btnArrived=document.getElementById("btnArrived");
+const btnVoted=document.getElementById("btnVoted");
+const btnIssue=document.getElementById("btnIssue");
+const btnLocation=document.getElementById("btnLocation");
+const photoInput=document.getElementById("photoInput");
+const photoPreview=document.getElementById("photoPreview");
 
-let currentCode = "";
-let statusData = {
-    arrived:false,
-    voted:false,
-    hasIssue:false,
-    issueText:"",
-    location:null,
-    photoSent:false
-};
+let currentCode="";
+let statusData={arrived:false,voted:false,hasIssue:false,issueText:"",location:null,photoSent:false};
 
-const STATUS_KEY_PREFIX = "monitor_status_";
+const STATUS_KEY="monitor_status_";
 
 // تسجيل الدخول
-loginForm.addEventListener("submit", async e => {
+loginForm.addEventListener("submit",async e=>{
     e.preventDefault();
-    const name = document.getElementById("monitorName").value.trim();
-    const code = document.getElementById("monitorCode").value.trim().toUpperCase();
+    const name=document.getElementById("monitorName").value.trim();
+    const code=document.getElementById("monitorCode").value.trim().toUpperCase();
 
-    if (!code) {
-        loginError.textContent = "يرجى إدخال الكود.";
-        loginError.style.display = "block";
+    const m=await findMonitorByCodeOnline(code);
+    if(!m){
+        loginError.style.display="block";
         return;
     }
 
-    const m = await findMonitorByCodeOnline(code);
-    if (!m){
-        loginError.style.display = "block";
-        return;
-    }
+    loginError.style.display="none";
+    currentCode=code;
 
-    loginError.style.display = "none";
-    currentCode = code;
+    welcomeName.textContent=name||m.monitorName||"مراقب";
+    welcomeCode.textContent=currentCode;
 
-    welcomeName.textContent = name || m.monitorName || "مراقب";
-    welcomeCode.textContent = currentCode;
+    const saved=localStorage.getItem(STATUS_KEY+currentCode);
+    if(saved) statusData=JSON.parse(saved);
 
-    // تحميل الحالة القديمة إن وجدت
-    const saved = localStorage.getItem(STATUS_KEY_PREFIX + currentCode);
-    if (saved) {
-        try {
-            statusData = Object.assign({}, statusData, JSON.parse(saved));
-        } catch {}
-    }
+    // نعلّم لوحة المستخدم أن هذا المراقب متصل
+    localStorage.setItem("online_status_"+currentCode,"online");
 
-    // اعتبره متصل حالياً
-    localStorage.setItem("online_status_" + currentCode, "online");
-
-    loginSection.style.display  = "none";
-    monitorSection.style.display = "block";
-
-    updateUI();
+    loginSection.style.display="none";
+    monitorSection.style.display="block";
 });
 
 // زر تسجيل خروج
 document.getElementById("logoutBtn").addEventListener("click",()=>{
-    if (currentCode) {
-        localStorage.setItem("online_status_" + currentCode, "offline");
-    }
-    // لا نحذف الحالة حتى تبقى المعلومات في لوحة المستخدم
+    localStorage.setItem("online_status_"+currentCode,"offline");
+    // لا نحذف حالة المراقب حتى تبقى الأيقونات ✓ ظاهرة
     location.reload();
 });
 
-// في حال أغلق الصفحة بدون ضغط تسجيل خروج
-window.addEventListener("beforeunload",()=>{
-    if (currentCode) {
-        localStorage.setItem("online_status_" + currentCode, "offline");
-    }
-});
-
-// فتح الكاميرا فعلياً
+// فتح الكاميرا / المعرض
 document.querySelector(".btn-photo").addEventListener("click",()=>{
     photoInput.click();
 });
 
-// حفظ الحالة في localStorage + إبقائه متصل
+// حفظ التغييرات
 function saveStatus(){
-    if (!currentCode) return;
-    try {
-        localStorage.setItem(STATUS_KEY_PREFIX + currentCode, JSON.stringify(statusData));
-    } catch(e) {
-        console.error("خطأ في حفظ حالة المراقب:", e);
-    }
-    localStorage.setItem("online_status_" + currentCode, "online");
+    if(!currentCode) return;
+    localStorage.setItem(STATUS_KEY+currentCode,JSON.stringify(statusData));
 }
 
-// تحديث واجهة الحالة
 function updateUI(){
-    const lines = document.querySelectorAll("#statusBox div");
-    lines[0].innerHTML = `<span class="label">الوصول:</span> ${statusData.arrived ? "تم الوصول" : "—"}`;
-    lines[1].innerHTML = `<span class="label">التصويت:</span> ${statusData.voted ? "تم التصويت" : "—"}`;
-    lines[2].innerHTML = `<span class="label">الموقع:</span> ${
-        statusData.location
-        ? statusData.location.lat.toFixed(4) + ", " + statusData.location.lng.toFixed(4)
-        : "—"
+    const lines=document.querySelectorAll("#statusBox div");
+    lines[0].innerHTML=`<span class="label">الوصول:</span> ${statusData.arrived?"تم الوصول":"—"}`;
+    lines[1].innerHTML=`<span class="label">التصويت:</span> ${statusData.voted?"تم التصويت":"—"}`;
+    lines[2].innerHTML=`<span class="label">الموقع:</span> ${
+        statusData.location?statusData.location.lat.toFixed(4)+", "+statusData.location.lng.toFixed(4):"—"
     }`;
-    lines[3].innerHTML = `<span class="label">المشكلة:</span> ${
-        statusData.hasIssue ? (statusData.issueText || "مشكلة موجودة") : "—"
+    lines[3].innerHTML=`<span class="label">المشكلة:</span> ${
+        statusData.hasIssue?statusData.issueText:"—"
     }`;
-    lines[4].innerHTML = `<span class="label">الصورة:</span> ${statusData.photoSent ? "📷 موجودة" : "—"}`;
+    lines[4].innerHTML=`<span class="label">الصورة:</span> ${statusData.photoSent?"📷 موجودة":"—"}`;
 }
 
-btnArrived.onclick = () => {
-    statusData.arrived = !statusData.arrived;
-    saveStatus();
-    updateUI();
-};
+btnArrived.onclick=()=>{statusData.arrived=!statusData.arrived;saveStatus();updateUI();}
+btnVoted.onclick=()=>{statusData.voted=!statusData.voted;saveStatus();updateUI();}
 
-btnVoted.onclick = () => {
-    statusData.voted = !statusData.voted;
-    saveStatus();
-    updateUI();
-};
-
-btnIssue.onclick = () => {
-    if (!statusData.hasIssue){
-        const t = prompt("اكتب وصف المشكلة:");
-        if (t && t.trim() !== ""){
-            statusData.hasIssue = true;
-            statusData.issueText = t.trim();
-            saveStatus();
-            updateUI();
-        }
-    } else {
-        const confirmRemove = confirm("إلغاء علامة المشكلة؟");
-        if (!confirmRemove) return;
-        statusData.hasIssue = false;
-        statusData.issueText = "";
-        saveStatus();
-        updateUI();
+btnIssue.onclick=()=>{
+    if(!statusData.hasIssue){
+        const t=prompt("وصف المشكلة:");
+        if(t){statusData.hasIssue=true;statusData.issueText=t;saveStatus();updateUI();}
+    }else{
+        statusData.hasIssue=false;statusData.issueText="";saveStatus();updateUI();
     }
 };
 
-btnLocation.onclick = () => {
-    if (!navigator.geolocation){
-        alert("المتصفح لا يدعم تحديد الموقع.");
-        return;
-    }
+btnLocation.onclick=()=>{
     navigator.geolocation.getCurrentPosition(
-        pos => {
-            statusData.location = {
-                lat: pos.coords.latitude,
-                lng: pos.coords.longitude,
-                time: Date.now()
+        pos=>{
+            statusData.location={
+                lat:pos.coords.latitude,
+                lng:pos.coords.longitude
             };
-            // نخزن نسخة خاصة بالموقع حتى تقرأها لوحة المستخدم
-            try {
-                localStorage.setItem(
-                    "monitor_location_" + currentCode,
-                    JSON.stringify(statusData.location)
-                );
-            } catch(e) {
-                console.error("خطأ في حفظ الموقع:", e);
-            }
-            saveStatus();
-            updateUI();
+            saveStatus();updateUI();
         },
-        () => alert("فشل الحصول على الموقع")
+        ()=>alert("فشل الحصول على الموقع")
     );
 };
 
-// حفظ أكثر من صورة (حد أقصى 20 صورة) بدون تسجيل خروج
+/* 🔴 هنا التعديل الكبير: دعم عدة صور + حد 20 صورة + معالجة امتلاء التخزين */
 photoInput.addEventListener("change",function(){
-    const file = this.files[0];
-    if (!file) return;
+    const files = Array.from(this.files || []);
+    if(!files.length || !currentCode) return;
 
-    const reader = new FileReader();
-    reader.onload = e => {
-        const dataUrl = e.target.result;
+    const baseKey   = "monitor_photo_" + currentCode;
+    const countKey  = "monitor_photo_count_" + currentCode;
 
-        statusData.photoSent = true;
-        saveStatus();
-        updateUI();
+    let count = parseInt(localStorage.getItem(countKey) || "0", 10);
+    if(isNaN(count)) count = 0;
 
-        if (!currentCode) return;
-
-        const baseKey = "monitor_photo_" + currentCode;
-
-        // إيجاد رقم الصورة التالية الفارغة 1..20
-        let index = 1;
-        for (; index <= 20; index++) {
-            if (!localStorage.getItem(baseKey + "_" + index)) break;
-        }
-
-        if (index > 20) {
+    for(const file of files){
+        if(count >= 20){
             alert("وصلت إلى الحد الأقصى (20 صورة) لهذا المراقب.");
-            return;
+            break;
         }
 
-        try {
-            // نخزن الصورة الجديدة بمفتاح مرقم
-            localStorage.setItem(baseKey + "_" + index, dataUrl);
-            // ونحدث المفتاح الأساسي بآخر صورة (للتوافق)
-            localStorage.setItem(baseKey, dataUrl);
-        } catch(err) {
-            console.error("localStorage quota error:", err);
-            alert("لا يمكن حفظ الصورة، يبدو أن مساحة التخزين في المتصفح ممتلئة.");
-        }
+        const reader = new FileReader();
+        reader.onload = (e)=>{
+            try{
+                count++;
 
-        photoPreview.innerHTML = `<img src="${dataUrl}" alt="صورة المراقب" />`;
-    };
-    reader.readAsDataURL(file);
+                // نخزن نسخة مرقمة
+                localStorage.setItem(baseKey + "_" + count, e.target.result);
+
+                // ونخلي آخر صورة أيضاً في المفتاح القديم للمتوافقية
+                localStorage.setItem(baseKey, e.target.result);
+
+                localStorage.setItem(countKey, String(count));
+
+                statusData.photoSent = true;
+                saveStatus();
+                updateUI();
+
+                // نعرض آخر صورة فقط (للتذكير)
+                photoPreview.innerHTML = `<img src="${e.target.result}" />`;
+            }catch(err){
+                console.error(err);
+                alert("لا يمكن حفظ الصورة، يبدو أن مساحة التخزين في المتصفح ممتلئة.\nامسح بعض الصور القديمة أو استخدم متصفحاً آخر.");
+            }
+        };
+        reader.readAsDataURL(file);
+    }
+
+    // نفرغ القيمة حتى يسمح باختيار نفس الملف مرة ثانية لو أحب
+    this.value = "";
+});
+
+// إذا أغلق المتصفح بدون ضغط تسجيل خروج نعتبره أوفلاين
+window.addEventListener("beforeunload",()=>{
+    if(currentCode){
+        localStorage.setItem("online_status_"+currentCode,"offline");
+    }
 });
 </script>
 
