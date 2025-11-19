@@ -775,7 +775,8 @@
               });
               monitors = loaded;
               saveMonitors();
-              renderMonitors(document.getElementById('searchInput').value);
+              // 🔁 هنا ندمج مع الحالة القادمة من صفحة المراقب (online / status / location / photos)
+              updateOnlineStatusAuto();
           })
           .catch((err) => {
               console.error("خطأ في جلب المراقبين من Firestore:", err);
@@ -793,7 +794,9 @@
             monitors = [];
         }
 
-        renderMonitors();
+        // أول ما نجهز المصفوفة، نحدثها حسب localStorage من صفحة المراقب
+        updateOnlineStatusAuto();
+        // بعدها نحدّث من Firestore (آخر بيانات محفوظة أونلاين)
         loadMonitorsFromFirestore();
     }
 
@@ -1032,7 +1035,7 @@
             monitorName:   name,
             monitorPhone:  phone,
             monitorCenter: center,
-            code:          code,   // هنا نخزن الكود بحقل اسمه code
+            code:          code,
             arrived:   false,
             voted:     false,
             hasIssue:  false,
@@ -1066,16 +1069,16 @@
           });
     });
 
-    // ✅ دالة تجيب كل الصور الخاصة بمراقب (لحد 20 صورة)
+    // ✅ تجميع كل صور المراقب (من 1 إلى 20 + المفتاح القديم)
     function getMonitorPhotos(code) {
         const photos = [];
         const baseKey = "monitor_photo_" + code;
 
-        // صورة واحدة قديمة بدون رقم
+        // آخر صورة (المفتاح القديم بدون رقم)
         const single = localStorage.getItem(baseKey);
         if (single) photos.push(single);
 
-        // صور مرقمة: monitor_photo_CODE_1 .. monitor_photo_CODE_20
+        // الصور المرقمة: monitor_photo_CODE_1 .. monitor_photo_CODE_20
         for (let i = 1; i <= 20; i++) {
             const dataUrl = localStorage.getItem(baseKey + "_" + i);
             if (dataUrl) photos.push(dataUrl);
@@ -1109,6 +1112,7 @@
             }
 
         } else if (action === 'toggleOnline') {
+            // هذا مجرد تبديل يدوي لو حبيت تغيّرها بنفسك
             m.online = !m.online;
 
         } else if (action === 'deleteMonitor') {
@@ -1122,7 +1126,7 @@
             }
 
         } else if (action === 'viewPhotos') {
-            // ✅ عرض كل صور المراقب (لحد 20 صورة) في نافذة جديدة
+            // ✅ عرض كل الصور
             const photos = getMonitorPhotos(m.code);
             if (!photos.length) {
                 alert("لا توجد صور مستلمة من هذا المراقب حتى الآن.");
@@ -1194,13 +1198,18 @@
         renderMonitors(document.getElementById('searchInput').value);
     });
 
-    // مزامنة حالة المراقبين من localStorage (من صفحة المراقب)
+    // 🔁 مزامنة حالة المراقبين من localStorage (من صفحة المراقب)
     function updateOnlineStatusAuto() {
-        if (!currentUserName || !STORAGE_KEY) return;
+        if (!currentUserName || !STORAGE_KEY) {
+            // حتى لو ما مسجل، نرسم الجدول على الأقل
+            renderMonitors(document.getElementById('searchInput') ? document.getElementById('searchInput').value : '');
+            return;
+        }
 
         monitors.forEach(monitor => {
             const code = monitor.code;
 
+            // متصل / غير متصل
             const onlineStatus = localStorage.getItem("online_status_" + code);
             if (onlineStatus === "online") {
                 monitor.online = true;
@@ -1208,6 +1217,7 @@
                 monitor.online = false;
             }
 
+            // حالة الوصول / التصويت / المشكلة من صفحة المراقب
             const rawStatus = localStorage.getItem("monitor_status_" + code);
             if (rawStatus) {
                 try {
@@ -1226,7 +1236,8 @@
         renderMonitors(document.getElementById('searchInput').value);
     }
 
-    setInterval(updateOnlineStatusAuto, 3000);
+    // نخلي التحديث الأوتوماتيكي سريع شوي حتى يظهر "متصل" تقريباً مباشرة
+    setInterval(updateOnlineStatusAuto, 2000);
 
     (function initialCheck() {
         const savedUser = localStorage.getItem('currentUserName');
