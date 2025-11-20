@@ -662,7 +662,7 @@
                     <div class="summary-note">عدد جميع المراقبين المسجّلين في هذه اللوحة.</div>
                 </div>
                 <div class="summary-box">
-                    <div class="summary-title">المراقبون الواصلون</div>
+                    <div class="summary-title">المراقبون الاصلون</div>
                     <div class="summary-value" id="arrivedMonitorsCount">0</div>
                     <div class="summary-note">عدد المراقبين الذين تم تحديدهم كـ "تم الوصول".</div>
                 </div>
@@ -804,7 +804,7 @@
         loadMonitorsFromFirestore();
     }
 
-    // تسجيل الدخول  ✅ مع فحص active
+    // تسجيل الدخول ✅ الآن من Firestore (systemUsers) مع فحص active
     loginForm.addEventListener('submit', function (e) {
         e.preventDefault();
         loginError.style.display = 'none';
@@ -818,34 +818,50 @@
             return;
         }
 
-        let systemUsers = [];
-        try {
-            systemUsers = JSON.parse(localStorage.getItem('systemUsers') || '[]');
-        } catch (err) {
-            systemUsers = [];
-        }
+        db.collection('systemUsers')
+          .where('username', '==', username)
+          .where('password', '==', pass)
+          .get()
+          .then((snapshot) => {
+              if (snapshot.empty) {
+                  loginError.textContent = 'بيانات الدخول غير صحيحة. تأكد من اسم المستخدم والكود الذي أعطاك إياه مدير البرنامج.';
+                  loginError.style.display = 'block';
+                  return;
+              }
 
-        const matchedUser = systemUsers.find(u =>
-            u.username &&
-            u.username.toLowerCase() === username.toLowerCase() &&
-            u.password === pass
-        );
+              let matchedUser = null;
+              snapshot.forEach((docu) => {
+                  const data = docu.data();
+                  matchedUser = {
+                      id: docu.id,
+                      username: data.username,
+                      password: data.password,
+                      note: data.note || '',
+                      active: (typeof data.active === 'boolean') ? data.active : true
+                  };
+              });
 
-        if (!matchedUser) {
-            loginError.textContent = 'بيانات الدخول غير صحيحة. تأكد من اسم المستخدم والكود الذي أعطاك إياه مدير البرنامج.';
-            loginError.style.display = 'block';
-            return;
-        }
+              if (!matchedUser) {
+                  loginError.textContent = 'حدث خطأ غير متوقع في قراءة بيانات المستخدم.';
+                  loginError.style.display = 'block';
+                  return;
+              }
 
-        if (matchedUser.active === false) {
-            loginError.textContent = 'هذا الحساب تم إيقافه من قبل مدير البرنامج. يرجى مراجعة مدير البرنامج.';
-            loginError.style.display = 'block';
-            return;
-        }
+              if (matchedUser.active === false) {
+                  loginError.textContent = 'هذا الحساب تم إيقافه من قبل مدير البرنامج. يرجى مراجعة مدير البرنامج.';
+                  loginError.style.display = 'block';
+                  return;
+              }
 
-        localStorage.setItem('currentUserName', matchedUser.username);
-        initForUser(matchedUser.username);
-        showDashboard();
+              localStorage.setItem('currentUserName', matchedUser.username);
+              initForUser(matchedUser.username);
+              showDashboard();
+          })
+          .catch((err) => {
+              console.error("خطأ في التحقق من بيانات الدخول من Firestore:", err);
+              loginError.textContent = 'حدث خطأ أثناء الاتصال بقاعدة البيانات. حاول مرة أخرى.';
+              loginError.style.display = 'block';
+          });
     });
 
     logoutLink.addEventListener('click', function (e) {
@@ -935,15 +951,11 @@
                 </div>
 
                 <div>
-                    <span class="bool-icon ${m.arrived ? 'true' : 'false'}" data-action="toggleArrived" data-index="${idx}">
-                        ${m.arrived ? '✔' : '✖'}
-                    </span>
+                    <span class="bool-icon ${m.arrived ? 'true' : 'false'}" data-action="toggleArrived" data-index="${idx}">${m.arrived ? '✔' : '✖'}</span>
                 </div>
 
                 <div>
-                    <span class="bool-icon ${m.voted ? 'true' : 'false'}" data-action="toggleVoted" data-index="${idx}">
-                        ${m.voted ? '✔' : '✖'}
-                    </span>
+                    <span class="bool-icon ${m.voted ? 'true' : 'false'}" data-action="toggleVoted" data-index="${idx}">${m.voted ? '✔' : '✖'}</span>
                 </div>
 
                 <div>
@@ -972,12 +984,12 @@
                     </button>
                 </div>
 
-                <!-- ✅ عمود الموقع: فقط أيقونة الموقع -->
+                <!-- عمود الموقع -->
                 <div>
                     <span title="عرض الموقع" data-action="showLocation" data-index="${idx}">📍</span>
                 </div>
 
-                <!-- ✅ عمود الإجراءات: فقط سلة الحذف -->
+                <!-- عمود الإجراءات -->
                 <div class="actions">
                     <span title="حذف المراقب" data-action="deleteMonitor" data-index="${idx}">🗑️</span>
                 </div>
@@ -1224,7 +1236,6 @@
 
             const mapIframe = document.getElementById('mainMap');
             if (mapIframe) {
-                // إحداثيات مضبوطة مع تقريب وستوى تكبير عالٍ
                 mapIframe.src = `https://www.google.com/maps?q=${lat.toFixed(6)},${lng.toFixed(6)}&z=18&output=embed`;
             }
 
@@ -1275,33 +1286,43 @@
 
     setInterval(updateOnlineStatusAuto, 3000);
 
+    // التحقق دوريًا من أن الحساب ما زال موجود ومفعل في Firestore
     function checkUserStillActive() {
         if (!currentUserName) return;
 
-        let systemUsers = [];
-        try {
-            systemUsers = JSON.parse(localStorage.getItem('systemUsers') || '[]');
-        } catch {
-            systemUsers = [];
-        }
+        db.collection('systemUsers')
+          .where('username', '==', currentUserName)
+          .limit(1)
+          .get()
+          .then((snapshot) => {
+              if (snapshot.empty) {
+                  alert("تم حذف هذا الحساب من قبل مدير البرنامج أو لم يعد موجوداً. سيتم تسجيل الخروج الآن.");
+                  localStorage.removeItem('currentUserName');
+                  currentUserName = null;
+                  STORAGE_KEY = null;
+                  monitors = [];
+                  showLogin();
+                  return;
+              }
 
-        const me = systemUsers.find(u =>
-            u.username &&
-            u.username.toLowerCase() === currentUserName.toLowerCase()
-        );
-
-        if (!me || me.active === false) {
-            alert("تم إيقاف هذا الحساب من قبل مدير البرنامج. سيتم تسجيل الخروج الآن.");
-            localStorage.removeItem('currentUserName');
-            currentUserName = null;
-            STORAGE_KEY = null;
-            monitors = [];
-            showLogin();
-        }
+              const data = snapshot.docs[0].data();
+              if (data.active === false) {
+                  alert("تم إيقاف هذا الحساب من قبل مدير البرنامج. سيتم تسجيل الخروج الآن.");
+                  localStorage.removeItem('currentUserName');
+                  currentUserName = null;
+                  STORAGE_KEY = null;
+                  monitors = [];
+                  showLogin();
+              }
+          })
+          .catch((err) => {
+              console.error("خطأ في التحقق من حالة المستخدم:", err);
+          });
     }
 
     setInterval(checkUserStillActive, 4000);
 
+    // فحص مبدئي عند فتح الصفحة: إذا كان هناك مستخدم محفوظ، نتحقق منه من Firestore
     (function initialCheck() {
         const savedUser = localStorage.getItem('currentUserName');
         if (!savedUser) {
@@ -1309,26 +1330,31 @@
             return;
         }
 
-        let systemUsers = [];
-        try {
-            systemUsers = JSON.parse(localStorage.getItem('systemUsers') || '[]');
-        } catch {
-            systemUsers = [];
-        }
+        db.collection('systemUsers')
+          .where('username', '==', savedUser)
+          .limit(1)
+          .get()
+          .then((snapshot) => {
+              if (snapshot.empty) {
+                  localStorage.removeItem('currentUserName');
+                  showLogin();
+                  return;
+              }
 
-        const found = systemUsers.find(u =>
-            u.username &&
-            u.username.toLowerCase() === savedUser.toLowerCase()
-        );
+              const data = snapshot.docs[0].data();
+              if (data.active === false) {
+                  localStorage.removeItem('currentUserName');
+                  showLogin();
+                  return;
+              }
 
-        if (!found || found.active === false) {
-            localStorage.removeItem('currentUserName');
-            showLogin();
-            return;
-        }
-
-        initForUser(found.username);
-        showDashboard();
+              initForUser(savedUser);
+              showDashboard();
+          })
+          .catch((err) => {
+              console.error("خطأ في التحقق من المستخدم عند بدء التشغيل:", err);
+              showLogin();
+          });
     })();
 </script>
 
