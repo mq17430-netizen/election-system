@@ -1213,14 +1213,19 @@
                 alert("صيغة بيانات الموقع غير صحيحة.");
                 return;
             }
-            if (!coords.lat || !coords.lng) {
-                alert("إحداثيات الموقع غير مكتملة.");
+
+            const lat = parseFloat(coords.lat);
+            const lng = parseFloat(coords.lng);
+
+            if (isNaN(lat) || isNaN(lng)) {
+                alert("إحداثيات الموقع غير صحيحة أو غير مكتملة.");
                 return;
             }
 
             const mapIframe = document.getElementById('mainMap');
             if (mapIframe) {
-                mapIframe.src = `https://www.google.com/maps?q=${coords.lat},${coords.lng}&z=17&output=embed`;
+                // إحداثيات مضبوطة مع تقريب وستوى تكبير عالٍ
+                mapIframe.src = `https://www.google.com/maps?q=${lat.toFixed(6)},${lng.toFixed(6)}&z=18&output=embed`;
             }
 
             tabs.forEach(t => t.classList.remove('active'));
