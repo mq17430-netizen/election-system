@@ -202,6 +202,37 @@ let statusData={arrived:false,voted:false,hasIssue:false,issueText:"",location:n
 
 const STATUS_KEY="monitor_status_";
 
+// ✅ مفاتيح حفظ حالة تسجيل دخول المراقب
+const LOGIN_FLAG_KEY = "monitor_logged_in";
+const LOGIN_CODE_KEY = "monitor_logged_code";
+const LOGIN_NAME_KEY = "monitor_logged_name";
+
+// ✅ محاولة استرجاع جلسة مراقب سابقة (في حال تحديث الصفحة)
+(function restoreMonitorSession(){
+    const flag = localStorage.getItem(LOGIN_FLAG_KEY);
+    const savedCode = localStorage.getItem(LOGIN_CODE_KEY);
+    const savedName = localStorage.getItem(LOGIN_NAME_KEY);
+
+    if(flag === "true" && savedCode){
+        currentCode = savedCode;
+
+        const saved = localStorage.getItem(STATUS_KEY + currentCode);
+        if(saved){
+            try{ statusData = JSON.parse(saved); }catch(e){}
+        }
+
+        welcomeName.textContent = savedName || "مراقب";
+        welcomeCode.textContent = currentCode;
+
+        loginSection.style.display = "none";
+        monitorSection.style.display = "block";
+
+        // اعتبره أونلاين بعد الرجوع
+        localStorage.setItem("online_status_"+currentCode,"online");
+        updateUI();
+    }
+})();
+
 // تسجيل الدخول
 loginForm.addEventListener("submit",async e=>{
     e.preventDefault();
@@ -230,16 +261,28 @@ loginForm.addEventListener("submit",async e=>{
 
     // علّم أنه أونلاين
     localStorage.setItem("online_status_"+currentCode,"online");
+
+    // ✅ حفظ أن المراقب مسجّل دخول حتى إذا حدّث الصفحة
+    localStorage.setItem(LOGIN_FLAG_KEY,"true");
+    localStorage.setItem(LOGIN_CODE_KEY,currentCode);
+    localStorage.setItem(LOGIN_NAME_KEY,welcomeName.textContent);
+
     updateUI();
 });
 
-// زر تسجيل خروج
+// زر تسجيل خروج (فقط هنا يطلع من الجلسة)
 document.getElementById("logoutBtn").addEventListener("click",()=>{
     if(currentCode){
         localStorage.setItem("online_status_"+currentCode,"offline");
     }
-    // ما نمسح حالة الأزرار حتى المدير يظل يشوف آخر حالة
-    location.reload();
+    // مسح حالة تسجيل الدخول فقط عند الخروج
+    localStorage.removeItem(LOGIN_FLAG_KEY);
+    localStorage.removeItem(LOGIN_CODE_KEY);
+    localStorage.removeItem(LOGIN_NAME_KEY);
+
+    currentCode = "";
+    loginSection.style.display = "block";
+    monitorSection.style.display = "none";
 });
 
 // فتح الكاميرا/المعرض
@@ -380,7 +423,8 @@ photoInput.addEventListener("change",function(){
     this.value = "";
 });
 
-// لما يطلع من الصفحة نخزن أنه أوفلاين
+// لما يطلع من الصفحة نخزن أنه أوفلاين (إذا قفل التاب مثلاً)
+// ملاحظة: في حالة التحديث السريع، راح يرجع أونلاين مباشرة من restoreMonitorSession
 window.addEventListener("beforeunload",()=>{
     if(currentCode){
         localStorage.setItem("online_status_"+currentCode,"offline");
