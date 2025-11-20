@@ -145,15 +145,13 @@
     const db   = getFirestore(app);
     const col  = collection(db, "systemUsers");
 
-    const SYSTEM_USERS_KEY = "systemUsers";
-
     const usernameInput = document.getElementById("username");
     const noteInput     = document.getElementById("note");
     const passwordInput = document.getElementById("password");
     const usersTable    = document.getElementById("usersTable");
     const addUserBtn    = document.getElementById("addUser");
 
-    // مصفوفة المستخدمين الحالية (للتخزين في localStorage أيضاً)
+    // مصفوفة المستخدمين الحالية
     let systemUsers = [];
 
     function generateCode(){
@@ -163,10 +161,6 @@
         for (let i = 0; i < 3; i++) c += L[Math.floor(Math.random() * L.length)];
         for (let i = 0; i < 2; i++) c += D[Math.floor(Math.random() * D.length)];
         return c;
-    }
-
-    function saveSystemUsersToLocal(){
-        localStorage.setItem(SYSTEM_USERS_KEY, JSON.stringify(systemUsers));
     }
 
     function renderUsersTable(){
@@ -211,8 +205,6 @@
                 active:   (typeof data.active === "boolean") ? data.active : true
             });
         });
-        // تخزين نسخة بالمتصفح حتى index.html يقدر يستخدمها في تسجيل الدخول
-        saveSystemUsersToLocal();
         renderUsersTable();
         // توليد كود جديد للحقل
         passwordInput.value = generateCode();
@@ -240,9 +232,8 @@
                 active: true   // 🔵 افتراضياً المستخدم مفعل
             });
 
-            // إضافة للمصفوفة المحلية وتحديث التخزين
+            // إضافة للمصفوفة المحلية
             systemUsers.push({ id: docRef.id, username, password, note, active: true });
-            saveSystemUsersToLocal();
             renderUsersTable();
 
             // تفريغ الحقول + كود جديد
@@ -265,7 +256,6 @@
             await deleteDoc(doc(db, "systemUsers", id));
             // إزالة من المصفوفة
             systemUsers = systemUsers.filter(u => u.id !== id);
-            saveSystemUsersToLocal();
             renderUsersTable();
         } catch (e) {
             console.error("خطأ في حذف المستخدم:", e);
@@ -285,7 +275,6 @@
         if (idx !== -1) {
             systemUsers[idx].active = isActive;
         }
-        saveSystemUsersToLocal();
 
         // تحديث في Firestore
         try {
