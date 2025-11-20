@@ -140,7 +140,7 @@
         <label for="photoInput">
             <button class="btn-action btn-photo" type="button">📷 التقاط / رفع صورة</button>
         </label>
-        <!-- ⬅⬅ مهم: multiple + كامرة -->
+        <!-- multiple + كامرة -->
         <input id="photoInput" type="file" accept="image/*" capture="environment" multiple>
 
         <div class="status-box" id="statusBox">
@@ -290,6 +290,7 @@ btnIssue.onclick=()=>{
     }
 };
 
+// ✅ زر الموقع مع high accuracy
 btnLocation.onclick=()=>{
     if(!navigator.geolocation){
         alert("المتصفح لا يدعم تحديد الموقع.");
@@ -308,7 +309,15 @@ btnLocation.onclick=()=>{
                 }catch(e){}
             }
         },
-        ()=>alert("فشل الحصول على الموقع")
+        (err)=>{
+            console.error("Geolocation error:",err);
+            alert("فشل الحصول على الموقع بدقة عالية. تأكد من تفعيل GPS وإعطاء صلاحية للموقع ثم حاول مرة أخرى.");
+        },
+        {
+            enableHighAccuracy: true,
+            timeout: 20000,
+            maximumAge: 0
+        }
     );
 };
 
@@ -361,8 +370,7 @@ photoInput.addEventListener("change",function(){
         reader.onload=e=>{
             statusData.photoSent=true;
             saveOnePhoto(e.target.result);
-            saveStatus();
-            updateUI();
+            saveStatus();updateUI();
             photoPreview.innerHTML=`<img src="${e.target.result}" />`;
         };
         reader.readAsDataURL(file);
