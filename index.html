@@ -293,7 +293,7 @@
         .table-header,
         .table-row {
             display: grid;
-            grid-template-columns: 1.3fr 1.2fr 1.1fr 0.9fr 0.9fr 0.9fr 0.9fr 1fr 0.9fr;
+            grid-template-columns: 1.3fr 1.2fr 1.1fr 0.9fr 0.9fr 0.9fr 0.9fr 1fr 0.9fr 0.9fr;
             gap: 4px;
             align-items: center;
         }
@@ -616,6 +616,7 @@
                     <div>توجد مشكلة</div>
                     <div>الحالة</div>
                     <div>صورة الشريط</div>
+                    <div>الموقع</div>
                     <div>الإجراءات</div>
                 </div>
                 <div id="monitorsBody"></div>
@@ -718,8 +719,6 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    const MAX_PHOTOS = 20;
-
     const loginSection     = document.getElementById('loginSection');
     const dashboardSection = document.getElementById('dashboardSection');
     const loginForm        = document.getElementById('loginForm');
@@ -766,6 +765,7 @@
                       name:   data.monitorName  || '',
                       phone:  data.monitorPhone || '',
                       center: data.monitorCenter|| '',
+                      // نقرأ من code أو monitorCode (للبيانات القديمة)
                       code:   data.code || data.monitorCode || '',
                       arrived:   data.arrived   || false,
                       voted:     data.voted     || false,
@@ -798,7 +798,7 @@
         loadMonitorsFromFirestore();
     }
 
-    // تسجيل الدخول
+    // تسجيل الدخول  ✅ مضاف له فحص active
     loginForm.addEventListener('submit', function (e) {
         e.preventDefault();
         loginError.style.display = 'none';
@@ -820,12 +820,20 @@
         }
 
         const matchedUser = systemUsers.find(u =>
+            u.username &&
             u.username.toLowerCase() === username.toLowerCase() &&
             u.password === pass
         );
 
         if (!matchedUser) {
             loginError.textContent = 'بيانات الدخول غير صحيحة. تأكد من اسم المستخدم والكود الذي أعطاك إياه مدير البرنامج.';
+            loginError.style.display = 'block';
+            return;
+        }
+
+        // 🔴 إذا المستخدم متوقف من لوحة المدير
+        if (matchedUser.active === false) {
+            loginError.textContent = 'هذا الحساب تم إيقافه من قبل مدير البرنامج. يرجى مراجعة مدير البرنامج.';
             loginError.style.display = 'block';
             return;
         }
@@ -875,7 +883,7 @@
         issuesMonitorsCount.textContent  = issues;
     }
 
-    // دالة تجيب كل الصور الخاصة بمراقب (حتى 20 صورة)
+    // ✅ جلب كل صور المراقب (قديمة + 1..20)
     function getMonitorPhotos(code) {
         const photos = [];
         const baseKey = "monitor_photo_" + code;
@@ -883,10 +891,11 @@
         const single = localStorage.getItem(baseKey);
         if (single) photos.push(single);
 
-        for (let i = 1; i <= MAX_PHOTOS; i++) {
+        for (let i = 1; i <= 20; i++) {
             const dataUrl = localStorage.getItem(baseKey + "_" + i);
             if (dataUrl) photos.push(dataUrl);
         }
+
         return photos;
     }
 
@@ -894,7 +903,7 @@
         monitorsBody.innerHTML = '';
 
         const normalized = filterText.trim().toLowerCase();
-        const filtered = monitors.map((m, realIndex) => ({...m, realIndex})).filter(m => {
+        const filtered = monitors.filter(m => {
             if (!normalized) return true;
             const hay = (m.name + ' ' + m.phone + ' ' + m.center).toLowerCase();
             return hay.includes(normalized);
@@ -922,13 +931,13 @@
                 </div>
 
                 <div>
-                    <span class="bool-icon ${m.arrived ? 'true' : 'false'}" data-action="toggleArrived" data-index="${m.realIndex}">
+                    <span class="bool-icon ${m.arrived ? 'true' : 'false'}" data-action="toggleArrived" data-index="${idx}">
                         ${m.arrived ? '✔' : '✖'}
                     </span>
                 </div>
 
                 <div>
-                    <span class="bool-icon ${m.voted ? 'true' : 'false'}" data-action="toggleVoted" data-index="${m.realIndex}">
+                    <span class="bool-icon ${m.voted ? 'true' : 'false'}" data-action="toggleVoted" data-index="${idx}">
                         ${m.voted ? '✔' : '✖'}
                     </span>
                 </div>
@@ -937,7 +946,7 @@
                     <span
                         class="bool-icon ${m.hasIssue ? 'true' : 'neutral'}"
                         data-action="viewIssue"
-                        data-index="${m.realIndex}"
+                        data-index="${idx}"
                         title="${m.hasIssue ? 'يوجد مشكلة مبلَّغة من المراقب، اضغط لعرض التفاصيل' : 'لا توجد مشكلة مبلَّغة من المراقب'}"
                     >
                         ${m.hasIssue ? '⚠' : '—'}
@@ -945,7 +954,7 @@
                 </div>
 
                 <div>
-                    <span class="badge-status ${m.online ? 'online' : 'offline'}" data-action="toggleOnline" data-index="${m.realIndex}">
+                    <span class="badge-status ${m.online ? 'online' : 'offline'}" data-action="toggleOnline" data-index="${idx}">
                         ${m.online ? '📶 متصل' : '📶 غير متصل'}
                     </span>
                 </div>
@@ -953,15 +962,15 @@
                 <div>
                     <button type="button"
                             data-action="viewPhotos"
-                            data-index="${m.realIndex}"
+                            data-index="${idx}"
                             style="font-size:11px; padding:3px 8px; border-radius:6px; border:1px solid #dde2ef; background:#f9fafc; cursor:pointer;">
                         عرض الصور
                     </button>
                 </div>
 
                 <div class="actions">
-                    <span title="عرض الموقع" data-action="showLocation" data-index="${m.realIndex}">📍</span>
-                    <span title="حذف المراقب" data-action="deleteMonitor" data-index="${m.realIndex}">🗑️</span>
+                    <span title="عرض الموقع" data-action="showLocation" data-index="${idx}">📍</span>
+                    <span title="حذف المراقب" data-action="deleteMonitor" data-index="${idx}">🗑️</span>
                 </div>
             `;
 
@@ -1040,7 +1049,7 @@
         const name   = document.getElementById('monitorName').value.trim();
         const phone  = document.getElementById('monitorPhone').value.trim();
         const center = document.getElementById('monitorCenter').value.trim();
-        const code   = document.getElementById('monitorCode').value.trim().toUpperCase();
+        const code   = document.getElementById('monitorCode').value.trim();
         if (!name || !phone || !center || !code) return;
 
         const docData = {
@@ -1138,7 +1147,7 @@
                 "<h3 style='margin-bottom:10px;'>صور المراقب: " + (m.name || '-') + " – كود: " + (m.code || '-') + "</h3>"
             );
 
-            photos.slice(0, MAX_PHOTOS).forEach(function(src, idx) {
+            photos.slice(0, 20).forEach(function(src, idx) {
                 win.document.write(
                     "<div style='margin:10px 0; padding:8px; background:#ffffff; border-radius:8px; " +
                     "box-shadow:0 2px 6px rgba(0,0,0,0.12);'>" +
@@ -1197,7 +1206,6 @@
 
         monitors.forEach(monitor => {
             const code = monitor.code;
-            if (!code) return;
 
             const onlineStatus = localStorage.getItem("online_status_" + code);
             if (onlineStatus === "online") {
@@ -1226,6 +1234,35 @@
 
     setInterval(updateOnlineStatusAuto, 3000);
 
+    // ✅ فحص دوري: هل المستخدم ما زال مفعّل؟ إذا طُفي من لوحة المدير ينسحب هنا
+    function checkUserStillActive() {
+        if (!currentUserName) return;
+
+        let systemUsers = [];
+        try {
+            systemUsers = JSON.parse(localStorage.getItem('systemUsers') || '[]');
+        } catch {
+            systemUsers = [];
+        }
+
+        const me = systemUsers.find(u =>
+            u.username &&
+            u.username.toLowerCase() === currentUserName.toLowerCase()
+        );
+
+        if (!me || me.active === false) {
+            alert("تم إيقاف هذا الحساب من قبل مدير البرنامج. سيتم تسجيل الخروج الآن.");
+            localStorage.removeItem('currentUserName');
+            currentUserName = null;
+            STORAGE_KEY = null;
+            monitors = [];
+            showLogin();
+        }
+    }
+
+    setInterval(checkUserStillActive, 4000);
+
+    // فحص أولي عند فتح الصفحة  ✅ مضاف له فحص active
     (function initialCheck() {
         const savedUser = localStorage.getItem('currentUserName');
         if (!savedUser) {
@@ -1240,14 +1277,19 @@
             systemUsers = [];
         }
 
-        const exists = systemUsers.some(u => u.username.toLowerCase() === savedUser.toLowerCase());
-        if (!exists) {
+        const found = systemUsers.find(u =>
+            u.username &&
+            u.username.toLowerCase() === savedUser.toLowerCase()
+        );
+
+        // إذا المستخدم غير موجود أو متوقف ➜ رجوع لصفحة الدخول
+        if (!found || found.active === false) {
             localStorage.removeItem('currentUserName');
             showLogin();
             return;
         }
 
-        initForUser(savedUser);
+        initForUser(found.username);
         showDashboard();
     })();
 </script>
