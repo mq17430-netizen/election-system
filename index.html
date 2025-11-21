@@ -743,8 +743,8 @@
     const issuesMonitorsCount = document.getElementById('issuesMonitorsCount');
 
     let currentUserName = null;
+    let STORAGE_KEY     = null;
     let monitors        = [];
-    let monitorsUnsub   = null; // 🔴 إلغاء الاشتراك في التحديثات عند تسجيل الخروج
 
     function showLogin() {
         loginSection.style.display = 'flex';
@@ -756,24 +756,19 @@
         dashboardSection.style.display = 'block';
     }
 
-    // 🔵 الاستماع الفوري لتغيّر المراقبين من Firestore (Realtime)
-    function listenMonitorsRealtime() {
+    // تحميل المراقبين من Firestore حسب المستخدم الحالي (مع الحالة والموقع والصور)
+    function loadMonitorsFromFirestore() {
         if (!currentUserName) return;
 
-        // لو كان هناك اشتراك قديم، نلغيه
-        if (typeof monitorsUnsub === 'function') {
-            monitorsUnsub();
-            monitorsUnsub = null;
-        }
-
-        monitorsUnsub = db.collection('monitors')
+        db.collection('monitors')
           .where('adminUsername', '==', currentUserName)
-          .onSnapshot((snapshot) => {
+          .get()
+          .then((snapshot) => {
               const loaded = [];
-              snapshot.forEach((doc) => {
-                  const data = doc.data();
+              snapshot.forEach((docu) => {
+                  const data = docu.data();
                   loaded.push({
-                      id:       doc.id,
+                      id:       docu.id,
                       name:     data.monitorName  || '',
                       phone:    data.monitorPhone || '',
                       center:   data.monitorCenter|| '',
@@ -783,12 +778,15 @@
                       hasIssue: !!data.hasIssue,
                       issueText: data.issueText || '',
                       online:   !!data.online,
-                      location: data.location || null  // 🔵 الموقع من Firestore
+                      location: data.location || null,
+                      photos:   Array.isArray(data.photos) ? data.photos : []
                   });
               });
               monitors = loaded;
+              saveMonitors();
               renderMonitors(document.getElementById('searchInput').value);
-          }, (err) => {
+          })
+          .catch((err) => {
               console.error("خطأ في جلب المراقبين من Firestore:", err);
           });
     }
@@ -796,9 +794,16 @@
     function initForUser(username) {
         currentUserName = username;
         currentUserLabel.textContent = username;
+        STORAGE_KEY = 'monitors_' + currentUserName;
 
-        // نحمّل المراقبين مباشرة من Firestore (Realtime)
-        listenMonitorsRealtime();
+        try {
+            monitors = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+        } catch (e) {
+            monitors = [];
+        }
+
+        renderMonitors();
+        loadMonitorsFromFirestore();
     }
 
     // تسجيل الدخول من Firestore (systemUsers) مع فحص active
@@ -863,15 +868,9 @@
 
     logoutLink.addEventListener('click', function (e) {
         e.preventDefault();
-
-        // إلغاء الاشتراك من الـ onSnapshot
-        if (typeof monitorsUnsub === 'function') {
-            monitorsUnsub();
-            monitorsUnsub = null;
-        }
-
         localStorage.removeItem('currentUserName');
         currentUserName = null;
+        STORAGE_KEY = null;
         monitors = [];
         showLogin();
     });
@@ -891,6 +890,11 @@
         });
     });
 
+    function saveMonitors() {
+        if (!STORAGE_KEY) return;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(monitors));
+    }
+
     function updateReportsSummary() {
         if (!totalMonitorsCount) return;
         const total   = monitors.length;
@@ -902,20 +906,8 @@
         issuesMonitorsCount.textContent  = issues;
     }
 
-    function getMonitorPhotos(code) {
-        // ما زلنا نستخدم localStorage للصور، فقط إذا كان الجهاز نفسه
-        const photos = [];
-        const baseKey = "monitor_photo_" + code;
-
-        const single = localStorage.getItem(baseKey);
-        if (single) photos.push(single);
-
-        for (let i = 1; i <= 20; i++) {
-            const dataUrl = localStorage.getItem(baseKey + "_" + i);
-            if (dataUrl) photos.push(dataUrl);
-        }
-
-        return photos;
+    function getMonitorPhotosFromMonitorObject(m) {
+        return Array.isArray(m.photos) ? m.photos : [];
     }
 
     function renderMonitors(filterText = '') {
@@ -1083,13 +1075,30 @@
             issueText: '',
             online:    false,
             location:  null,
-            photoSent: false
+            photos:    []
         };
 
         db.collection('monitors').add(docData)
           .then((docRef) => {
-              alert("تم حفظ المراقب وتخزينه في النظام.");
+              monitors.push({
+                  id: docRef.id,
+                  name,
+                  phone,
+                  center,
+                  code,
+                  arrived: false,
+                  voted: false,
+                  hasIssue: false,
+                  issueText: '',
+                  online: false,
+                  location: null,
+                  photos: []
+              });
+
+              saveMonitors();
+              renderMonitors(document.getElementById('searchInput').value);
               closeModal();
+              alert("تم حفظ المراقب وتخزينه في النظام.");
           })
           .catch((err) => {
               console.error("خطأ في حفظ المراقب في Firestore:", err);
@@ -1103,7 +1112,6 @@
             alert("يجب تسجيل دخول المستخدم أولاً.");
             return;
         }
-
         if (!monitors.length) {
             alert("لا توجد بيانات مراقبين ليتم حذفها.");
             return;
@@ -1122,10 +1130,12 @@
             console.error("خطأ في حذف جميع المراقبين من Firestore:", e);
         }
 
+        monitors = [];
+        saveMonitors();
+        renderMonitors(document.getElementById('searchInput').value);
         alert("تم حذف جميع المراقبين لهذا المستخدم.");
     });
 
-    // التعامل مع الضغط على صفوف جدول المراقبين
     monitorsBody.addEventListener('click', function (e) {
         const action = e.target.dataset.action;
         if (!action) return;
@@ -1133,15 +1143,11 @@
         const m = monitors[index];
         if (!m) return;
 
-        const docRef = m.id ? db.collection('monitors').doc(m.id) : null;
-
         if (action === 'toggleArrived') {
             m.arrived = !m.arrived;
-            if (docRef) docRef.update({ arrived: m.arrived }).catch(err => console.error(err));
 
         } else if (action === 'toggleVoted') {
             m.voted = !m.voted;
-            if (docRef) docRef.update({ voted: m.voted }).catch(err => console.error(err));
 
         } else if (action === 'viewIssue') {
             if (m.hasIssue) {
@@ -1154,21 +1160,20 @@
             }
 
         } else if (action === 'toggleOnline') {
-            // مجرد تبديل يدوي (مثلاً إذا تريد تعدّلها من اللوحة)
             m.online = !m.online;
-            if (docRef) docRef.update({ online: m.online }).catch(err => console.error(err));
 
         } else if (action === 'deleteMonitor') {
             if (confirm('هل تريد حذف هذا المراقب؟')) {
-                if (docRef) {
-                    docRef.delete().catch(err => {
+                if (m.id) {
+                    db.collection('monitors').doc(m.id).delete().catch(err => {
                         console.error("خطأ في حذف المراقب من Firestore:", err);
                     });
                 }
+                monitors.splice(index, 1);
             }
 
         } else if (action === 'viewPhotos') {
-            const photos = getMonitorPhotos(m.code);
+            const photos = getMonitorPhotosFromMonitorObject(m);
             if (!photos.length) {
                 alert("لا توجد صور مستلمة من هذا المراقب حتى الآن.");
                 return;
@@ -1203,7 +1208,7 @@
 
         } else if (action === 'showLocation') {
             const coords = m.location;
-            if (!coords || typeof coords.lat === "undefined" || typeof coords.lng === "undefined") {
+            if (!coords) {
                 alert("لا يوجد موقع مخزن لهذا المراقب حتى الآن.");
                 return;
             }
@@ -1231,8 +1236,17 @@
             document.getElementById('searchBox').style.display       = 'none';
         }
 
+        saveMonitors();
         renderMonitors(document.getElementById('searchInput').value);
     });
+
+    // التحديث التلقائي: كل 3 ثواني نعيد القراءة من Firestore
+    function updateOnlineStatusAuto() {
+        if (!currentUserName) return;
+        loadMonitorsFromFirestore();
+    }
+
+    setInterval(updateOnlineStatusAuto, 3000);
 
     // التحقق دوريًا من أن الحساب ما زال موجود ومفعل في Firestore
     function checkUserStillActive() {
@@ -1245,12 +1259,9 @@
           .then((snapshot) => {
               if (snapshot.empty) {
                   alert("تم حذف هذا الحساب من قبل مدير البرنامج أو لم يعد موجوداً. سيتم تسجيل الخروج الآن.");
-                  if (typeof monitorsUnsub === 'function') {
-                      monitorsUnsub();
-                      monitorsUnsub = null;
-                  }
                   localStorage.removeItem('currentUserName');
                   currentUserName = null;
+                  STORAGE_KEY = null;
                   monitors = [];
                   showLogin();
                   return;
@@ -1259,12 +1270,9 @@
               const data = snapshot.docs[0].data();
               if (data.active === false) {
                   alert("تم إيقاف هذا الحساب من قبل مدير البرنامج. سيتم تسجيل الخروج الآن.");
-                  if (typeof monitorsUnsub === 'function') {
-                      monitorsUnsub();
-                      monitorsUnsub = null;
-                  }
                   localStorage.removeItem('currentUserName');
                   currentUserName = null;
+                  STORAGE_KEY = null;
                   monitors = [];
                   showLogin();
               }
@@ -1276,7 +1284,7 @@
 
     setInterval(checkUserStillActive, 4000);
 
-    // فحص مبدئي عند فتح الصفحة
+    // فحص مبدئي عند فتح الصفحة: إذا كان هناك مستخدم محفوظ، نتحقق منه من Firestore
     (function initialCheck() {
         const savedUser = localStorage.getItem('currentUserName');
         if (!savedUser) {
