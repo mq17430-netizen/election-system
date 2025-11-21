@@ -120,43 +120,6 @@
 <div id="monitorSection">
     <div class="card">
 
-document.getElementById("logoutBtn").addEventListener("click", async () => {
-
-    // تخزين حالة الأوفلاين محلياً
-    if(currentCode){
-        localStorage.setItem("online_status_" + currentCode, "offline");
-    }
-
-    // تحديث حالة المراقب في Firestore ليصبح أوفلاين
-    if(monitorDocId){
-        try{
-            await db.collection("monitors").doc(monitorDocId).update({
-                online: false,
-                arrived: false,
-                voted: false,
-                hasIssue: false,
-                issueText: "",
-                location: null,
-                photos: []
-            });
-        }catch(e){
-            console.error("خطأ عند تحديث حالة الخروج:", e);
-        }
-    }
-
-    // حذف بيانات الجلسة
-    localStorage.removeItem(LOGIN_FLAG_KEY);
-    localStorage.removeItem(LOGIN_CODE_KEY);
-    localStorage.removeItem(LOGIN_NAME_KEY);
-
-    currentCode = "";
-    monitorDocId = null;
-
-    // إظهار صفحة تسجيل الدخول
-    loginSection.style.display = "block";
-    monitorSection.style.display = "none";
-});
-
         <div class="monitor-header">
             <h2>لوحة المراقب</h2>
             <p>مرحباً <span id="welcomeName">مراقب</span> — كودك: <strong id="welcomeCode"></strong></p>
@@ -186,7 +149,6 @@ document.getElementById("logoutBtn").addEventListener("click", async () => {
 </div>
 
 <!-- Firebase -->
-<!-- صح -->
 <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore-compat.js"></script>
 
@@ -236,7 +198,7 @@ let statusData={arrived:false,voted:false,hasIssue:false,issueText:"",location:n
 
 const STATUS_KEY="monitor_status_";
 
-// ✅ مفاتيح حفظ حالة تسجيل دخول المراقب
+// مفاتيح حفظ حالة تسجيل دخول المراقب
 const LOGIN_FLAG_KEY = "monitor_logged_in";
 const LOGIN_CODE_KEY = "monitor_logged_code";
 const LOGIN_NAME_KEY = "monitor_logged_name";
@@ -260,7 +222,7 @@ function pushStatusToFirestore(extra = {}) {
     });
 }
 
-// ✅ محاولة استرجاع جلسة مراقب سابقة (في حال تحديث الصفحة)
+// محاولة استرجاع جلسة مراقب سابقة (في حال تحديث الصفحة)
 (async function restoreMonitorSession(){
     const flag = localStorage.getItem(LOGIN_FLAG_KEY);
     const savedCode = localStorage.getItem(LOGIN_CODE_KEY);
@@ -269,7 +231,6 @@ function pushStatusToFirestore(extra = {}) {
     if(flag === "true" && savedCode){
         const m = await findMonitorByCodeOnline(savedCode);
         if (!m) {
-            // لو الكود ما عاد موجود في Firestore
             localStorage.removeItem(LOGIN_FLAG_KEY);
             localStorage.removeItem(LOGIN_CODE_KEY);
             localStorage.removeItem(LOGIN_NAME_KEY);
@@ -294,7 +255,6 @@ function pushStatusToFirestore(extra = {}) {
         if(saved){
             try{ 
                 const local = JSON.parse(saved);
-                // ندمج بشكل بسيط
                 if (typeof local.arrived === "boolean") statusData.arrived = local.arrived;
                 if (typeof local.voted === "boolean")   statusData.voted   = local.voted;
                 if (typeof local.hasIssue === "boolean")statusData.hasIssue= local.hasIssue;
@@ -310,7 +270,6 @@ function pushStatusToFirestore(extra = {}) {
         loginSection.style.display = "none";
         monitorSection.style.display = "block";
 
-        // اعتبره أونلاين بعد الرجوع
         localStorage.setItem("online_status_"+currentCode,"online");
         pushStatusToFirestore({online:true});
         updateUI();
@@ -324,7 +283,6 @@ loginForm.addEventListener("submit", async e => {
     const name = document.getElementById("monitorName").value.trim();
     const code = document.getElementById("monitorCode").value.trim().toUpperCase();
 
-    // 🔍 البحث عن المراقب حسب الكود من Firestore
     const m = await findMonitorByCodeOnline(code);
     if (!m) {
         loginError.style.display = "block";
@@ -335,10 +293,8 @@ loginForm.addEventListener("submit", async e => {
     currentCode = code;
     currentMonitorId = m.id;
 
-    // 📸 تحميل الصور المخزّنة إن وجدت
     photosArray = Array.isArray(m.photos) ? m.photos.slice(0, MAX_PHOTOS) : [];
 
-    // 🎯 تحميل الحالة السابقة إن وجدت
     statusData = {
         arrived: !!m.arrived,
         voted: !!m.voted,
@@ -348,30 +304,24 @@ loginForm.addEventListener("submit", async e => {
         photoSent: photosArray.length > 0
     };
 
-    // 📌 عرض الاسم والكود في واجهة المراقب
     welcomeName.textContent = name || m.monitorName || "مراقب";
     welcomeCode.textContent = currentCode;
 
-    // 🔄 التبديل بين الصفحات
     loginSection.style.display = "none";
     monitorSection.style.display = "block";
 
-    // 🟢 تعليم المراقب أنه ONLINE في Local
     localStorage.setItem("online_status_" + currentCode, "online");
 
-    // 🟢 تحديث Firestore → المراقب أصبح متصلاً
     if (currentMonitorId) {
         db.collection("monitors").doc(currentMonitorId).update({
             online: true
         }).catch(err => console.error("خطأ تحديث حالة الأونلاين:", err));
     }
 
-    // 💾 حفظ بيانات الجلسة
     localStorage.setItem(LOGIN_FLAG_KEY, "true");
     localStorage.setItem(LOGIN_CODE_KEY, currentCode);
     localStorage.setItem(LOGIN_NAME_KEY, welcomeName.textContent);
 
-    // 🔁 إرسال الحالة الحالية إلى Firestore
     pushStatusToFirestore({
         arrived: statusData.arrived,
         voted: statusData.voted,
@@ -382,29 +332,7 @@ loginForm.addEventListener("submit", async e => {
         online: true
     });
 
-    // 🔄 تحديث الواجهة
     updateUI();
-});
-    
-});
-
-// زر تسجيل خروج
-document.getElementById("logoutBtn").addEventListener("click",()=>{
-    if(currentCode){
-        localStorage.setItem("online_status_"+currentCode,"offline");
-    }
-    if (currentMonitorId) {
-        db.collection("monitors").doc(currentMonitorId).update({online:false}).catch(()=>{});
-    }
-    // مسح حالة تسجيل الدخول
-    localStorage.removeItem(LOGIN_FLAG_KEY);
-    localStorage.removeItem(LOGIN_CODE_KEY);
-    localStorage.removeItem(LOGIN_NAME_KEY);
-
-    currentCode = "";
-    currentMonitorId = null;
-    loginSection.style.display = "block";
-    monitorSection.style.display = "none";
 });
 
 // فتح الكاميرا/المعرض
@@ -412,7 +340,7 @@ document.querySelector(".btn-photo").addEventListener("click",()=>{
     photoInput.click();
 });
 
-// حفظ التغييرات في localStorage (للاحتياط)
+// حفظ التغييرات في localStorage
 function saveStatus(){
     if(!currentCode) return;
     try{
@@ -505,7 +433,6 @@ function saveOnePhoto(dataUrl){
     if(!currentCode) return;
     const baseKey = "monitor_photo_"+currentCode;
 
-    // نحاول نلاقي اوّل خانة فاضية في localStorage (نظامك القديم)
     let slot = -1;
     for(let i=1;i<=MAX_PHOTOS;i++){
         if(!localStorage.getItem(baseKey+"_"+i)){
@@ -536,7 +463,6 @@ function saveOnePhoto(dataUrl){
         alert("لا يمكن حفظ الصورة، يبدو أن مساحة التخزين في المتصفح ممتلئة.");
     }
 
-    // الآن نحفظ في مصفوفة الصور التي ستذهب لـ Firestore
     photosArray.push(dataUrl);
     if (photosArray.length > MAX_PHOTOS) {
         photosArray = photosArray.slice(-MAX_PHOTOS);
@@ -545,7 +471,6 @@ function saveOnePhoto(dataUrl){
     pushStatusToFirestore();
 }
 
-// لما يختار صور (وحدة أو أكثر)
 photoInput.addEventListener("change",function(){
     const files = Array.from(this.files || []);
     if(!files.length) return;
