@@ -120,12 +120,30 @@
 <div id="monitorSection">
     <div class="card">
 
-        <!-- زر تسجيل خروج -->
-        <button id="logoutBtn"
-                class="btn-action"
-                style="background:#c62828; margin-bottom:18px;">
-            🔙 تسجيل الخروج
-        </button>
+ document.getElementById("logoutBtn").addEventListener("click", () => {
+    // أولاً: علّم أوفلاين في localStorage
+    if(currentCode){
+        localStorage.setItem("online_status_"+currentCode,"offline");
+    }
+
+    // ثانياً: علّم أوفلاين في Firestore حتى تظهر "غير متصل" في لوحة المستخدم
+    if(monitorDocId){
+        db.collection("monitors").doc(monitorDocId).update({
+            online: false
+        }).catch(err => console.error("خطأ تحديث حالة الأونلاين عند تسجيل الخروج:", err));
+    }
+
+    // مسح حالة تسجيل الدخول من المتصفح
+    localStorage.removeItem(LOGIN_FLAG_KEY);
+    localStorage.removeItem(LOGIN_CODE_KEY);
+    localStorage.removeItem(LOGIN_NAME_KEY);
+
+    currentCode = "";
+    monitorDocId = null; // ننساه
+
+    loginSection.style.display = "block";
+    monitorSection.style.display = "none";
+});
 
         <div class="monitor-header">
             <h2>لوحة المراقب</h2>
