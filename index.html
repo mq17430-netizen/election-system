@@ -20,7 +20,7 @@
 
         #loginSection {
             min-height: 100vh;
-        display: none;   /* نخفي شاشة الدخول في البداية */
+            display: none;   /* نخفي شاشة الدخول في البداية */
             align-items: center;
             justify-content: center;
             padding: 20px;
@@ -1241,51 +1241,43 @@
             win.document.close();
 
         } else if (action === "showLocation") {
-    let coords = null;
+            let coords = null;
 
-    const locKey = "monitor_location_" + m.code;
-    const stored = localStorage.getItem(locKey);
+            const locKey = "monitor_location_" + m.code;
+            const stored = localStorage.getItem(locKey);
 
-    if (stored) {
-        try { 
-            coords = JSON.parse(stored); 
-        }
-        catch { 
-            coords = null; 
-        }
-    }
+            if (stored) {
+                try { 
+                    coords = JSON.parse(stored); 
+                }
+                catch { 
+                    coords = null; 
+                }
+            }
 
-    if (!coords) {
-        alert("لا يوجد موقع مُسجل لهذا المراقب حتى الآن.");
-        return;
-    }
+            if (!coords) {
+                alert("لا يوجد موقع مُسجل لهذا المراقب حتى الآن.");
+                return;
+            }
 
-    const lat = Number(coords.lat);
-    const lng = Number(coords.lng);
+            const lat = Number(coords.lat);
+            const lng = Number(coords.lng);
 
-    if (isNaN(lat) || isNaN(lng)) {
-        alert("إحداثيات الموقع غير صحيحة أو غير مكتملة.");
-        return;
-    }
+            if (isNaN(lat) || isNaN(lng)) {
+                alert("إحداثيات الموقع غير صحيحة أو غير مكتملة.");
+                return;
+            }
 
-    const mapIframe = document.getElementById("mainMap");
-    if (mapIframe) {
-        mapIframe.src =
-            `https://www.google.com/maps?q=${lat.toFixed(6)},${lng.toFixed(6)}&z=19&output=embed`;
-    }
+            const mapIframe = document.getElementById("mainMap");
+            if (mapIframe) {
+                mapIframe.src =
+                    `https://www.google.com/maps?q=${lat.toFixed(6)},${lng.toFixed(6)}&z=19&output=embed`;
+            }
 
-    tabs.forEach(t => t.classList.remove("active"));
-    const mapTab = document.querySelector('.tab[data-target="mapSection"]');
-    if (mapTab) mapTab.classList.add("active");
+            tabs.forEach(t => t.classList.remove("active"));
+            const mapTab = document.querySelector('.tab[data-target="mapSection"]');
+            if (mapTab) mapTab.classList.add("active");
 
-    document.getElementById("representation").style.display = "none";
-    document.getElementById("searchbox").style.display = "none";
-    document.getElementById("monitorSection").style.display = "none";
-    document.getElementById("mapSection").style.display = "block";
-
-    saveMonitors();
-    renderMonitors(document.getElementById("searchInput").value);
-}
             document.getElementById('monitorsSection').style.display = 'none';
             document.getElementById('mapSection').style.display      = 'block';
             document.getElementById('reportsSection').style.display  = 'none';
@@ -1367,7 +1359,8 @@
           });
     }
 
-    setInterval(checkUserStillActive, 4000);
+    // ⚠ إيقاف الفحص الدوري حتى لا يتم تسجيل خروج المستخدم تلقائياً
+    // setInterval(checkUserStillActive, 4000);
 
     // فحص مبدئي عند فتح الصفحة
     (function initialCheck() {
