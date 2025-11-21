@@ -189,6 +189,7 @@
         .btn-issue   { background: linear-gradient(90deg, #ff9800, #f44336); }
         .btn-loc     { background: linear-gradient(90deg, #ff9800, #ff5722); }
         .btn-photo   { background: linear-gradient(90deg, #7b1fa2, #512da8); }
+        .btn-logout  { background: linear-gradient(90deg, #e0e0e0, #bdbdbd); color:#333; }
 
         .btn-action.inactive {
             opacity: 0.5;
@@ -277,12 +278,17 @@
         <!-- زر الإبلاغ عن مشكلة -->
         <button id="btnIssue" class="btn-action btn-issue">⚠ الإبلاغ عن مشكلة</button>
 
+        <!-- زر الموقع بدقة عالية -->
         <button id="btnLocation" class="btn-action btn-loc">📍 تشغيل الموقع (إرسال الإحداثيات)</button>
 
+        <!-- زر الصورة -->
         <label for="photoInput">
             <button class="btn-action btn-photo" type="button">📷 التقاط / رفع صورة الشريط</button>
         </label>
         <input id="photoInput" type="file" accept="image/*" capture="environment">
+
+        <!-- زر تسجيل الخروج -->
+        <button id="btnLogout" class="btn-action btn-logout" type="button">⬅ تسجيل الخروج</button>
 
         <div class="status-box" id="statusBox">
             <div><span class="label">حالة الوصول:</span> لم يتم التحديث بعد.</div>
@@ -296,11 +302,12 @@
     </div>
 </div>
 
-<!-- Firebase (نفس الإعدادات المستخدمة في الصفحات الأخرى) -->
+<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore-compat.js"></script>
 
 <script>
+    // إعداد Firebase (نفس إعداداتك)
     const firebaseConfig = {
         apiKey: "AIzaSyDdiudUa5jjcZDwJgYBbLdC-YBNQ5rlqvU",
         authDomain: "election-system-9cbb8.firebaseapp.com",
@@ -326,12 +333,14 @@
     const btnVoted    = document.getElementById('btnVoted');
     const btnIssue    = document.getElementById('btnIssue');
     const btnLocation = document.getElementById('btnLocation');
+    const btnLogout   = document.getElementById('btnLogout');
     const photoInput  = document.getElementById('photoInput');
     const statusBox   = document.getElementById('statusBox');
     const photoPreview= document.getElementById('photoPreview');
 
     let currentCode = "";
-    let monitorDocRef = null;
+    let currentMonitorId = null;   // ID الوثيقة في Firestore
+
     let statusData = {
         arrived: false,
         voted: false,
@@ -343,7 +352,18 @@
 
     const STATUS_KEY_PREFIX = "monitor_status_";
 
-    // تحديث واجهة الحالة
+    function resetStatusData() {
+        statusData = {
+            arrived: false,
+            voted: false,
+            hasIssue: false,
+            issueText: "",
+            location: null,
+            photoSent: false
+        };
+    }
+
+    // تحديث الواجهة
     function updateStatusUI() {
         const lines = statusBox.querySelectorAll('div');
 
@@ -354,8 +374,10 @@
             (statusData.voted ? '🗳 تم التصويت.' : 'لم يتم التحديث بعد.');
 
         if (statusData.location) {
+            const acc = statusData.location.accuracy ?
+                ` (الدقة ≈ ${Math.round(statusData.location.accuracy)} م)` : '';
             lines[2].innerHTML = '<span class="label">آخر موقع مرسل:</span> ' +
-                `خط العرض ${statusData.location.lat.toFixed(5)}, خط الطول ${statusData.location.lng.toFixed(5)}`;
+                `خط العرض ${statusData.location.lat.toFixed(5)}, خط الطول ${statusData.location.lng.toFixed(5)}${acc}`;
         } else {
             lines[2].innerHTML = '<span class="label">آخر موقع مرسل:</span> لا يوجد.';
         }
@@ -373,36 +395,39 @@
         btnIssue.classList.toggle('inactive', statusData.hasIssue);
     }
 
-    // حفظ الحالة (محلي + تحديث Firestore)
+    // حفظ في localStorage + Firestore
     function saveStatus() {
         if (!currentCode) return;
 
-        // حفظ محلي (اختياري)
+        // localStorage احتياط
         localStorage.setItem(STATUS_KEY_PREFIX + currentCode, JSON.stringify(statusData));
 
-        if (statusData.hasIssue) {
-            localStorage.setItem("monitor_issue_" + currentCode, statusData.issueText);
-        } else {
-            localStorage.removeItem("monitor_issue_" + currentCode);
-        }
-
-        // تحديث Firestore
-        if (monitorDocRef) {
-            const updateObj = {
-                arrived:   statusData.arrived,
-                voted:     statusData.voted,
-                hasIssue:  statusData.hasIssue,
-                issueText: statusData.issueText,
-                location:  statusData.location || null,
-                online:    true
+        // تحديث document في Firestore
+        if (currentMonitorId) {
+            const payload = {
+                arrived: statusData.arrived,
+                voted: statusData.voted,
+                hasIssue: statusData.hasIssue,
+                issueText: statusData.issueText || '',
+                online: true
             };
-            monitorDocRef.update(updateObj).catch(err => {
-                console.error("Firestore update error:", err);
+
+            if (statusData.location) {
+                payload.location = {
+                    lat: statusData.location.lat,
+                    lng: statusData.location.lng,
+                    accuracy: statusData.location.accuracy || null,
+                    timestamp: statusData.location.timestamp || Date.now()
+                };
+            }
+
+            db.collection('monitors').doc(currentMonitorId).update(payload).catch(err => {
+                console.error("خطأ في تحديث حالة المراقب:", err);
             });
         }
     }
 
-    // تسجيل الدخول (التحقق من الكود من Firestore)
+    // تسجيل الدخول: البحث عن المراقب حسب الكود في Firestore
     loginForm.addEventListener('submit', function (e) {
         e.preventDefault();
 
@@ -415,8 +440,6 @@
             return;
         }
 
-        loginError.style.display = "none";
-
         db.collection('monitors')
           .where('code', '==', code)
           .limit(1)
@@ -428,36 +451,50 @@
                   return;
               }
 
-              const doc = snapshot.docs[0];
-              const data = doc.data();
-              monitorDocRef = doc.ref;
+              loginError.style.display = "none";
 
-              currentCode = data.code || code;
+              const docu = snapshot.docs[0];
+              const data = docu.data();
 
-              welcomeName.textContent = nameInput || data.monitorName || "مراقب";
+              currentMonitorId = docu.id;
+              currentCode = code;
+
+              const displayName = nameInput || data.monitorName || data.name || "مراقب";
+              welcomeName.textContent = displayName;
               welcomeCode.textContent = currentCode;
 
-              statusData = {
-                  arrived:   !!data.arrived,
-                  voted:     !!data.voted,
-                  hasIssue:  !!data.hasIssue,
-                  issueText: data.issueText || "",
-                  location:  data.location || null,
-                  photoSent: Array.isArray(data.photos) && data.photos.length > 0
-              };
+              // لو المراقب كتب اسمه، نحدّثه في Firestore
+              if (nameInput && (!data.monitorName || data.monitorName === "")) {
+                  db.collection('monitors').doc(currentMonitorId).update({
+                      monitorName: nameInput
+                  }).catch(()=>{});
+              }
 
-              // حفظ حالة الأونلاين
+              // قراءة الحالة من localStorage (لو موجودة)
+              const saved = localStorage.getItem(STATUS_KEY_PREFIX + currentCode);
+              if (saved) {
+                  try {
+                      const parsed = JSON.parse(saved);
+                      statusData = Object.assign({}, statusData, parsed);
+                  } catch (e) {}
+              }
+
+              // تحديث حالة الاتصال في Firestore
+              db.collection('monitors').doc(currentMonitorId).update({
+                  online: true
+              }).catch(err => {
+                  console.error("خطأ في تحديث online:", err);
+              });
+
               localStorage.setItem("online_status_" + currentCode, "online");
-              monitorDocRef.update({ online: true }).catch(()=>{});
 
               updateStatusUI();
-
-              loginSection.style.display   = "none";
+              loginSection.style.display  = "none";
               monitorSection.style.display = "block";
           })
           .catch((err) => {
-              console.error("Firestore login error:", err);
-              loginError.textContent = "خطأ في الاتصال بقاعدة البيانات، حاول مرة أخرى.";
+              console.error("خطأ في التحقق من الكود من Firestore:", err);
+              loginError.textContent = "حدث خطأ أثناء الاتصال بقاعدة البيانات. حاول مرة أخرى.";
               loginError.style.display = "block";
           });
     });
@@ -467,6 +504,7 @@
         statusData.arrived = !statusData.arrived;
         saveStatus();
         updateStatusUI();
+        alert("✔ تم تحديث حالة الوصول.");
     });
 
     // زر التصويت
@@ -474,6 +512,7 @@
         statusData.voted = !statusData.voted;
         saveStatus();
         updateStatusUI();
+        alert("✔ تم تحديث حالة التصويت.");
     });
 
     // زر الإبلاغ عن مشكلة
@@ -481,71 +520,70 @@
         if (!statusData.hasIssue) {
             const txt = prompt("اكتب وصف مختصر للمشكلة:");
             if (txt && txt.trim() !== "") {
-                statusData.hasIssue  = true;
+                statusData.hasIssue = true;
                 statusData.issueText = txt.trim();
-
-                localStorage.setItem("monitor_status_" + currentCode, JSON.stringify(statusData));
-                localStorage.setItem("monitor_issue_"  + currentCode, statusData.issueText);
-
                 saveStatus();
                 updateStatusUI();
-
                 alert("✔ تم إرسال المشكلة إلى لوحة التحكم.");
             }
         } else {
             const confirmRemove = confirm("هل تريد إلغاء علامة المشكلة؟");
             if (!confirmRemove) return;
-
-            statusData.hasIssue  = false;
+            statusData.hasIssue = false;
             statusData.issueText = "";
-
-            localStorage.removeItem("monitor_issue_" + currentCode);
-            localStorage.setItem("monitor_status_" + currentCode, JSON.stringify(statusData));
-
             saveStatus();
             updateStatusUI();
         }
     });
 
-    // زر إرسال الموقع
+    // زر الموقع - دقة عالية
     btnLocation.addEventListener('click', function () {
         if (!navigator.geolocation) {
             alert("المتصفح لا يدعم تحديد الموقع.");
             return;
         }
 
-        btnLocation.textContent = "📍 جاري الحصول على الموقع...";
+        btnLocation.textContent = "📍 جاري الحصول على الموقع بدقة عالية...";
         navigator.geolocation.getCurrentPosition(
             (pos) => {
                 statusData.location = {
                     lat: pos.coords.latitude,
                     lng: pos.coords.longitude,
-                    accuracy: typeof pos.coords.accuracy === "number" ? pos.coords.accuracy : null,
+                    accuracy: pos.coords.accuracy || null,
                     timestamp: Date.now()
                 };
 
+                // حفظ في localStorage + Firestore
                 saveStatus();
 
+                // تخزين إضافي في localStorage بنفس المفتاح الذي تقرأه لوحة المستخدم
                 if (currentCode) {
                     localStorage.setItem(
                         "monitor_location_" + currentCode,
                         JSON.stringify(statusData.location)
                     );
-                    localStorage.setItem("online_status_" + currentCode, "online");
                 }
 
+                localStorage.setItem("online_status_" + currentCode, "online");
+
                 updateStatusUI();
-                btnLocation.textContent = "📍 تم إرسال الموقع";
+                btnLocation.textContent = "📍 تم إرسال الموقع بدقة عالية";
+                alert("✔ تم إرسال الإحداثيات إلى لوحة التحكم.");
             },
             (err) => {
                 console.error(err);
-                alert("تعذر الحصول على الموقع.");
+                alert("تعذر الحصول على الموقع. تأكد من تفعيل GPS ومنح صلاحية الموقع.");
                 btnLocation.textContent = "📍 تشغيل الموقع (إرسال الإحداثيات)";
+            },
+            {
+                enableHighAccuracy: true,   // دقة عالية
+                timeout: 20000,            // 20 ثانية
+                maximumAge: 0
             }
         );
     });
 
-    // رفع صورة
+    // رفع الصورة (تبقى محلياً حالياً)
     photoInput.addEventListener('change', function () {
         const file = this.files[0];
         if (!file) return;
@@ -560,15 +598,6 @@
                 localStorage.setItem("monitor_photo_" + currentCode, e.target.result);
             }
 
-            // (اختياري) حفظ الصورة كسلسلة Base64 في حقل photos في Firestore
-            if (monitorDocRef) {
-                monitorDocRef.update({
-                    photos: firebase.firestore.FieldValue.arrayUnion(e.target.result)
-                }).catch(err => {
-                    console.error("Firestore photo update error:", err);
-                });
-            }
-
             photoPreview.innerHTML = `
                 <div style="font-size:12px; color:#555;">آخر صورة مرفوعة:</div>
                 <img src="${e.target.result}" alt="صورة الشريط">
@@ -577,13 +606,53 @@
         reader.readAsDataURL(file);
     });
 
-    // عند إغلاق الصفحة ضع المراقب أوفلاين
+    // زر تسجيل الخروج
+    btnLogout.addEventListener('click', function () {
+        if (!currentCode) {
+            // مجرد احتياط
+            monitorSection.style.display = "none";
+            loginSection.style.display = "block";
+            return;
+        }
+
+        if (!confirm("هل تريد تسجيل الخروج من لوحة المراقب؟")) return;
+
+        // تحديث حالة الاتصال في Firestore إلى غير متصل
+        if (currentMonitorId) {
+            db.collection('monitors').doc(currentMonitorId).update({
+                online: false
+            }).catch(err => {
+                console.error("خطأ في تحديث online عند تسجيل الخروج:", err);
+            });
+        }
+
+        localStorage.setItem("online_status_" + currentCode, "offline");
+
+        // إعادة التهيئة
+        resetStatusData();
+        updateStatusUI();
+        photoPreview.innerHTML = "";
+
+        currentCode = "";
+        currentMonitorId = null;
+
+        // تفريغ حقول الدخول
+        document.getElementById('monitorName').value = "";
+        document.getElementById('monitorCode').value = "";
+
+        monitorSection.style.display = "none";
+        loginSection.style.display = "block";
+    });
+
+    // في حالة إغلاق الصفحة فجأة، نعتبره "خروج"
     window.addEventListener('beforeunload', function () {
         if (currentCode) {
             localStorage.setItem("online_status_" + currentCode, "offline");
-        }
-        if (monitorDocRef) {
-            monitorDocRef.update({ online: false }).catch(()=>{});
+            if (currentMonitorId) {
+                db.collection('monitors').doc(currentMonitorId).update({
+                    online: false
+                }).catch(()=>{});
+            }
         }
     });
 </script>
