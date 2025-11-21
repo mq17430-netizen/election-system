@@ -777,7 +777,8 @@
                       voted:     data.voted     || false,
                       hasIssue:  data.hasIssue  || false,
                       issueText: data.issueText || '',
-                      online:    data.online    || false
+                      online:    data.online    || false,
+                      location:  data.location  || null   // ⬅️ إضافة حقل الموقع
                   });
               });
               monitors = loaded;
@@ -1082,7 +1083,8 @@
             voted:     false,
             hasIssue:  false,
             issueText: '',
-            online:    false
+            online:    false,
+            location:  null
         };
 
         db.collection('monitors').add(docData)
@@ -1097,7 +1099,8 @@
                   voted: false,
                   hasIssue: false,
                   issueText: '',
-                  online: false
+                  online: false,
+                  location: null
               });
 
               saveMonitors();
@@ -1150,9 +1153,23 @@
 
         if (action === 'toggleArrived') {
             m.arrived = !m.arrived;
+            if (m.id) {
+                db.collection('monitors').doc(m.id).update({
+                    arrived: m.arrived
+                }).catch(err => {
+                    console.error("خطأ في تحديث arrived في Firestore:", err);
+                });
+            }
 
         } else if (action === 'toggleVoted') {
             m.voted = !m.voted;
+            if (m.id) {
+                db.collection('monitors').doc(m.id).update({
+                    voted: m.voted
+                }).catch(err => {
+                    console.error("خطأ في تحديث voted في Firestore:", err);
+                });
+            }
 
         } else if (action === 'viewIssue') {
             if (m.hasIssue) {
@@ -1166,6 +1183,13 @@
 
         } else if (action === 'toggleOnline') {
             m.online = !m.online;
+            if (m.id) {
+                db.collection('monitors').doc(m.id).update({
+                    online: m.online
+                }).catch(err => {
+                    console.error("خطأ في تحديث حالة الاتصال في Firestore:", err);
+                });
+            }
 
         } else if (action === 'deleteMonitor') {
             if (confirm('هل تريد حذف هذا المراقب؟')) {
@@ -1212,18 +1236,29 @@
             win.document.close();
 
         } else if (action === 'showLocation') {
-            const locKey = "monitor_location_" + m.code;
-            const stored = localStorage.getItem(locKey);
-            if (!stored) {
-                alert("لا يوجد موقع مخزن لهذا المراقب حتى الآن.");
-                return;
-            }
-            let coords;
-            try {
-                coords = JSON.parse(stored);
-            } catch {
-                alert("صيغة بيانات الموقع غير صحيحة.");
-                return;
+            let coords = null;
+
+            // أولوية لبيانات Firestore
+            if (m.location && typeof m.location.lat !== "undefined" && typeof m.location.lng !== "undefined") {
+                coords = m.location;
+            } else {
+                // توافقاً مع النسخ القديمة: نجرّب localStorage
+                const locKey = "monitor_location_" + m.code;
+                const stored = localStorage.getItem(locKey);
+                if (!stored) {
+                    alert("لا يوجد موقع مخزن لهذا المراقب حتى الآن.");
+                    saveMonitors();
+                    renderMonitors(document.getElementById('searchInput').value);
+                    return;
+                }
+                try {
+                    coords = JSON.parse(stored);
+                } catch {
+                    alert("صيغة بيانات الموقع غير صحيحة.");
+                    saveMonitors();
+                    renderMonitors(document.getElementById('searchInput').value);
+                    return;
+                }
             }
 
             const lat = parseFloat(coords.lat);
@@ -1231,6 +1266,8 @@
 
             if (isNaN(lat) || isNaN(lng)) {
                 alert("إحداثيات الموقع غير صحيحة أو غير مكتملة.");
+                saveMonitors();
+                renderMonitors(document.getElementById('searchInput').value);
                 return;
             }
 
@@ -1253,35 +1290,10 @@
         renderMonitors(document.getElementById('searchInput').value);
     });
 
+    // ✅ التحديث الدوري الآن يعتمد على Firestore فقط
     function updateOnlineStatusAuto() {
-        if (!currentUserName || !STORAGE_KEY) return;
-
-        monitors.forEach(monitor => {
-            const code = monitor.code;
-
-            const onlineStatus = localStorage.getItem("online_status_" + code);
-            if (onlineStatus === "online") {
-                monitor.online = true;
-            } else if (onlineStatus === "offline") {
-                monitor.online = false;
-            }
-
-            const rawStatus = localStorage.getItem("monitor_status_" + code);
-            if (rawStatus) {
-                try {
-                    const st = JSON.parse(rawStatus);
-                    if (typeof st.arrived   === "boolean") monitor.arrived   = st.arrived;
-                    if (typeof st.voted     === "boolean") monitor.voted     = st.voted;
-                    if (typeof st.hasIssue  === "boolean") monitor.hasIssue  = st.hasIssue;
-                    if (typeof st.issueText === "string")  monitor.issueText = st.issueText;
-                } catch (e) {
-                    console.error("خطأ في قراءة حالة المراقب:", e);
-                }
-            }
-        });
-
-        saveMonitors();
-        renderMonitors(document.getElementById('searchInput').value);
+        if (!currentUserName) return;
+        loadMonitorsFromFirestore();
     }
 
     setInterval(updateOnlineStatusAuto, 3000);
