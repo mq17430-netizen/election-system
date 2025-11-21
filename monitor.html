@@ -120,27 +120,39 @@
 <div id="monitorSection">
     <div class="card">
 
- document.getElementById("logoutBtn").addEventListener("click", () => {
-    // أولاً: علّم أوفلاين في localStorage
+document.getElementById("logoutBtn").addEventListener("click", async () => {
+
+    // تخزين حالة الأوفلاين محلياً
     if(currentCode){
-        localStorage.setItem("online_status_"+currentCode,"offline");
+        localStorage.setItem("online_status_" + currentCode, "offline");
     }
 
-    // ثانياً: علّم أوفلاين في Firestore حتى تظهر "غير متصل" في لوحة المستخدم
+    // تحديث حالة المراقب في Firestore ليصبح أوفلاين
     if(monitorDocId){
-        db.collection("monitors").doc(monitorDocId).update({
-            online: false
-        }).catch(err => console.error("خطأ تحديث حالة الأونلاين عند تسجيل الخروج:", err));
+        try{
+            await db.collection("monitors").doc(monitorDocId).update({
+                online: false,
+                arrived: false,
+                voted: false,
+                hasIssue: false,
+                issueText: "",
+                location: null,
+                photos: []
+            });
+        }catch(e){
+            console.error("خطأ عند تحديث حالة الخروج:", e);
+        }
     }
 
-    // مسح حالة تسجيل الدخول من المتصفح
+    // حذف بيانات الجلسة
     localStorage.removeItem(LOGIN_FLAG_KEY);
     localStorage.removeItem(LOGIN_CODE_KEY);
     localStorage.removeItem(LOGIN_NAME_KEY);
 
     currentCode = "";
-    monitorDocId = null; // ننساه
+    monitorDocId = null;
 
+    // إظهار صفحة تسجيل الدخول
     loginSection.style.display = "block";
     monitorSection.style.display = "none";
 });
