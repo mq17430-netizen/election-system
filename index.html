@@ -756,7 +756,7 @@
         dashboardSection.style.display = 'block';
     }
 
-    // تحميل المراقبين من Firestore حسب المستخدم الحالي (مع الحالة والموقع والصور)
+    // تحميل المراقبين من Firestore حسب المستخدم الحالي (مرّة واحدة)
     function loadMonitorsFromFirestore() {
         if (!currentUserName) return;
 
@@ -906,8 +906,19 @@
         issuesMonitorsCount.textContent  = issues;
     }
 
-    function getMonitorPhotosFromMonitorObject(m) {
-        return Array.isArray(m.photos) ? m.photos : [];
+    function getMonitorPhotosFromLocal(code) {
+        const photos = [];
+        const baseKey = "monitor_photo_" + code;
+
+        const single = localStorage.getItem(baseKey);
+        if (single) photos.push(single);
+
+        for (let i = 1; i <= 20; i++) {
+            const dataUrl = localStorage.getItem(baseKey + "_" + i);
+            if (dataUrl) photos.push(dataUrl);
+        }
+
+        return photos;
     }
 
     function renderMonitors(filterText = '') {
@@ -1145,9 +1156,19 @@
 
         if (action === 'toggleArrived') {
             m.arrived = !m.arrived;
+            if (m.id) {
+                db.collection('monitors').doc(m.id).update({ arrived: m.arrived }).catch(err => {
+                    console.error("خطأ في تحديث arrived:", err);
+                });
+            }
 
         } else if (action === 'toggleVoted') {
             m.voted = !m.voted;
+            if (m.id) {
+                db.collection('monitors').doc(m.id).update({ voted: m.voted }).catch(err => {
+                    console.error("خطأ في تحديث voted:", err);
+                });
+            }
 
         } else if (action === 'viewIssue') {
             if (m.hasIssue) {
@@ -1160,7 +1181,13 @@
             }
 
         } else if (action === 'toggleOnline') {
+            // نغيّرها يدوياً إذا حبيت من اللوحة
             m.online = !m.online;
+            if (m.id) {
+                db.collection('monitors').doc(m.id).update({ online: m.online }).catch(err => {
+                    console.error("خطأ في تحديث online:", err);
+                });
+            }
 
         } else if (action === 'deleteMonitor') {
             if (confirm('هل تريد حذف هذا المراقب؟')) {
@@ -1173,7 +1200,14 @@
             }
 
         } else if (action === 'viewPhotos') {
-            const photos = getMonitorPhotosFromMonitorObject(m);
+            let photos = [];
+            if (Array.isArray(m.photos) && m.photos.length) {
+                photos = m.photos;
+            } else {
+                // احتياطاً لو كانت صور قديمة محفوظة في المتصفح المحلي
+                photos = getMonitorPhotosFromLocal(m.code);
+            }
+
             if (!photos.length) {
                 alert("لا توجد صور مستلمة من هذا المراقب حتى الآن.");
                 return;
@@ -1207,7 +1241,22 @@
             win.document.close();
 
         } else if (action === 'showLocation') {
-            const coords = m.location;
+            let coords = null;
+
+            // أولاً من Firestore (الموجود في المصفوفة)
+            if (m.location && typeof m.location.lat === "number" && typeof m.location.lng === "number") {
+                coords = m.location;
+            } else {
+                // احتياطاً لو كان النظام القديم (localStorage)
+                const locKey = "monitor_location_" + m.code;
+                const stored = localStorage.getItem(locKey);
+                if (stored) {
+                    try {
+                        coords = JSON.parse(stored);
+                    } catch {}
+                }
+            }
+
             if (!coords) {
                 alert("لا يوجد موقع مخزن لهذا المراقب حتى الآن.");
                 return;
@@ -1223,7 +1272,7 @@
 
             const mapIframe = document.getElementById('mainMap');
             if (mapIframe) {
-                mapIframe.src = `https://www.google.com/maps?q=${lat.toFixed(6)},${lng.toFixed(6)}&z=18&output=embed`;
+                mapIframe.src = `https://www.google.com/maps?q=${lat.toFixed(6)},${lng.toFixed(6)}&z=19&output=embed`;
             }
 
             tabs.forEach(t => t.classList.remove('active'));
@@ -1240,10 +1289,39 @@
         renderMonitors(document.getElementById('searchInput').value);
     });
 
-    // التحديث التلقائي: كل 3 ثواني نعيد القراءة من Firestore
+    // 🔄 تحديث دوري من Firestore فقط (كل 3 ثواني) حتى تتزامن مع المراقب من أي مكان
     function updateOnlineStatusAuto() {
         if (!currentUserName) return;
-        loadMonitorsFromFirestore();
+
+        db.collection('monitors')
+          .where('adminUsername', '==', currentUserName)
+          .get()
+          .then((snapshot) => {
+              const loaded = [];
+              snapshot.forEach((docu) => {
+                  const data = docu.data();
+                  loaded.push({
+                      id:       docu.id,
+                      name:     data.monitorName  || '',
+                      phone:    data.monitorPhone || '',
+                      center:   data.monitorCenter|| '',
+                      code:     data.code || data.monitorCode || '',
+                      arrived:  !!data.arrived,
+                      voted:    !!data.voted,
+                      hasIssue: !!data.hasIssue,
+                      issueText: data.issueText || '',
+                      online:   !!data.online,
+                      location: data.location || null,
+                      photos:   Array.isArray(data.photos) ? data.photos : []
+                  });
+              });
+              monitors = loaded;
+              saveMonitors();
+              renderMonitors(document.getElementById('searchInput').value);
+          })
+          .catch((err) => {
+              console.error("خطأ في تحديث حالة المراقبين من Firestore:", err);
+          });
     }
 
     setInterval(updateOnlineStatusAuto, 3000);
@@ -1284,7 +1362,7 @@
 
     setInterval(checkUserStillActive, 4000);
 
-    // فحص مبدئي عند فتح الصفحة: إذا كان هناك مستخدم محفوظ، نتحقق منه من Firestore
+    // فحص مبدئي عند فتح الصفحة
     (function initialCheck() {
         const savedUser = localStorage.getItem('currentUserName');
         if (!savedUser) {
