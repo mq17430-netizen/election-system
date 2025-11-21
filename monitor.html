@@ -198,6 +198,8 @@ const photoInput=document.getElementById("photoInput");
 const photoPreview=document.getElementById("photoPreview");
 
 let currentCode="";
+let currentMonitorId = null; // ← ID وثيقة المراقب في Firestore
+
 let statusData={arrived:false,voted:false,hasIssue:false,issueText:"",location:null,photoSent:false};
 
 const STATUS_KEY="monitor_status_";
@@ -208,7 +210,7 @@ const LOGIN_CODE_KEY = "monitor_logged_code";
 const LOGIN_NAME_KEY = "monitor_logged_name";
 
 // ✅ محاولة استرجاع جلسة مراقب سابقة (في حال تحديث الصفحة)
-(function restoreMonitorSession(){
+(async function restoreMonitorSession(){
     const flag = localStorage.getItem(LOGIN_FLAG_KEY);
     const savedCode = localStorage.getItem(LOGIN_CODE_KEY);
     const savedName = localStorage.getItem(LOGIN_NAME_KEY);
@@ -221,14 +223,30 @@ const LOGIN_NAME_KEY = "monitor_logged_name";
             try{ statusData = JSON.parse(saved); }catch(e){}
         }
 
-        welcomeName.textContent = savedName || "مراقب";
+        // نحاول نجيب المراقب من Firestore حتى نعرف ID مالته
+        try {
+            const m = await findMonitorByCodeOnline(currentCode);
+            if (m) {
+                currentMonitorId = m.id;
+                welcomeName.textContent = savedName || m.monitorName || "مراقب";
+            } else {
+                welcomeName.textContent = savedName || "مراقب";
+            }
+        } catch (e) {
+            welcomeName.textContent = savedName || "مراقب";
+        }
+
         welcomeCode.textContent = currentCode;
 
         loginSection.style.display = "none";
         monitorSection.style.display = "block";
 
-        // اعتبره أونلاين بعد الرجوع
+        // اعتبره أونلاين بعد الرجوع (محلي + Firestore)
         localStorage.setItem("online_status_"+currentCode,"online");
+        if (currentMonitorId) {
+            db.collection("monitors").doc(currentMonitorId).update({ online: true }).catch(()=>{});
+        }
+
         updateUI();
     }
 })();
@@ -247,6 +265,7 @@ loginForm.addEventListener("submit",async e=>{
 
     loginError.style.display="none";
     currentCode=code;
+    currentMonitorId = m.id || null;
 
     welcomeName.textContent=name||m.monitorName||"مراقب";
     welcomeCode.textContent=currentCode;
@@ -259,8 +278,11 @@ loginForm.addEventListener("submit",async e=>{
     loginSection.style.display="none";
     monitorSection.style.display="block";
 
-    // علّم أنه أونلاين
+    // علّم أنه أونلاين (محلي + Firestore)
     localStorage.setItem("online_status_"+currentCode,"online");
+    if (currentMonitorId) {
+        db.collection("monitors").doc(currentMonitorId).update({ online: true }).catch(()=>{});
+    }
 
     // ✅ حفظ أن المراقب مسجّل دخول حتى إذا حدّث الصفحة
     localStorage.setItem(LOGIN_FLAG_KEY,"true");
@@ -275,12 +297,17 @@ document.getElementById("logoutBtn").addEventListener("click",()=>{
     if(currentCode){
         localStorage.setItem("online_status_"+currentCode,"offline");
     }
+    if (currentMonitorId) {
+        db.collection("monitors").doc(currentMonitorId).update({ online: false }).catch(()=>{});
+    }
     // مسح حالة تسجيل الدخول فقط عند الخروج
     localStorage.removeItem(LOGIN_FLAG_KEY);
     localStorage.removeItem(LOGIN_CODE_KEY);
     localStorage.removeItem(LOGIN_NAME_KEY);
 
     currentCode = "";
+    currentMonitorId = null;
+
     loginSection.style.display = "block";
     monitorSection.style.display = "none";
 });
@@ -290,13 +317,28 @@ document.querySelector(".btn-photo").addEventListener("click",()=>{
     photoInput.click();
 });
 
-// حفظ التغييرات
+// حفظ التغييرات (محلي + Firestore)
 function saveStatus(){
     if(!currentCode) return;
+
+    // تخزين محلي
     try{
         localStorage.setItem(STATUS_KEY+currentCode,JSON.stringify(statusData));
     }catch(e){
         alert("لا يمكن حفظ الحالة، مساحة التخزين في المتصفح ممتلئة.");
+    }
+
+    // تحديث في Firestore حتى تظهر في لوحة المستخدم
+    if (currentMonitorId) {
+        db.collection("monitors").doc(currentMonitorId).update({
+            arrived:   !!statusData.arrived,
+            voted:     !!statusData.voted,
+            hasIssue:  !!statusData.hasIssue,
+            issueText: statusData.issueText || "",
+            location:  statusData.location || null
+        }).catch((e)=>{
+            console.error("خطأ في تحديث حالة المراقب في Firestore:", e);
+        });
     }
 }
 
@@ -364,7 +406,7 @@ btnLocation.onclick=()=>{
     );
 };
 
-// 🟣 حفظ صورة واحدة في أحد الأماكن 1..20
+// 🟣 حفظ صورة واحدة في أحد الأماكن 1..20 (محلي كما هو)
 function saveOnePhoto(dataUrl){
     if(!currentCode) return;
     const baseKey = "monitor_photo_"+currentCode;
@@ -424,10 +466,12 @@ photoInput.addEventListener("change",function(){
 });
 
 // لما يطلع من الصفحة نخزن أنه أوفلاين (إذا قفل التاب مثلاً)
-// ملاحظة: في حالة التحديث السريع، راح يرجع أونلاين مباشرة من restoreMonitorSession
 window.addEventListener("beforeunload",()=>{
     if(currentCode){
         localStorage.setItem("online_status_"+currentCode,"offline");
+    }
+    if (currentMonitorId) {
+        db.collection("monitors").doc(currentMonitorId).update({ online: false }).catch(()=>{});
     }
 });
 </script>
