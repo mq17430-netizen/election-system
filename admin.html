@@ -151,6 +151,9 @@
     const usersTable    = document.getElementById("usersTable");
     const addUserBtn    = document.getElementById("addUser");
 
+    // 🔹 مفتاح التخزين المحلي لمزامنة المستخدمين مع باقي الصفحات
+    const SYSTEM_USERS_KEY = "systemUsers";
+
     // مصفوفة المستخدمين الحالية
     let systemUsers = [];
 
@@ -161,6 +164,15 @@
         for (let i = 0; i < 3; i++) c += L[Math.floor(Math.random() * L.length)];
         for (let i = 0; i < 2; i++) c += D[Math.floor(Math.random() * D.length)];
         return c;
+    }
+
+    // 🔹 حفظ نسخة من المستخدمين في localStorage (للتوافق مع الصفحات الأخرى)
+    function saveSystemUsersToLocal(){
+        try{
+            localStorage.setItem(SYSTEM_USERS_KEY, JSON.stringify(systemUsers));
+        }catch(e){
+            console.warn("تعذر حفظ systemUsers في المتصفح:", e);
+        }
     }
 
     function renderUsersTable(){
@@ -206,6 +218,8 @@
             });
         });
         renderUsersTable();
+        // 🔹 حفظ نسخة محلية لاستخدامها في صفحات أخرى
+        saveSystemUsersToLocal();
         // توليد كود جديد للحقل
         passwordInput.value = generateCode();
     }
@@ -235,6 +249,8 @@
             // إضافة للمصفوفة المحلية
             systemUsers.push({ id: docRef.id, username, password, note, active: true });
             renderUsersTable();
+            // 🔹 تحديث النسخة المخزنة في المتصفح
+            saveSystemUsersToLocal();
 
             // تفريغ الحقول + كود جديد
             usernameInput.value = "";
@@ -257,6 +273,8 @@
             // إزالة من المصفوفة
             systemUsers = systemUsers.filter(u => u.id !== id);
             renderUsersTable();
+            // 🔹 تحديث النسخة في المتصفح
+            saveSystemUsersToLocal();
         } catch (e) {
             console.error("خطأ في حذف المستخدم:", e);
             alert("حدث خطأ أثناء الحذف من قاعدة البيانات.");
@@ -275,6 +293,9 @@
         if (idx !== -1) {
             systemUsers[idx].active = isActive;
         }
+
+        // 🔹 تحديث النسخة المحلية أيضًا
+        saveSystemUsersToLocal();
 
         // تحديث في Firestore
         try {
