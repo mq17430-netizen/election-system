@@ -306,23 +306,27 @@ function pushStatusToFirestore(extra = {}) {
 })();
 
 // تسجيل الدخول
-loginForm.addEventListener("submit",async e=>{
+loginForm.addEventListener("submit", async e => {
     e.preventDefault();
-    const name=document.getElementById("monitorName").value.trim();
-    const code=document.getElementById("monitorCode").value.trim().toUpperCase();
 
-    const m=await findMonitorByCodeOnline(code);
-    if(!m){
-        loginError.style.display="block";
+    const name = document.getElementById("monitorName").value.trim();
+    const code = document.getElementById("monitorCode").value.trim().toUpperCase();
+
+    // 🔍 البحث عن المراقب حسب الكود من Firestore
+    const m = await findMonitorByCodeOnline(code);
+    if (!m) {
+        loginError.style.display = "block";
         return;
     }
 
-    loginError.style.display="none";
-    currentCode=code;
+    loginError.style.display = "none";
+    currentCode = code;
     currentMonitorId = m.id;
 
+    // 📸 تحميل الصور المخزّنة إن وجدت
     photosArray = Array.isArray(m.photos) ? m.photos.slice(0, MAX_PHOTOS) : [];
 
+    // 🎯 تحميل الحالة السابقة إن وجدت
     statusData = {
         arrived: !!m.arrived,
         voted: !!m.voted,
@@ -332,22 +336,44 @@ loginForm.addEventListener("submit",async e=>{
         photoSent: photosArray.length > 0
     };
 
-    welcomeName.textContent=name||m.monitorName||"مراقب";
-    welcomeCode.textContent=currentCode;
+    // 📌 عرض الاسم والكود في واجهة المراقب
+    welcomeName.textContent = name || m.monitorName || "مراقب";
+    welcomeCode.textContent = currentCode;
 
-    loginSection.style.display="none";
-    monitorSection.style.display="block";
+    // 🔄 التبديل بين الصفحات
+    loginSection.style.display = "none";
+    monitorSection.style.display = "block";
 
-    // علّم أنه أونلاين
-    localStorage.setItem("online_status_"+currentCode,"online");
+    // 🟢 تعليم المراقب أنه ONLINE في Local
+    localStorage.setItem("online_status_" + currentCode, "online");
 
-    // حفظ أن المراقب مسجّل دخول
-    localStorage.setItem(LOGIN_FLAG_KEY,"true");
-    localStorage.setItem(LOGIN_CODE_KEY,currentCode);
-    localStorage.setItem(LOGIN_NAME_KEY,welcomeName.textContent);
+    // 🟢 تحديث Firestore → المراقب أصبح متصلاً
+    if (currentMonitorId) {
+        db.collection("monitors").doc(currentMonitorId).update({
+            online: true
+        }).catch(err => console.error("خطأ تحديث حالة الأونلاين:", err));
+    }
 
-    pushStatusToFirestore({online:true});
+    // 💾 حفظ بيانات الجلسة
+    localStorage.setItem(LOGIN_FLAG_KEY, "true");
+    localStorage.setItem(LOGIN_CODE_KEY, currentCode);
+    localStorage.setItem(LOGIN_NAME_KEY, welcomeName.textContent);
+
+    // 🔁 إرسال الحالة الحالية إلى Firestore
+    pushStatusToFirestore({
+        arrived: statusData.arrived,
+        voted: statusData.voted,
+        hasIssue: statusData.hasIssue,
+        issueText: statusData.issueText,
+        location: statusData.location,
+        photos: photosArray,
+        online: true
+    });
+
+    // 🔄 تحديث الواجهة
     updateUI();
+});
+    
 });
 
 // زر تسجيل خروج
