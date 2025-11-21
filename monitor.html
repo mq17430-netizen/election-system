@@ -2,507 +2,430 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>صفحة المراقب - نظام مراقبة الانتخابات</title>
+    <title>لوحة مدير المراقبين - نظام مراقبة الانتخابات</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
 
     <style>
+        :root {
+            --primary:#1a9bff;
+            --accent:#00c853;
+            --danger:#e53935;
+            --warning:#ff9800;
+            --bg:#f5f7fb;
+        }
+
         *{box-sizing:border-box;margin:0;padding:0;}
 
         body{
-            font-family:'Cairo',system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+            font-family:'Cairo',sans-serif;
             min-height:100vh;
-            background:radial-gradient(circle at top,#e0f2ff 0,#f7fbff 45%,#e6fff4 100%);
+            background:radial-gradient(circle at top left,#e0f2ff 0,#f7fbff 35%,#e6fff4 100%);
+            padding:32px 12px;
+        }
+
+        .container{
+            max-width:1150px;
+            margin:0 auto;
+        }
+
+        /* ===== الهيدر وملخص الاتصال ===== */
+        .header{
             display:flex;
+            flex-wrap:wrap;
+            justify-content:space-between;
             align-items:center;
-            justify-content:center;
-            padding:16px;
+            margin-bottom:18px;
+            gap:10px;
         }
 
-        .card{
-            background:#fff;
-            border-radius:20px;
-            box-shadow:0 18px 40px rgba(15,34,58,0.18);
-            max-width:420px;
-            width:100%;
-            padding:20px 18px 16px;
-        }
-
-        .icon-circle{
-            width:64px;
-            height:64px;
-            border-radius:50%;
-            margin:0 auto 10px;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            font-size:32px;
-            color:#fff;
-            background:linear-gradient(135deg,#00c853,#1a9bff);
-        }
-
-        h1{
-            font-size:20px;
-            text-align:center;
+        .header-title h1{
+            font-size:24px;
             margin-bottom:4px;
         }
-
-        .subtitle{
+        .header-title p{
             font-size:13px;
-            color:#666;
-            text-align:center;
-            margin-bottom:14px;
+            color:#777;
         }
 
-        .section-title{
-            font-size:14px;
-            font-weight:700;
-            margin:14px 0 6px;
+        .summary-pill{
+            background:linear-gradient(90deg,#00c853,#1a9bff,#0066ff);
+            padding:8px 16px;
+            border-radius:999px;
+            color:#fff;
+            font-size:13px;
+            display:inline-flex;
+            align-items:center;
+            gap:8px;
+            box-shadow:0 8px 20px rgba(0,102,255,0.22);
+        }
+        .summary-pill-dot{
+            width:11px;
+            height:11px;
+            border-radius:50%;
+            background:#69f0ae;
+            box-shadow:0 0 0 4px rgba(105,240,174,0.4);
         }
 
-        .form-group{
+        /* ===== الكارد الرئيسي + الجدول ===== */
+        .card{
+            background:#fff;
+            border-radius:22px;
+            box-shadow:0 18px 40px rgba(15,34,58,0.14);
+            padding:16px 18px 18px;
+            overflow-x:auto;
+        }
+
+        .search-box{
+            display:flex;
+            flex-wrap:wrap;
+            gap:10px;
             margin-bottom:10px;
-            text-align:right;
+            align-items:center;
         }
-
-        label{
-            display:block;
-            font-size:12px;
-            margin-bottom:3px;
-            color:#444;
-        }
-
-        input,textarea{
-            width:100%;
-            border-radius:10px;
-            border:1px solid #dde2ef;
-            padding:8px 10px;
+        .search-box input{
+            flex:1;
+            min-width:210px;
+            border-radius:999px;
+            border:1px solid #dde3ee;
+            padding:8px 14px;
             font-size:13px;
             outline:none;
+            background:#f8faff;
+        }
+        .search-box input:focus{
+            border-color:var(--primary);
+            box-shadow:0 0 0 3px rgba(26,155,255,0.18);
+            background:#ffffff;
+        }
+        .search-info{
+            font-size:11px;
+            color:#777;
         }
 
-        input:focus,textarea:focus{
-            border-color:#1a9bff;
-            box-shadow:0 0 0 3px rgba(26,155,255,0.12);
-        }
-
-        textarea{
-            resize:vertical;
-            min-height:70px;
-            max-height:150px;
-        }
-
-        .btn{
+        table{
             width:100%;
-            border:none;
-            border-radius:12px;
-            padding:9px 0;
-            font-size:14px;
-            font-weight:600;
-            cursor:pointer;
-            background:linear-gradient(90deg,#00c853,#1a9bff,#0066ff);
-            color:#fff;
-            box-shadow:0 10px 22px rgba(0,102,255,0.25);
-            margin-top:4px;
-        }
-
-        .btn-secondary{
-            background:#f5f7ff;
-            color:#244673;
-            box-shadow:none;
-            border:1px solid #dde2ef;
-        }
-
-        .btn-row{
-            display:flex;
-            gap:8px;
+            border-collapse:collapse;
+            min-width:900px;
             margin-top:6px;
         }
 
-        .btn-row .btn-small{
-            flex:1;
-            padding:7px 0;
-            font-size:12px;
-            border-radius:10px;
-        }
-
-        .status-badge{
-            margin-top:8px;
+        th,td{
+            padding:9px 6px;
             font-size:12px;
             text-align:center;
-            padding:6px 8px;
-            border-radius:999px;
-            background:rgba(0,200,83,0.06);
-            color:#1b5e20;
+            border-bottom:1px solid #eef0f7;
         }
 
-        .status-badge.offline{
-            background:rgba(244,67,54,0.06);
+        th{
+            background:linear-gradient(90deg,#f3f6ff,#f8fbff);
+            font-weight:600;
+            color:#455a64;
+            position:sticky;
+            top:0;
+            z-index:1;
+        }
+
+        tr:nth-child(even){
+            background:#fafbff;
+        }
+
+        /* ===== البادجات والتاقات ===== */
+        .badge{
+            display:inline-flex;
+            align-items:center;
+            gap:6px;
+            border-radius:999px;
+            padding:4px 10px;
+            font-size:11px;
+            font-weight:600;
+        }
+        .badge-online{
+            background:rgba(0,200,83,0.08);
+            color:#1b5e20;
+        }
+        .badge-offline{
+            background:rgba(244,67,54,0.08);
             color:#b71c1c;
         }
 
-        .hint{
-            margin-top:10px;
+        .badge-online::before,
+        .badge-offline::before{
+            content:"";
+            width:9px;
+            height:9px;
+            border-radius:50%;
+        }
+        .badge-online::before{
+            background:#00e676;
+            box-shadow:0 0 0 3px rgba(0,230,118,0.35);
+        }
+        .badge-offline::before{
+            background:#ff8a80;
+            box-shadow:0 0 0 3px rgba(255,138,128,0.35);
+        }
+
+        .tag{
+            display:inline-block;
+            padding:3px 10px;
+            border-radius:999px;
             font-size:11px;
-            color:#777;
-            text-align:right;
-            line-height:1.5;
+            white-space:nowrap;
+        }
+        .tag-yes{
+            background:rgba(76,175,80,0.12);
+            color:#1b5e20;
+        }
+        .tag-no{
+            background:rgba(158,158,158,0.15);
+            color:#616161;
+        }
+        .tag-issue{
+            background:rgba(255,152,0,0.12);
+            color:#e65100;
+        }
+        .tag-photo{
+            background:rgba(123,31,162,0.13);
+            color:#4a148c;
         }
 
-        .error{
-            margin-top:6px;
-            font-size:12px;
-            color:#c62828;
-            display:none;
-        }
-
-        .success-msg{
-            margin-top:6px;
-            font-size:12px;
-            color:#2e7d32;
-            display:none;
-        }
-
-        .small{
+        .loc-text{
+            font-family:monospace;
             font-size:11px;
-            color:#666;
-            margin-top:4px;
-            text-align:right;
         }
 
-        #monitorSection{display:none;}
+        .footer{
+            margin-top:14px;
+            font-size:11px;
+            color:#999;
+            text-align:center;
+        }
+
+        @media (max-width:600px){
+            body{padding:18px 8px;}
+            .header{
+                align-items:flex-start;
+            }
+            .header-title h1{
+                font-size:20px;
+            }
+            .card{
+                padding:14px 12px 16px;
+            }
+        }
     </style>
 </head>
 <body>
 
-<div class="card" id="loginCard">
-    <div class="icon-circle">🧾</div>
-    <h1>دخول المراقب</h1>
-    <p class="subtitle">أدخل كود المراقب الذي استلمته من مدير البرنامج.</p>
-
-    <form id="loginForm">
-        <div class="form-group">
-            <label for="monitorCodeInput">كود المراقب</label>
-            <input type="text" id="monitorCodeInput" placeholder="مثال: ABXC3">
+<div class="container">
+    <!-- الهيدر -->
+    <div class="header">
+        <div class="header-title">
+            <h1>لوحة مدير المراقبين</h1>
+            <p>عرض حالة جميع المراقبين لحظياً من أي مكان ومن أي جهاز</p>
         </div>
-        <button type="submit" class="btn">دخول</button>
-        <div id="loginError" class="error"></div>
-    </form>
 
-    <p class="hint">
-        * الكود يُعطيك إياه المسؤول أو صاحب اللوحة.<br>
-        * لا تشارك الكود مع أي شخص غير مخوّل.
-    </p>
+        <!-- ملخص عدد المتصلين الآن -->
+        <div class="summary-pill" id="summaryBadge">
+            <span class="summary-pill-dot"></span>
+            <span>عدد المراقبين المتصلين الآن: —</span>
+        </div>
+    </div>
+
+    <!-- الكارد الرئيسي -->
+    <div class="card">
+        <!-- البحث -->
+        <div class="search-box">
+            <input id="searchInput" type="text" placeholder="بحث باسم المراقب أو الكود...">
+            <div class="search-info" id="searchInfo">عدد المراقبين: —</div>
+        </div>
+
+        <!-- الجدول -->
+        <table>
+            <thead>
+            <tr>
+                <th>#</th>
+                <th>الكود</th>
+                <th>اسم المراقب</th>
+                <th>الحالة</th>
+                <th>الوصول</th>
+                <th>التصويت</th>
+                <th>المشكلة</th>
+                <th>الموقع (Lat,Lng)</th>
+                <th>الدقة (م)</th>
+                <th>وقت آخر موقع</th>
+                <th>الصور</th>
+            </tr>
+            </thead>
+            <tbody id="monitorsTableBody">
+            <!-- يُملأ ديناميكياً من Firestore -->
+            </tbody>
+        </table>
+    </div>
+
+    <div class="footer">
+        تطوير: المهندس مختار قاسم — يعمل من أي حاسبة أو موبايل عبر GitHub + Firestore
+    </div>
 </div>
 
-<div class="card" id="monitorSection">
-    <div class="icon-circle">📡</div>
-    <h1 id="monitorNameTitle">مرحبا أيها المراقب</h1>
-    <p class="subtitle" id="monitorCenterSubtitle">مركز الاقتراع: —</p>
-
-    <div id="onlineBadge" class="status-badge">🟢 متصل بالنظام الآن</div>
-
-    <div class="section-title">حالة المراقب</div>
-    <div class="btn-row">
-        <button type="button" id="btnArrived" class="btn btn-small btn-secondary">✅ تم الوصول</button>
-        <button type="button" id="btnVoted"  class="btn btn-small btn-secondary">🗳️ تم التصويت</button>
-    </div>
-
-    <div class="section-title">إرسال مشكلة</div>
-    <div class="form-group">
-        <label for="issueText">اكتب تفاصيل المشكلة إن وجدت</label>
-        <textarea id="issueText" placeholder="اكتب هنا ما يحدث في المركز، تأخير، إغلاق، نقص أوراق، أي ملاحظة مهمة..."></textarea>
-    </div>
-    <div class="btn-row">
-        <button type="button" id="btnSendIssue" class="btn btn-small">إرسال المشكلة</button>
-        <button type="button" id="btnClearIssue" class="btn btn-small btn-secondary">مسح المشكلة</button>
-    </div>
-
-    <div class="section-title">إرسال الموقع الجغرافي</div>
-    <button type="button" id="btnSendLocation" class="btn btn-secondary">📍 إرسال موقعي الحالي</button>
-
-    <p class="small" id="lastLocationInfo">آخر موقع: لم يُرسل بعد.</p>
-
-    <div id="actionSuccess" class="success-msg"></div>
-    <div id="actionError" class="error"></div>
-
-    <button type="button" id="btnLogout" class="btn btn-secondary" style="margin-top:10px;">
-        ⬅ تسجيل الخروج
-    </button>
-
-    <p class="hint">
-        * عند إغلاق هذه الصفحة يتم تسجيلك كـ "غير متصل" تلقائياً قدر الإمكان.<br>
-        * تأكد من السماح للمتصفح باستخدام الموقع الجغرافي عند الضغط على زر "إرسال موقعي".
-    </p>
-</div>
-
-<!-- Firebase (Compat) -->
-<script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore-compat.js"></script>
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore-compat.js"></script>
 
 <script>
-    const firebaseConfig = {
-        apiKey: "AIzaSyDdiudUa5jjcZDwJgYBbLdC-YBNQ5rlqvU",
-        authDomain: "election-system-9cbb8.firebaseapp.com",
-        projectId: "election-system-9cbb8",
-        storageBucket: "election-system-9cbb8.firebasestorage.app",
-        messagingSenderId: "886706894008",
-        appId: "1:886706894008:web:270556771843614e56b04d"
-    };
+const firebaseConfig = {
+  apiKey:"AIzaSyDdiudUa5jjcZDwJgYBbLdC-YBNQ5rlqvU",
+  authDomain:"election-system-9cbb8.firebaseapp.com",
+  projectId:"election-system-9cbb8",
+  storageBucket:"election-system-9cbb8.firebasestorage.app",
+  messagingSenderId:"886706894008",
+  appId:"1:886706894008:web:270556771843614e56b04d"
+};
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
-    const loginCard           = document.getElementById('loginCard');
-    const monitorSection      = document.getElementById('monitorSection');
-    const loginForm           = document.getElementById('loginForm');
-    const loginError          = document.getElementById('loginError');
-    const monitorCodeInput    = document.getElementById('monitorCodeInput');
+const tbody = document.getElementById("monitorsTableBody");
+const searchInput = document.getElementById("searchInput");
+const searchInfo = document.getElementById("searchInfo");
+const summaryBadge = document.getElementById("summaryBadge");
 
-    const monitorNameTitle    = document.getElementById('monitorNameTitle');
-    const monitorCenterSubtitle = document.getElementById('monitorCenterSubtitle');
-    const onlineBadge         = document.getElementById('onlineBadge');
-    const issueTextInput      = document.getElementById('issueText');
-    const lastLocationInfo    = document.getElementById('lastLocationInfo');
+let monitorsCache = [];
 
-    const btnArrived          = document.getElementById('btnArrived');
-    const btnVoted            = document.getElementById('btnVoted');
-    const btnSendIssue        = document.getElementById('btnSendIssue');
-    const btnClearIssue       = document.getElementById('btnClearIssue');
-    const btnSendLocation     = document.getElementById('btnSendLocation');
-    const btnLogout           = document.getElementById('btnLogout');
-
-    const actionSuccess       = document.getElementById('actionSuccess');
-    const actionError         = document.getElementById('actionError');
-
-    let currentMonitorId   = null;
-    let currentMonitorData = null;
-
-    function showError(el, msg){
-        el.textContent = msg;
-        el.style.display = 'block';
+// فورمات التاريخ بصورة مقروءة بالعربي
+function formatDate(ts){
+    if(!ts) return "—";
+    try{
+        const d = new Date(ts);
+        if(isNaN(d.getTime())) return "—";
+        return d.toLocaleString("ar-IQ");
+    }catch(e){
+        return "—";
     }
-    function hideError(el){
-        el.textContent = '';
-        el.style.display = 'none';
-    }
-    function showSuccess(msg){
-        actionSuccess.textContent = msg;
-        actionSuccess.style.display = 'block';
-        setTimeout(()=>{ actionSuccess.style.display = 'none'; }, 3000);
-    }
+}
 
-    function setOnlineBadge(isOnline){
-        if(isOnline){
-            onlineBadge.classList.remove('offline');
-            onlineBadge.textContent = '🟢 متصل بالنظام الآن';
-        }else{
-            onlineBadge.classList.add('offline');
-            onlineBadge.textContent = '⚪ غير متصل بالنظام';
+// رسم صف واحد في الجدول
+function renderRow(data, index){
+    const name = data.monitorName || data.name || "غير محدد";
+    const code = data.code || "—";
+    const online = data.online === true;
+    const arrived = !!data.arrived;
+    const voted = !!data.voted;
+    const hasIssue = !!data.hasIssue;
+    const issueText = data.issueText || "";
+    const photos = Array.isArray(data.photos) ? data.photos : [];
+    const photoCount = photos.length;
+
+    const loc = data.location || null;
+    let latLngText = "—";
+    let accuracyText = "—";
+    let timeText = "—";
+
+    if(loc && typeof loc.lat === "number" && typeof loc.lng === "number"){
+        latLngText = loc.lat.toFixed(6)+", "+loc.lng.toFixed(6);
+        if(typeof loc.accuracy === "number"){
+            accuracyText = Math.round(loc.accuracy) + " م";
+        }
+        if(loc.timestamp){
+            timeText = formatDate(loc.timestamp);
         }
     }
 
-    function formatLocationInfo(location){
-        if(!location || typeof location.lat !== 'number' || typeof location.lng !== 'number'){
-            return 'آخر موقع: لم يُرسل بعد.';
-        }
-        const lat = location.lat.toFixed(6);
-        const lng = location.lng.toFixed(6);
-        const acc = typeof location.accuracy === 'number' ? Math.round(location.accuracy) + ' م' : 'غير معروفة';
-        const ts  = location.timestamp ? new Date(location.timestamp).toLocaleString('ar-IQ') : 'غير محدد';
-        return `آخر موقع: (${lat}, ${lng}) - دقة تقريبية: ${acc} - وقت الإرسال: ${ts}`;
-    }
+    const tr = document.createElement("tr");
 
-    function updateMonitor(fields){
-        if(!currentMonitorId) return Promise.reject(new Error('لا يوجد مراقب مسجل حالياً.'));
-        return db.collection('monitors').doc(currentMonitorId).update(fields);
-    }
-
-    // تسجيل الدخول بواسطة كود المراقب
-    loginForm.addEventListener('submit', function(e){
-        e.preventDefault();
-        hideError(loginError);
-
-        const code = (monitorCodeInput.value || '').trim().toUpperCase();
-        if(!code){
-            showError(loginError, 'يرجى إدخال كود المراقب.');
-            return;
-        }
-
-        db.collection('monitors')
-          .where('code', '==', code)
-          .limit(1)
-          .get()
-          .then((snapshot)=>{
-              if(snapshot.empty){
-                  showError(loginError, 'لم يتم العثور على مراقب بهذا الكود. تأكد من الكود أو راجع مدير البرنامج.');
-                  return;
-              }
-
-              const doc = snapshot.docs[0];
-              currentMonitorId   = doc.id;
-              currentMonitorData = doc.data();
-
-              // تحديث واجهة المراقب
-              const name   = currentMonitorData.monitorName  || currentMonitorData.name || 'المراقب';
-              const center = currentMonitorData.monitorCenter|| 'غير محدد';
-
-              monitorNameTitle.textContent      = 'مرحباً، ' + name;
-              monitorCenterSubtitle.textContent = 'مركز الاقتراع: ' + center;
-              lastLocationInfo.textContent      = formatLocationInfo(currentMonitorData.location);
-
-              // اعتبره متصل
-              updateMonitor({ online:true })
-                .then(()=>{
-                    setOnlineBadge(true);
-                })
-                .catch((err)=>{
-                    console.error('خطأ في تحديث حالة الاتصال:', err);
-                });
-
-              // عرض واجهة المراقب وإخفاء شاشة الدخول
-              loginCard.style.display    = 'none';
-              monitorSection.style.display = 'block';
-          })
-          .catch((err)=>{
-              console.error('خطأ في البحث عن المراقب:', err);
-              showError(loginError, 'حدث خطأ أثناء الاتصال بقاعدة البيانات. حاول مرة أخرى.');
-          });
-    });
-
-    // زر "تم الوصول"
-    btnArrived.addEventListener('click', function(){
-        updateMonitor({ arrived:true })
-          .then(()=>{ showSuccess('تم تسجيل الوصول بنجاح.'); })
-          .catch((err)=>{
-              console.error('خطأ في تحديث الوصول:', err);
-              showError(actionError, 'حدث خطأ في حفظ حالة الوصول.');
-          });
-    });
-
-    // زر "تم التصويت"
-    btnVoted.addEventListener('click', function(){
-        updateMonitor({ voted:true })
-          .then(()=>{ showSuccess('تم تسجيل حالة التصويت بنجاح.'); })
-          .catch((err)=>{
-              console.error('خطأ في تحديث التصويت:', err);
-              showError(actionError, 'حدث خطأ في حفظ حالة التصويت.');
-          });
-    });
-
-    // إرسال مشكلة
-    btnSendIssue.addEventListener('click', function(){
-        hideError(actionError);
-        const txt = (issueTextInput.value || '').trim();
-        if(!txt){
-            showError(actionError, 'يرجى كتابة نص المشكلة قبل الإرسال.');
-            return;
-        }
-
-        updateMonitor({ hasIssue:true, issueText:txt })
-          .then(()=>{
-              showSuccess('تم إرسال المشكلة إلى لوحة المسؤول.');
-          })
-          .catch((err)=>{
-              console.error('خطأ في إرسال المشكلة:', err);
-              showError(actionError, 'حدث خطأ أثناء إرسال المشكلة.');
-          });
-    });
-
-    // مسح المشكلة
-    btnClearIssue.addEventListener('click', function(){
-        hideError(actionError);
-        issueTextInput.value = '';
-        updateMonitor({ hasIssue:false, issueText:'' })
-          .then(()=>{
-              showSuccess('تم مسح المشكلة.');
-          })
-          .catch((err)=>{
-              console.error('خطأ في مسح المشكلة:', err);
-              showError(actionError, 'حدث خطأ أثناء مسح المشكلة.');
-          });
-    });
-
-    // إرسال الموقع الجغرافي
-    btnSendLocation.addEventListener('click', function(){
-        hideError(actionError);
-        if(!navigator.geolocation){
-            showError(actionError, 'هذا المتصفح لا يدعم تحديد الموقع الجغرافي.');
-            return;
-        }
-
-        btnSendLocation.disabled = true;
-        btnSendLocation.textContent = '📍 جاري جلب الموقع...';
-
-        navigator.geolocation.getCurrentPosition(
-            (pos)=>{
-                const coords = pos.coords;
-                const loc = {
-                    lat: coords.latitude,
-                    lng: coords.longitude,
-                    accuracy: coords.accuracy,
-                    timestamp: Date.now()
-                };
-
-                updateMonitor({ location:loc })
-                  .then(()=>{
-                      lastLocationInfo.textContent = formatLocationInfo(loc);
-                      showSuccess('تم إرسال الموقع بنجاح.');
-                  })
-                  .catch((err)=>{
-                      console.error('خطأ في حفظ الموقع:', err);
-                      showError(actionError, 'حدث خطأ أثناء حفظ الموقع.');
-                  })
-                  .finally(()=>{
-                      btnSendLocation.disabled = false;
-                      btnSendLocation.textContent = '📍 إرسال موقعي الحالي';
-                  });
-            },
-            (err)=>{
-                console.error('geolocation error:', err);
-                let msg = 'تعذّر الحصول على الموقع.';
-                if(err.code === 1) msg = 'تم رفض إذن الوصول للموقع. يرجى السماح للموقع من إعدادات المتصفح.';
-                showError(actionError, msg);
-                btnSendLocation.disabled = false;
-                btnSendLocation.textContent = '📍 إرسال موقعي الحالي';
-            },
-            {
-                enableHighAccuracy:true,
-                timeout:15000,
-                maximumAge:0
+    tr.innerHTML = `
+        <td>${index+1}</td>
+        <td><strong>${code}</strong></td>
+        <td>${name}</td>
+        <td>
+            <span class="badge ${online ? "badge-online" : "badge-offline"}">
+                ${online ? "متصل" : "غير متصل"}
+            </span>
+        </td>
+        <td>
+            <span class="tag ${arrived ? "tag-yes" : "tag-no"}">
+                ${arrived ? "تم الوصول" : "لم يحدد"}
+            </span>
+        </td>
+        <td>
+            <span class="tag ${voted ? "tag-yes" : "tag-no"}">
+                ${voted ? "تم التصويت" : "لم يحدد"}
+            </span>
+        </td>
+        <td>
+            ${
+                hasIssue
+                ? `<span class="tag tag-issue" title="${issueText.replace(/"/g,"&quot;")}">مشكلة</span>`
+                : `<span class="tag tag-no">لا يوجد</span>`
             }
-        );
+        </td>
+        <td class="loc-text">${latLngText}</td>
+        <td>${accuracyText}</td>
+        <td>${timeText}</td>
+        <td>
+            ${
+                photoCount > 0
+                ? `<span class="tag tag-photo">📷 ${photoCount} صورة</span>`
+                : `<span class="tag tag-no">لا يوجد</span>`
+            }
+        </td>
+    `;
+
+    return tr;
+}
+
+// تحديث الجدول على أساس الكاش + الفلتر
+function refreshTable(){
+    const q = (searchInput.value || "").trim().toLowerCase();
+    tbody.innerHTML = "";
+
+    const filtered = monitorsCache.filter(m=>{
+        const name = (m.monitorName || m.name || "").toLowerCase();
+        const code = (m.code || "").toLowerCase();
+        if(!q) return true;
+        return name.includes(q) || code.includes(q);
     });
 
-    // تسجيل الخروج
-    btnLogout.addEventListener('click', function(){
-        if(currentMonitorId){
-            updateMonitor({ online:false })
-              .catch((err)=>{ console.error('خطأ في تسجيل الخروج (تحديث online):', err); })
-              .finally(()=>{
-                  currentMonitorId   = null;
-                  currentMonitorData = null;
-                  monitorSection.style.display = 'none';
-                  loginCard.style.display      = 'block';
-                  monitorCodeInput.value       = '';
-                  issueTextInput.value         = '';
-                  setOnlineBadge(false);
-              });
-        }else{
-            monitorSection.style.display = 'none';
-            loginCard.style.display      = 'block';
-            setOnlineBadge(false);
-        }
+    filtered.forEach((m,idx)=>{
+        const row = renderRow(m, idx);
+        tbody.appendChild(row);
     });
 
-    // محاولة تسجيله كـ offline عند إغلاق الصفحة
-    window.addEventListener('beforeunload', function(){
-        if(currentMonitorId){
-            // محاولة سريعة، قد لا تنجح دائماً لكنها مفيدة في أغلب الحالات
-            db.collection('monitors').doc(currentMonitorId).update({ online:false }).catch(()=>{});
-        }
-    });
+    searchInfo.textContent = `عدد المراقبين: ${filtered.length} من أصل ${monitorsCache.length}`;
+
+    const onlineCount = monitorsCache.filter(m => m.online === true).length;
+    const span = summaryBadge.querySelector("span:last-child");
+    if(span){
+        span.textContent = onlineCount > 0
+            ? `عدد المراقبين المتصلين الآن: ${onlineCount}`
+            : "لا يوجد مراقب متصل حالياً";
+    }
+}
+
+// الاستماع المباشر إلى تغيّر بيانات المراقبين
+db.collection("monitors")
+  .orderBy("code")
+  .onSnapshot(snap=>{
+      monitorsCache = [];
+      snap.forEach(doc=>{
+          const d = doc.data();
+          d._id = doc.id; // للاحتياج لاحقاً
+          monitorsCache.push(d);
+      });
+      refreshTable();
+  }, err=>{
+      console.error("Firestore listen error:", err);
+      const span = summaryBadge.querySelector("span:last-child");
+      if(span){
+          span.textContent = "⚠ خطأ في الاتصال بقاعدة البيانات";
+      }
+  });
+
+// البحث الفوري
+searchInput.addEventListener("input", ()=>{
+    refreshTable();
+});
 </script>
 
 </body>
