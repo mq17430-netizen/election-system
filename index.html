@@ -1240,45 +1240,52 @@
             win.document.write("</body></html>");
             win.document.close();
 
-        } else if (action === 'showLocation') {
-            let coords = null;
+        } else if (action === "showLocation") {
+    let coords = null;
 
-            // أولاً من Firestore (الموجود في المصفوفة)
-            if (m.location && typeof m.location.lat === "number" && typeof m.location.lng === "number") {
-                coords = m.location;
-            } else {
-                // احتياطاً لو كان النظام القديم (localStorage)
-                const locKey = "monitor_location_" + m.code;
-                const stored = localStorage.getItem(locKey);
-                if (stored) {
-                    try {
-                        coords = JSON.parse(stored);
-                    } catch {}
-                }
-            }
+    const locKey = "monitor_location_" + m.code;
+    const stored = localStorage.getItem(locKey);
 
-            if (!coords) {
-                alert("لا يوجد موقع مخزن لهذا المراقب حتى الآن.");
-                return;
-            }
+    if (stored) {
+        try { 
+            coords = JSON.parse(stored); 
+        }
+        catch { 
+            coords = null; 
+        }
+    }
 
-            const lat = parseFloat(coords.lat);
-            const lng = parseFloat(coords.lng);
+    if (!coords) {
+        alert("لا يوجد موقع مُسجل لهذا المراقب حتى الآن.");
+        return;
+    }
 
-            if (isNaN(lat) || isNaN(lng)) {
-                alert("إحداثيات الموقع غير صحيحة أو غير مكتملة.");
-                return;
-            }
+    const lat = Number(coords.lat);
+    const lng = Number(coords.lng);
 
-            const mapIframe = document.getElementById('mainMap');
-            if (mapIframe) {
-                mapIframe.src = `https://www.google.com/maps?q=${lat.toFixed(6)},${lng.toFixed(6)}&z=19&output=embed`;
-            }
+    if (isNaN(lat) || isNaN(lng)) {
+        alert("إحداثيات الموقع غير صحيحة أو غير مكتملة.");
+        return;
+    }
 
-            tabs.forEach(t => t.classList.remove('active'));
-            const mapTab = document.querySelector('.tab[data-target="mapSection"]');
-            if (mapTab) mapTab.classList.add('active');
+    const mapIframe = document.getElementById("mainMap");
+    if (mapIframe) {
+        mapIframe.src =
+            `https://www.google.com/maps?q=${lat.toFixed(6)},${lng.toFixed(6)}&z=19&output=embed`;
+    }
 
+    tabs.forEach(t => t.classList.remove("active"));
+    const mapTab = document.querySelector('.tab[data-target="mapSection"]');
+    if (mapTab) mapTab.classList.add("active");
+
+    document.getElementById("representation").style.display = "none";
+    document.getElementById("searchbox").style.display = "none";
+    document.getElementById("monitorSection").style.display = "none";
+    document.getElementById("mapSection").style.display = "block";
+
+    saveMonitors();
+    renderMonitors(document.getElementById("searchInput").value);
+}
             document.getElementById('monitorsSection').style.display = 'none';
             document.getElementById('mapSection').style.display      = 'block';
             document.getElementById('reportsSection').style.display  = 'none';
