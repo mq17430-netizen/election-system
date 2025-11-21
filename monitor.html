@@ -57,9 +57,23 @@
         /* لوحة المراقب */
         #monitorSection{display:none;width:100%;max-width:450px;padding:20px;}
 
-        .monitor-header{text-align:center;margin-bottom:16px;}
+        .monitor-header{text-align:center;margin-bottom:10px;}
         .monitor-header h2{font-size:20px;margin-bottom:4px;}
         .monitor-header p{font-size:13px;color:#777;}
+
+        /* زر تسجيل الخروج */
+        .btn-logout{
+            width:100%;
+            border:1px solid #dde3ee;
+            border-radius:12px;
+            padding:8px 0;
+            margin-bottom:12px;
+            font-size:14px;
+            font-weight:500;
+            cursor:pointer;
+            background:#fafafa;
+            color:#555;
+        }
 
         .btn-action{
             width:100%;border:none;border-radius:14px;padding:12px 0;margin-bottom:10px;
@@ -125,10 +139,13 @@
             <p>مرحباً <span id="welcomeName">مراقب</span> — كودك: <strong id="welcomeCode"></strong></p>
         </div>
 
+        <!-- زر تسجيل الخروج الجديد -->
+        <button id="btnLogout" class="btn-logout">🚪 تسجيل الخروج</button>
+
         <button id="btnArrived"  class="btn-action btn-arrived">✅ تم الوصول</button>
         <button id="btnVoted"    class="btn-action btn-voted">🗳 تم التصويت</button>
         <button id="btnIssue"    class="btn-action btn-issue">⚠ مشكلة</button>
-        <button id="btnLocation" class="btn-action btn-loc">📍 إرسال الموقع</button>
+        <button id="btnLocation" class="btn-action btn-loc">📍 إرسال الموقع بدقة عالية</button>
 
         <label for="photoInput">
             <button class="btn-action btn-photo" type="button">📷 التقاط / رفع صورة</button>
@@ -187,6 +204,7 @@ const btnArrived=document.getElementById("btnArrived");
 const btnVoted=document.getElementById("btnVoted");
 const btnIssue=document.getElementById("btnIssue");
 const btnLocation=document.getElementById("btnLocation");
+const btnLogout=document.getElementById("btnLogout");
 const photoInput=document.getElementById("photoInput");
 const photoPreview=document.getElementById("photoPreview");
 
@@ -194,7 +212,15 @@ let currentCode="";
 let currentMonitorId = null;
 let photosArray = [];
 
-let statusData={arrived:false,voted:false,hasIssue:false,issueText:"",location:null,photoSent:false};
+// أضفنا accuracy و timestamp للموقع
+let statusData={
+    arrived:false,
+    voted:false,
+    hasIssue:false,
+    issueText:"",
+    location:null, // {lat,lng,accuracy,timestamp}
+    photoSent:false
+};
 
 const STATUS_KEY="monitor_status_";
 
@@ -253,7 +279,7 @@ function pushStatusToFirestore(extra = {}) {
 
         const saved = localStorage.getItem(STATUS_KEY + currentCode);
         if(saved){
-            try{ 
+            try{
                 const local = JSON.parse(saved);
                 if (typeof local.arrived === "boolean") statusData.arrived = local.arrived;
                 if (typeof local.voted === "boolean")   statusData.voted   = local.voted;
@@ -335,6 +361,48 @@ loginForm.addEventListener("submit", async e => {
     updateUI();
 });
 
+// زر تسجيل الخروج
+btnLogout.onclick = () => {
+    if(currentCode){
+        const oldCode = currentCode;
+
+        // تحديث حالة الأونلاين في Firestore
+        if (currentMonitorId) {
+            db.collection("monitors").doc(currentMonitorId).update({
+                online:false
+            }).catch(err => console.error("خطأ تحديث حالة الأونلاين عند تسجيل الخروج:", err));
+        }
+
+        // تحديث الحالة المحلية
+        localStorage.setItem("online_status_"+oldCode,"offline");
+        localStorage.removeItem(LOGIN_FLAG_KEY);
+        localStorage.removeItem(LOGIN_CODE_KEY);
+        localStorage.removeItem(LOGIN_NAME_KEY);
+    }
+
+    // إعادة تعيين المتغيرات
+    currentCode = "";
+    currentMonitorId = null;
+    statusData = {
+        arrived:false,
+        voted:false,
+        hasIssue:false,
+        issueText:"",
+        location:null,
+        photoSent:false
+    };
+    photosArray = [];
+    photoPreview.innerHTML = "";
+
+    // إعادة الفورم
+    loginForm.reset();
+    updateUI();
+
+    // الرجوع لصفحة تسجيل الدخول
+    monitorSection.style.display = "none";
+    loginSection.style.display = "block";
+};
+
 // فتح الكاميرا/المعرض
 document.querySelector(".btn-photo").addEventListener("click",()=>{
     photoInput.click();
@@ -355,7 +423,10 @@ function updateUI(){
     lines[0].innerHTML=`<span class="label">الوصول:</span> ${statusData.arrived?"تم الوصول":"—"}`;
     lines[1].innerHTML=`<span class="label">التصويت:</span> ${statusData.voted?"تم التصويت":"—"}`;
     lines[2].innerHTML=`<span class="label">الموقع:</span> ${
-        statusData.location?statusData.location.lat.toFixed(6)+", "+statusData.location.lng.toFixed(6):"—"
+        statusData.location
+            ? statusData.location.lat.toFixed(6)+", "+statusData.location.lng.toFixed(6) +
+              (statusData.location.accuracy ? " (±"+Math.round(statusData.location.accuracy)+" م)" : "")
+            : "—"
     }`;
     lines[3].innerHTML=`<span class="label">المشكلة:</span> ${
         statusData.hasIssue?(statusData.issueText||"مشكلة"): "—"
@@ -396,7 +467,7 @@ btnIssue.onclick=()=>{
     }
 };
 
-// زر الموقع مع high accuracy
+// زر الموقع مع high accuracy + إرسال accuracy و timestamp
 btnLocation.onclick=()=>{
     if(!navigator.geolocation){
         alert("المتصفح لا يدعم تحديد الموقع.");
@@ -406,7 +477,9 @@ btnLocation.onclick=()=>{
         pos=>{
             statusData.location={
                 lat:pos.coords.latitude,
-                lng:pos.coords.longitude
+                lng:pos.coords.longitude,
+                accuracy: pos.coords.accuracy || null, // دقة الموقع بالمتر
+                timestamp: Date.now()                  // وقت الإرسال
             };
             saveStatus();updateUI();
             if(currentCode){
@@ -414,6 +487,7 @@ btnLocation.onclick=()=>{
                     localStorage.setItem("monitor_location_"+currentCode,JSON.stringify(statusData.location));
                 }catch(e){}
             }
+            // إرسال نفس الكائن إلى Firestore حتى يظهر بدقة في لوحة المستخدم
             pushStatusToFirestore();
         },
         (err)=>{
