@@ -282,10 +282,20 @@
         <button id="btnLocation" class="btn-action btn-loc">📍 تشغيل الموقع (إرسال الإحداثيات)</button>
 
         <!-- زر الصورة -->
-        <label for="photoInput">
-            <button class="btn-action btn-photo" type="button">📷 التقاط / رفع صورة الشريط</button>
-        </label>
-        <input id="photoInput" type="file" accept="image/*" capture="environment">
+       <label for="photoInput">
+    <button class="btn-action btn-photo" type="button">
+        📷 التقاط / رفع صورة الشريط
+    </button>
+</label>
+
+<!-- multiple = يسمح برفع عدد غير محدود -->
+<input
+    id="photoInput"
+    type="file"
+    accept="image/*"
+    capture="environment"
+    multiple
+>
 
         <!-- زر تسجيل الخروج -->
         <button id="btnLogout" class="btn-action btn-logout" type="button">⬅ تسجيل الخروج</button>
@@ -583,28 +593,85 @@
         );
     });
 
-    // رفع الصورة (تبقى محلياً حالياً)
-    photoInput.addEventListener('change', function () {
-        const file = this.files[0];
-        if (!file) return;
+    // رفع الصورة (تبقى محلياً حالياً)// دالة مساعدة لجلب كل صور هذا المراقب من localStorage
+function getPhotosForCurrentMonitor() {
+    if (!currentCode) return [];
 
+    const baseKey = "monitor_photo_" + currentCode;
+    const photos = [];
+
+    const first = localStorage.getItem(baseKey);
+    if (first) photos.push(first);
+
+    for (let i = 1; i <= 50; i++) {
+        const d = localStorage.getItem(baseKey + "_" + i);
+        if (d) photos.push(d);
+    }
+
+    return photos;
+}
+
+// تحديث معاينة الصور أسفل الأزرار
+function refreshPhotoPreview() {
+    const photos = getPhotosForCurrentMonitor();
+    if (!photos.length) {
+        photoPreview.innerHTML = "";
+        return;
+    }
+
+    let html = `<div style="font-size:12px; color:#555;">عدد الصور المرسلة: ${photos.length}</div>`;
+    html += `<div style="margin-top:6px; display:flex; flex-wrap:wrap; gap:6px;">`;
+
+    photos.forEach((src, idx) => {
+        html += `
+            <div style="width:70px; height:70px; overflow:hidden; border-radius:8px; border:1px solid #e0e0e0;">
+                <img src="${src}" alt="صورة ${idx+1}" style="width:100%; height:100%; object-fit:cover;">
+            </div>
+        `;
+    });
+
+    html += `</div>`;
+    photoPreview.innerHTML = html;
+}
+
+// التعامل مع رفع / التقاط صور متعددة
+photoInput.addEventListener('change', function () {
+    if (!currentCode) {
+        alert("يجب تسجيل الدخول أولاً.");
+        return;
+    }
+
+    const files = Array.from(this.files || []);
+    if (!files.length) return;
+
+    const baseKey = "monitor_photo_" + currentCode;
+
+    function storeDataUrl(dataUrl) {
+        if (!localStorage.getItem(baseKey)) {
+            localStorage.setItem(baseKey, dataUrl);
+        } else {
+            let idx = 1;
+            while (localStorage.getItem(baseKey + "_" + idx)) {
+                idx++;
+            }
+            localStorage.setItem(baseKey + "_" + idx, dataUrl);
+        }
+    }
+
+    files.forEach(file => {
         const reader = new FileReader();
         reader.onload = function (e) {
+            storeDataUrl(e.target.result);
             statusData.photoSent = true;
             saveStatus();
             updateStatusUI();
-
-            if (currentCode) {
-                localStorage.setItem("monitor_photo_" + currentCode, e.target.result);
-            }
-
-            photoPreview.innerHTML = `
-                <div style="font-size:12px; color:#555;">آخر صورة مرفوعة:</div>
-                <img src="${e.target.result}" alt="صورة الشريط">
-            `;
+            refreshPhotoPreview();
         };
         reader.readAsDataURL(file);
     });
+
+    this.value = "";
+});
 
     // زر تسجيل الخروج
     btnLogout.addEventListener('click', function () {
