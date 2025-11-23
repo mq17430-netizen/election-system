@@ -552,46 +552,57 @@
             alert("المتصفح لا يدعم تحديد الموقع.");
             return;
         }
+btnLocation.addEventListener('click', function () {
+    if (!navigator.geolocation) {
+        alert("المتصفّح لا يدعم تحديد الموقع.");
+        return;
+    }
 
-        btnLocation.textContent = "📍 جاري الحصول على الموقع بدقة عالية...";
-        navigator.geolocation.getCurrentPosition(
-            (pos) => {
-                statusData.location = {
-                    lat: pos.coords.latitude,
-                    lng: pos.coords.longitude,
-                    accuracy: pos.coords.accuracy || null,
-                    timestamp: Date.now()
-                };
+    btnLocation.textContent = "📍 جاري الحصول على الموقع بدقة عالية...";
+    
+    navigator.geolocation.getCurrentPosition(
+        (pos) => {
+            // نخزن الموقع مع الدقّة
+            statusData.location = {
+                lat: pos.coords.latitude,
+                lng: pos.coords.longitude,
+                accuracy: pos.coords.accuracy || null, // بالمتر
+                timestamp: Date.now()
+            };
 
-                // حفظ في localStorage + Firestore
-                saveStatus();
+            // حفظ في localStorage + استدعاء دالتك الأصلية
+            saveStatus();
 
-                // تخزين إضافي في localStorage بنفس المفتاح الذي تقرأه لوحة المستخدم
-                if (currentCode) {
-                    localStorage.setItem(
-                        "monitor_location_" + currentCode,
-                        JSON.stringify(statusData.location)
-                    );
-                }
-
-                localStorage.setItem("online_status_" + currentCode, "online");
-
-                updateStatusUI();
-                btnLocation.textContent = "📍 تم إرسال الموقع بدقة عالية";
-                alert("✔ تم إرسال الإحداثيات إلى لوحة التحكم.");
-            },
-            (err) => {
-                console.error(err);
-                alert("تعذر الحصول على الموقع. تأكد من تفعيل GPS ومنح صلاحية الموقع.");
-                btnLocation.textContent = "📍 تشغيل الموقع (إرسال الإحداثيات)";
-            },
-            {
-                enableHighAccuracy: true,   // دقة عالية
-                timeout: 20000,            // 20 ثانية
-                maximumAge: 0
+            if (currentCode) {
+                localStorage.setItem(
+                    "monitor_location_" + currentCode,
+                    JSON.stringify(statusData.location)
+                );
             }
-        );
-    });
+
+            localStorage.setItem("online_status_" + currentCode, "online");
+
+            updateStatusUI();
+
+            let accText = "";
+            if (typeof statusData.location.accuracy === "number") {
+                accText = " (± " + Math.round(statusData.location.accuracy) + " م)";
+            }
+
+            btnLocation.textContent = "📍 تم إرسال الموقع بدقة عالية" + accText;
+        },
+        (err) => {
+            console.error(err);
+            btnLocation.textContent = "📍 تشغيل الموقع (إرسال الإحداثيات)";
+            alert("تعذّر الحصول على الموقع، تأكد من تفعيل الـ GPS ومنح الصلاحية للموقع.");
+        },
+        {
+            enableHighAccuracy: true, // 🔥 طلب دقة عالية
+            maximumAge: 0,            // لا يستخدم قراءة قديمة
+            timeout: 15000            // مهلة 15 ثانية
+        }
+    );
+});
 
     // رفع الصورة (تبقى محلياً حالياً)// دالة مساعدة لجلب كل صور هذا المراقب من localStorage
 function getPhotosForCurrentMonitor() {
