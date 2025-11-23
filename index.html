@@ -20,7 +20,7 @@
 
         #loginSection {
             min-height: 100vh;
-            display: none;   /* نخفي شاشة الدخول في البداية */
+            display: none;
             align-items: center;
             justify-content: center;
             padding: 20px;
@@ -123,7 +123,7 @@
             line-height: 1.6;
         }
 
-        /* ====== لوحة التحكم الأصلية ====== */
+        /* ====== لوحة التحكم ====== */
 
         #dashboardSection {
             display: none;
@@ -662,7 +662,7 @@
                     <div class="summary-note">عدد جميع المراقبين المسجّلين في هذه اللوحة.</div>
                 </div>
                 <div class="summary-box">
-                    <div class="summary-title">المراقبون الاصلون</div>
+                    <div class="summary-title">المراقبون الواصلون</div>
                     <div class="summary-value" id="arrivedMonitorsCount">0</div>
                     <div class="summary-note">عدد المراقبين الذين تم تحديدهم كـ "تم الوصول".</div>
                 </div>
@@ -725,6 +725,7 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
+    // عناصر أساسية
     const loginSection     = document.getElementById('loginSection');
     const dashboardSection = document.getElementById('dashboardSection');
     const loginForm        = document.getElementById('loginForm');
@@ -738,13 +739,27 @@
     const noReports    = document.getElementById('noReports');
     const deleteAllMonitorsBtn = document.getElementById('deleteAllMonitorsBtn');
 
-    const totalMonitorsCount  = document.getElementById('totalMonitorsCount');
-    const arrivedMonitorsCount= document.getElementById('arrivedMonitorsCount');
-    const issuesMonitorsCount = document.getElementById('issuesMonitorsCount');
+    const totalMonitorsCount   = document.getElementById('totalMonitorsCount');
+    const arrivedMonitorsCount = document.getElementById('arrivedMonitorsCount');
+    const issuesMonitorsCount  = document.getElementById('issuesMonitorsCount');
 
+    const searchInput   = document.getElementById('searchInput');
+    const tabs          = document.querySelectorAll('.tab');
+
+    const modalBackdrop = document.getElementById('modalBackdrop');
+    const addMonitorBtn = document.getElementById('addMonitorBtn');
+    const modalClose    = document.getElementById('modalClose');
+    const addMonitorForm= document.getElementById('addMonitorForm');
+
+    // حالة عامة
     let currentUserName = null;
-    let STORAGE_KEY     = null;
-    let monitors        = [];
+    let metaByCode   = {};  // بيانات من monitors
+    let statusByCode = {};  // حالة حية من monitorStatus
+    let monitors     = [];  // دمج
+    let currentFilterText = '';
+
+    let unsubscribeMeta   = null;
+    let unsubscribeStatus = null;
 
     function showLogin() {
         loginSection.style.display = 'flex';
@@ -756,147 +771,115 @@
         dashboardSection.style.display = 'block';
     }
 
-    // تحميل المراقبين من Firestore حسب المستخدم الحالي (مرّة واحدة)
-    function loadMonitorsFromFirestore() {
-        if (!currentUserName) return;
-
-        db.collection('monitors')
-          .where('adminUsername', '==', currentUserName)
-          .get()
-          .then((snapshot) => {
-              const loaded = [];
-              snapshot.forEach((docu) => {
-                  const data = docu.data();
-                  loaded.push({
-                      id:       docu.id,
-                      name:     data.monitorName  || '',
-                      phone:    data.monitorPhone || '',
-                      center:   data.monitorCenter|| '',
-                      code:     data.code || data.monitorCode || '',
-                      arrived:  !!data.arrived,
-                      voted:    !!data.voted,
-                      hasIssue: !!data.hasIssue,
-                      issueText: data.issueText || '',
-                      online:   !!data.online,
-                      location: data.location || null,
-                      photos:   Array.isArray(data.photos) ? data.photos : []
-                  });
-              });
-              monitors = loaded;
-              saveMonitors();
-              renderMonitors(document.getElementById('searchInput').value);
-          })
-          .catch((err) => {
-              console.error("خطأ في جلب المراقبين من Firestore:", err);
-          });
-    }
-
+    // تهيئة المستخدم بعد الدخول
     function initForUser(username) {
         currentUserName = username;
         currentUserLabel.textContent = username;
-        STORAGE_KEY = 'monitors_' + currentUserName;
 
-        try {
-            monitors = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-        } catch (e) {
-            monitors = [];
-        }
+        if (unsubscribeMeta)   unsubscribeMeta();
+        if (unsubscribeStatus) unsubscribeStatus();
 
-        renderMonitors();
-        loadMonitorsFromFirestore();
+        metaByCode   = {};
+        statusByCode = {};
+        monitors     = [];
+        currentFilterText = '';
+        renderMonitors('');
+
+        subscribeMonitorsMeta();
+        subscribeMonitorStatus();
     }
 
-    // تسجيل الدخول من Firestore (systemUsers) مع فحص active
-    loginForm.addEventListener('submit', function (e) {
-        e.preventDefault();
-        loginError.style.display = 'none';
+    // الاشتراك في monitors (المراقبين) لهذا المستخدم
+    function subscribeMonitorsMeta() {
+        if (!currentUserName) return;
 
-        const username = document.getElementById('loginUser').value.trim();
-        const pass     = document.getElementById('loginPass').value.trim();
+        unsubscribeMeta = db.collection('monitors')
+            .where('adminUsername', '==', currentUserName)
+            .onSnapshot((snapshot) => {
+                const newMeta = {};
+                snapshot.forEach((docu) => {
+                    const data = docu.data();
+                    const code = data.code || data.monitorCode || '';
+                    if (!code) return;
 
-        if (!username || !pass) {
-            loginError.textContent = 'يرجى إدخال اسم المستخدم والكود.';
-            loginError.style.display = 'block';
-            return;
-        }
+                    newMeta[code] = {
+                        id:     docu.id,
+                        code:   code,
+                        name:   data.monitorName   || data.name   || '',
+                        phone:  data.monitorPhone  || '',
+                        center: data.monitorCenter || data.center || ''
+                    };
+                });
+                metaByCode = newMeta;
+                recomputeMonitors();
+            }, (err) => {
+                console.error("خطأ في جلب بيانات monitors:", err);
+            });
+    }
 
-        db.collection('systemUsers')
-          .where('username', '==', username)
-          .where('password', '==', pass)
-          .get()
-          .then((snapshot) => {
-              if (snapshot.empty) {
-                  loginError.textContent = 'بيانات الدخول غير صحيحة. تأكد من اسم المستخدم والكود الذي أعطاك إياه مدير البرنامج.';
-                  loginError.style.display = 'block';
-                  return;
-              }
+    // الاشتراك في monitorStatus (حالات المراقبين الحية من صفحة المراقب)
+    function subscribeMonitorStatus() {
+        unsubscribeStatus = db.collection('monitorStatus')
+            .onSnapshot((snapshot) => {
+                const newStatus = {};
+                snapshot.forEach((docu) => {
+                    const data = docu.data();
+                    const code = data.code || docu.id;
+                    if (!code) return;
 
-              let matchedUser = null;
-              snapshot.forEach((docu) => {
-                  const data = docu.data();
-                  matchedUser = {
-                      id: docu.id,
-                      username: data.username,
-                      password: data.password,
-                      note: data.note || '',
-                      active: (typeof data.active === 'boolean') ? data.active : true
-                  };
-              });
+                    const hasLocation = !!(
+                        data.hasLocation ||
+                        (typeof data.locationLat === 'number' && typeof data.locationLng === 'number')
+                    );
 
-              if (!matchedUser) {
-                  loginError.textContent = 'حدث خطأ غير متوقع في قراءة بيانات المستخدم.';
-                  loginError.style.display = 'block';
-                  return;
-              }
+                    newStatus[code] = {
+                        online:      !!data.online,
+                        arrived:     !!data.arrived,
+                        voted:       !!data.voted,
+                        hasIssue:    !!data.hasIssue,
+                        hasPhoto:    !!data.hasPhoto,
+                        hasLocation: hasLocation,
+                        locationLat: (typeof data.locationLat === 'number') ? data.locationLat : null,
+                        locationLng: (typeof data.locationLng === 'number') ? data.locationLng : null
+                    };
+                });
+                statusByCode = newStatus;
+                recomputeMonitors();
+            }, (err) => {
+                console.error("خطأ في جلب monitorStatus:", err);
+            });
+    }
 
-              if (matchedUser.active === false) {
-                  loginError.textContent = 'هذا الحساب تم إيقافه من قبل مدير البرنامج. يرجى مراجعة مدير البرنامج.';
-                  loginError.style.display = 'block';
-                  return;
-              }
+    // دمج meta + status
+    function recomputeMonitors() {
+        const list = [];
+        Object.keys(metaByCode).forEach((code) => {
+            const meta   = metaByCode[code];
+            const status = statusByCode[code] || {};
 
-              localStorage.setItem('currentUserName', matchedUser.username);
-              initForUser(matchedUser.username);
-              showDashboard();
-          })
-          .catch((err) => {
-              console.error("خطأ في التحقق من بيانات الدخول من Firestore:", err);
-              loginError.textContent = 'حدث خطأ أثناء الاتصال بقاعدة البيانات. حاول مرة أخرى.';
-              loginError.style.display = 'block';
-          });
-    });
-
-    logoutLink.addEventListener('click', function (e) {
-        e.preventDefault();
-        localStorage.removeItem('currentUserName');
-        currentUserName = null;
-        STORAGE_KEY = null;
-        monitors = [];
-        showLogin();
-    });
-
-    const tabs = document.querySelectorAll('.tab');
-    tabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            tabs.forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-
-            const target = tab.dataset.target;
-            document.getElementById('monitorsSection').style.display = (target === 'monitorsSection') ? 'block' : 'none';
-            document.getElementById('mapSection').style.display      = (target === 'mapSection') ? 'block' : 'none';
-            document.getElementById('reportsSection').style.display  = (target === 'reportsSection') ? 'block' : 'none';
-
-            document.getElementById('searchBox').style.display       = (target === 'monitorsSection') ? 'block' : 'none';
+            list.push({
+                id:        meta.id,
+                code:      meta.code,
+                name:      meta.name,
+                phone:     meta.phone,
+                center:    meta.center,
+                online:    !!status.online,
+                arrived:   !!status.arrived,
+                voted:     !!status.voted,
+                hasIssue:  !!status.hasIssue,
+                hasPhoto:  !!status.hasPhoto,
+                hasLocation: !!status.hasLocation,
+                locationLat: status.locationLat ?? null,
+                locationLng: status.locationLng ?? null
+            });
         });
-    });
 
-    function saveMonitors() {
-        if (!STORAGE_KEY) return;
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(monitors));
+        monitors = list;
+        renderMonitors(currentFilterText);
+        updateReportsSummary();
     }
 
     function updateReportsSummary() {
-        if (!totalMonitorsCount) return;
         const total   = monitors.length;
         const arrived = monitors.filter(m => m.arrived).length;
         const issues  = monitors.filter(m => m.hasIssue).length;
@@ -906,28 +889,15 @@
         issuesMonitorsCount.textContent  = issues;
     }
 
-    function getMonitorPhotosFromLocal(code) {
-        const photos = [];
-        const baseKey = "monitor_photo_" + code;
-
-        const single = localStorage.getItem(baseKey);
-        if (single) photos.push(single);
-
-        for (let i = 1; i <= 20; i++) {
-            const dataUrl = localStorage.getItem(baseKey + "_" + i);
-            if (dataUrl) photos.push(dataUrl);
-        }
-
-        return photos;
-    }
-
+    // عرض جدول المراقبين
     function renderMonitors(filterText = '') {
+        currentFilterText = filterText || '';
         monitorsBody.innerHTML = '';
 
-        const normalized = filterText.trim().toLowerCase();
+        const normalized = currentFilterText.trim().toLowerCase();
         const filtered = monitors.filter(m => {
             if (!normalized) return true;
-            const hay = (m.name + ' ' + m.phone + ' ' + m.center).toLowerCase();
+            const hay = (m.name + ' ' + m.phone + ' ' + m.center + ' ' + m.code).toLowerCase();
             return hay.includes(normalized);
         });
 
@@ -953,11 +923,15 @@
                 </div>
 
                 <div>
-                    <span class="bool-icon ${m.arrived ? 'true' : 'false'}" data-action="toggleArrived" data-index="${idx}">${m.arrived ? '✔' : '✖'}</span>
+                    <span class="bool-icon ${m.arrived ? 'true' : 'false'}">
+                        ${m.arrived ? '✔' : '✖'}
+                    </span>
                 </div>
 
                 <div>
-                    <span class="bool-icon ${m.voted ? 'true' : 'false'}" data-action="toggleVoted" data-index="${idx}">${m.voted ? '✔' : '✖'}</span>
+                    <span class="bool-icon ${m.voted ? 'true' : 'false'}">
+                        ${m.voted ? '✔' : '✖'}
+                    </span>
                 </div>
 
                 <div>
@@ -965,33 +939,40 @@
                         class="bool-icon ${m.hasIssue ? 'true' : 'neutral'}"
                         data-action="viewIssue"
                         data-index="${idx}"
-                        title="${m.hasIssue ? 'يوجد مشكلة مبلَّغة من المراقب، اضغط لعرض التفاصيل' : 'لا توجد مشكلة مبلَّغة من المراقب'}"
+                        title="${m.hasIssue ? 'يوجد مشكلة مبلَّغة من هذا المراقب' : 'لا توجد مشكلة مبلَّغة'}"
                     >
                         ${m.hasIssue ? '⚠' : '—'}
                     </span>
                 </div>
 
                 <div>
-                    <span class="badge-status ${m.online ? 'online' : 'offline'}" data-action="toggleOnline" data-index="${idx}">
+                    <span class="badge-status ${m.online ? 'online' : 'offline'}">
                         ${m.online ? '📶 متصل' : '📶 غير متصل'}
                     </span>
                 </div>
 
                 <div>
-                    <button type="button"
-                            data-action="viewPhotos"
-                            data-index="${idx}"
-                            style="font-size:11px; padding:3px 8px; border-radius:6px; border:1px solid #dde2ef; background:#f9fafc; cursor:pointer;">
-                        عرض الصور
-                    </button>
+                    <span
+                        class="bool-icon ${m.hasPhoto ? 'true' : 'neutral'}"
+                        data-action="viewPhotos"
+                        data-index="${idx}"
+                        title="${m.hasPhoto ? 'تم استلام صورة من هذا المراقب' : 'لا توجد صورة مرفوعة بعد'}"
+                    >
+                        ${m.hasPhoto ? '📷' : '—'}
+                    </span>
                 </div>
 
-                <!-- عمود الموقع -->
                 <div>
-                    <span title="عرض الموقع" data-action="showLocation" data-index="${idx}">📍</span>
+                    <span
+                        title="${m.hasLocation ? 'عرض موقع المراقب على الخريطة' : 'لا يوجد موقع مُسجّل'}"
+                        data-action="showLocation"
+                        data-index="${idx}"
+                        style="cursor:${m.hasLocation ? 'pointer' : 'default'};"
+                    >
+                        ${m.hasLocation ? '📍' : '—'}
+                    </span>
                 </div>
 
-                <!-- عمود الإجراءات -->
                 <div class="actions">
                     <span title="حذف المراقب" data-action="deleteMonitor" data-index="${idx}">🗑️</span>
                 </div>
@@ -1001,12 +982,11 @@
         });
 
         renderReports();
-        updateReportsSummary();
     }
 
     function renderReports() {
         reportsList.innerHTML = '';
-        const troubled = monitors.filter(m => m.hasIssue && m.issueText);
+        const troubled = monitors.filter(m => m.hasIssue);
         if (troubled.length === 0) {
             noReports.style.display = 'block';
             return;
@@ -1017,24 +997,36 @@
             const div = document.createElement('div');
             div.className = 'report-item';
             div.innerHTML = `
-                <div class="report-item-title">مشكلة من المراقب: ${m.name}</div>
-                <div style="font-size:12px; margin-bottom:3px;">مركز الاقتراع: ${m.center}</div>
-                <div>${m.issueText}</div>
-                <small>رقم الهاتف: ${m.phone} – كود الدخول: ${m.code}</small>
+                <div class="report-item-title">مشكلة مبلَّغة من المراقب: ${m.name || '-'}</div>
+                <div style="font-size:12px; margin-bottom:3px;">مركز الاقتراع: ${m.center || '-'}</div>
+                <div>المراقب ضغط زر "الإبلاغ عن مشكلة" من صفحته.</div>
+                <small>رقم الهاتف: ${m.phone || '-'} – كود الدخول: ${m.code || '-'}</small>
             `;
             reportsList.appendChild(div);
         });
     }
 
-    document.getElementById('searchInput').addEventListener('input', function () {
+    // بحث
+    searchInput.addEventListener('input', function () {
         renderMonitors(this.value);
     });
 
-    const modalBackdrop = document.getElementById('modalBackdrop');
-    const addMonitorBtn = document.getElementById('addMonitorBtn');
-    const modalClose    = document.getElementById('modalClose');
-    const addMonitorForm= document.getElementById('addMonitorForm');
+    // تبويبات
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            tabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
 
+            const target = tab.dataset.target;
+            document.getElementById('monitorsSection').style.display = (target === 'monitorsSection') ? 'block' : 'none';
+            document.getElementById('mapSection').style.display      = (target === 'mapSection') ? 'block' : 'none';
+            document.getElementById('reportsSection').style.display  = (target === 'reportsSection') ? 'block' : 'none';
+
+            document.getElementById('searchBox').style.display       = (target === 'monitorsSection') ? 'block' : 'none';
+        });
+    });
+
+    // كود عشوائي للمراقب
     function generateMonitorCode() {
         const letters = "ABCDEFGHJKLMNPQRSTUVWXYZ";
         const digits  = "0123456789";
@@ -1046,6 +1038,7 @@
         return code;
     }
 
+    // المودال
     function openModal() {
         document.getElementById('monitorCode').value = generateMonitorCode();
         modalBackdrop.style.display = 'flex';
@@ -1061,6 +1054,7 @@
         if (e.target === modalBackdrop) closeModal();
     });
 
+    // إضافة مراقب جديد (يحفظ فقط في monitors)
     addMonitorForm.addEventListener('submit', function (e) {
         e.preventDefault();
         if (!currentUserName) {
@@ -1079,55 +1073,31 @@
             monitorName:   name,
             monitorPhone:  phone,
             monitorCenter: center,
-            code:          code,
-            arrived:   false,
-            voted:     false,
-            hasIssue:  false,
-            issueText: '',
-            online:    false,
-            location:  null,
-            photos:    []
+            code:          code
         };
 
         db.collection('monitors').add(docData)
-          .then((docRef) => {
-              monitors.push({
-                  id: docRef.id,
-                  name,
-                  phone,
-                  center,
-                  code,
-                  arrived: false,
-                  voted: false,
-                  hasIssue: false,
-                  issueText: '',
-                  online: false,
-                  location: null,
-                  photos: []
-              });
-
-              saveMonitors();
-              renderMonitors(document.getElementById('searchInput').value);
-              closeModal();
-              alert("تم حفظ المراقب وتخزينه في النظام.");
-          })
-          .catch((err) => {
-              console.error("خطأ في حفظ المراقب في Firestore:", err);
-              alert("حدث خطأ أثناء حفظ المراقب، حاول مرة أخرى.");
-          });
+            .then(() => {
+                alert("تم حفظ المراقب وتخزينه في النظام. أعطِ هذا الكود للمراقب: " + code);
+                closeModal();
+            })
+            .catch((err) => {
+                console.error("خطأ في حفظ المراقب في Firestore:", err);
+                alert("حدث خطأ أثناء حفظ المراقب، حاول مرة أخرى.");
+            });
     });
 
-    // حدث زر حذف كل المراقبين
+    // حذف كل المراقبين لهذا المستخدم من monitors فقط
     deleteAllMonitorsBtn.addEventListener('click', async () => {
         if (!currentUserName) {
             alert("يجب تسجيل دخول المستخدم أولاً.");
             return;
         }
-        if (!monitors.length) {
+        if (!Object.keys(metaByCode).length) {
             alert("لا توجد بيانات مراقبين ليتم حذفها.");
             return;
         }
-        if (!confirm("هل تريد حذف جميع المراقبين لهذا المستخدم؟")) return;
+        if (!confirm("هل تريد حذف جميع المراقبين لهذا المستخدم من قاعدة البيانات؟")) return;
 
         try {
             const snap = await db.collection('monitors')
@@ -1137,16 +1107,17 @@
             const batch = db.batch();
             snap.forEach(docu => batch.delete(docu.ref));
             await batch.commit();
+
+            metaByCode   = {};
+            monitors     = [];
+            renderMonitors(currentFilterText);
+            alert("تم حذف جميع المراقبين لهذا المستخدم.");
         } catch (e) {
             console.error("خطأ في حذف جميع المراقبين من Firestore:", e);
         }
-
-        monitors = [];
-        saveMonitors();
-        renderMonitors(document.getElementById('searchInput').value);
-        alert("تم حذف جميع المراقبين لهذا المستخدم.");
     });
 
+    // تفاعل صفوف الجدول
     monitorsBody.addEventListener('click', function (e) {
         const action = e.target.dataset.action;
         if (!action) return;
@@ -1154,131 +1125,34 @@
         const m = monitors[index];
         if (!m) return;
 
-        if (action === 'toggleArrived') {
-            m.arrived = !m.arrived;
-            if (m.id) {
-                db.collection('monitors').doc(m.id).update({ arrived: m.arrived }).catch(err => {
-                    console.error("خطأ في تحديث arrived:", err);
-                });
-            }
-
-        } else if (action === 'toggleVoted') {
-            m.voted = !m.voted;
-            if (m.id) {
-                db.collection('monitors').doc(m.id).update({ voted: m.voted }).catch(err => {
-                    console.error("خطأ في تحديث voted:", err);
-                });
-            }
-
-        } else if (action === 'viewIssue') {
+        if (action === 'viewIssue') {
             if (m.hasIssue) {
-                alert(
-                    "مشكلة مبلَّغة من المراقب:\n\n" +
-                    (m.issueText && m.issueText.trim() !== "" ? m.issueText : "لا يوجد نص تفصيلي للمشكلة.")
-                );
+                alert("هذا المراقب ضغط زر الإبلاغ عن مشكلة من صفحته.");
             } else {
                 alert("لا توجد مشكلة مبلَّغة من هذا المراقب حتى الآن.");
             }
 
-        } else if (action === 'toggleOnline') {
-            // نغيّرها يدوياً إذا حبيت من اللوحة
-            m.online = !m.online;
-            if (m.id) {
-                db.collection('monitors').doc(m.id).update({ online: m.online }).catch(err => {
-                    console.error("خطأ في تحديث online:", err);
-                });
-            }
-
-        } else if (action === 'deleteMonitor') {
-            if (confirm('هل تريد حذف هذا المراقب؟')) {
-                if (m.id) {
-                    db.collection('monitors').doc(m.id).delete().catch(err => {
-                        console.error("خطأ في حذف المراقب من Firestore:", err);
-                    });
-                }
-                monitors.splice(index, 1);
-            }
-
         } else if (action === 'viewPhotos') {
-            let photos = [];
-            if (Array.isArray(m.photos) && m.photos.length) {
-                photos = m.photos;
+            if (m.hasPhoto) {
+                alert("تم استقبال إشارة أن المراقب رفع صورة الشريط ✅.\n(يمكن لاحقاً ربطها بتخزين الصور في Firebase Storage لعرضها هنا).");
             } else {
-                // احتياطاً لو كانت صور قديمة محفوظة في المتصفح المحلي
-                photos = getMonitorPhotosFromLocal(m.code);
+                alert("لا توجد صورة مرفوعة من هذا المراقب حتى الآن.");
             }
-
-            if (!photos.length) {
-                alert("لا توجد صور مستلمة من هذا المراقب حتى الآن.");
-                return;
-            }
-
-            const win = window.open("", "_blank");
-            if (!win) {
-                alert("المتصفح منع فتح نافذة جديدة. فعّل السماح بالنوافذ المنبثقة (Popup) ثم حاول مرة أخرى.");
-                return;
-            }
-
-            win.document.write(
-                "<html dir='rtl'><head><meta charset='utf-8'><title>صور المراقب " + (m.name || '') + "</title></head>" +
-                "<body style='font-family:Tahoma,Arial,sans-serif; background:#f4f6fb; padding:10px;'>" +
-                "<h3 style='margin-bottom:10px;'>صور المراقب: " + (m.name || '-') + " – كود: " + (m.code || '-') + "</h3>"
-            );
-
-            photos.slice(0, 20).forEach(function(src, idx) {
-                win.document.write(
-                    "<div style='margin:10px 0; padding:8px; background:#ffffff; border-radius:8px; " +
-                    "box-shadow:0 2px 6px rgba(0,0,0,0.12);'>" +
-                        "<div style='font-size:12px; margin-bottom:4px;'>صورة رقم " + (idx + 1) + "</div>" +
-                        "<img src='" + src + "' style='max-width:100%; border-radius:6px; display:block; margin-bottom:4px;'>" +
-                        "<a href='" + src + "' download='strip_" + (m.code || 'monitor') + "_" + (idx + 1) + ".png' " +
-                        "style='font-size:12px; color:#1a73e8; text-decoration:none;'>تنزيل هذه الصورة</a>" +
-                    "</div>"
-                );
-            });
-
-            win.document.write("</body></html>");
-            win.document.close();
 
         } else if (action === "showLocation") {
-            let coords = null;
-
-            // أولاً نحاول من البيانات القادمة من Firestore
-            if (m.location && typeof m.location.lat === "number" && typeof m.location.lng === "number") {
-                coords = m.location;
-            } else {
-                // احتياطاً: نحاول من localStorage إذا المراقب أرسل من نفس الجهاز
-                const locKey = "monitor_location_" + m.code;
-                const stored = localStorage.getItem(locKey);
-                if (stored) {
-                    try {
-                        coords = JSON.parse(stored);
-                    } catch (err) {
-                        coords = null;
-                    }
-                }
-            }
-
-            if (!coords) {
-                alert("لا يوجد موقع مُسجل لهذا المراقب حتى الآن.");
+            if (!m.hasLocation || typeof m.locationLat !== "number" || typeof m.locationLng !== "number") {
+                alert("لا يوجد موقع مُسجّل لهذا المراقب حتى الآن.");
                 return;
             }
 
-            const lat = Number(coords.lat);
-            const lng = Number(coords.lng);
-
-            if (isNaN(lat) || isNaN(lng)) {
-                alert("إحداثيات الموقع غير صحيحة أو غير مكتملة.");
-                return;
-            }
+            const lat = m.locationLat;
+            const lng = m.locationLng;
 
             const mapIframe = document.getElementById("mainMap");
             if (mapIframe) {
-                mapIframe.src =
-                    `https://www.google.com/maps?q=${lat.toFixed(6)},${lng.toFixed(6)}&z=19&output=embed`;
+                mapIframe.src = `https://www.google.com/maps?q=${lat.toFixed(6)},${lng.toFixed(6)}&z=19&output=embed`;
             }
 
-            // نفعّل تبويب الخريطة ونظهرها
             tabs.forEach(t => t.classList.remove("active"));
             const mapTab = document.querySelector('.tab[data-target="mapSection"]');
             if (mapTab) mapTab.classList.add("active");
@@ -1287,86 +1161,132 @@
             document.getElementById('mapSection').style.display      = 'block';
             document.getElementById('reportsSection').style.display  = 'none';
             document.getElementById('searchBox').style.display       = 'none';
-        }
 
-        saveMonitors();
-        renderMonitors(document.getElementById('searchInput').value);
+        } else if (action === 'deleteMonitor') {
+            if (!confirm('هل تريد حذف هذا المراقب من قاعدة البيانات؟')) return;
+
+            if (m.id) {
+                db.collection('monitors').doc(m.id).delete().catch(err => {
+                    console.error("خطأ في حذف المراقب من Firestore:", err);
+                });
+            }
+
+            if (m.code && metaByCode[m.code]) {
+                delete metaByCode[m.code];
+            }
+            recomputeMonitors();
+        }
     });
 
-    // 🔄 تحديث دوري من Firestore فقط (كل 3 ثواني) حتى تتزامن مع المراقب من أي مكان
-    function updateOnlineStatusAuto() {
-        if (!currentUserName) return;
+    // تسجيل الدخول من systemUsers
+    loginForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        loginError.style.display = 'none';
 
-        db.collection('monitors')
-          .where('adminUsername', '==', currentUserName)
-          .get()
-          .then((snapshot) => {
-              const loaded = [];
-              snapshot.forEach((docu) => {
-                  const data = docu.data();
-                  loaded.push({
-                      id:       docu.id,
-                      name:     data.monitorName  || '',
-                      phone:    data.monitorPhone || '',
-                      center:   data.monitorCenter|| '',
-                      code:     data.code || data.monitorCode || '',
-                      arrived:  !!data.arrived,
-                      voted:    !!data.voted,
-                      hasIssue: !!data.hasIssue,
-                      issueText: data.issueText || '',
-                      online:   !!data.online,
-                      location: data.location || null,
-                      photos:   Array.isArray(data.photos) ? data.photos : []
-                  });
-              });
-              monitors = loaded;
-              saveMonitors();
-              renderMonitors(document.getElementById('searchInput').value);
-          })
-          .catch((err) => {
-              console.error("خطأ في تحديث حالة المراقبين من Firestore:", err);
-          });
-    }
+        const username = document.getElementById('loginUser').value.trim();
+        const pass     = document.getElementById('loginPass').value.trim();
 
-    setInterval(updateOnlineStatusAuto, 3000);
+        if (!username || !pass) {
+            loginError.textContent = 'يرجى إدخال اسم المستخدم والكود.';
+            loginError.style.display = 'block';
+            return;
+        }
 
-    // التحقق دوريًا من أن الحساب ما زال موجود ومفعل في Firestore
+        db.collection('systemUsers')
+            .where('username', '==', username)
+            .where('password', '==', pass)
+            .get()
+            .then((snapshot) => {
+                if (snapshot.empty) {
+                    loginError.textContent = 'بيانات الدخول غير صحيحة. تأكد من اسم المستخدم والكود الذي أعطاك إياه مدير البرنامج.';
+                    loginError.style.display = 'block';
+                    return;
+                }
+
+                let matchedUser = null;
+                snapshot.forEach((docu) => {
+                    const data = docu.data();
+                    matchedUser = {
+                        id: docu.id,
+                        username: data.username,
+                        password: data.password,
+                        note: data.note || '',
+                        active: (typeof data.active === 'boolean') ? data.active : true
+                    };
+                });
+
+                if (!matchedUser) {
+                    loginError.textContent = 'حدث خطأ غير متوقع في قراءة بيانات المستخدم.';
+                    loginError.style.display = 'block';
+                    return;
+                }
+
+                if (matchedUser.active === false) {
+                    loginError.textContent = 'هذا الحساب تم إيقافه من قبل مدير البرنامج. يرجى مراجعة مدير البرنامج.';
+                    loginError.style.display = 'block';
+                    return;
+                }
+
+                localStorage.setItem('currentUserName', matchedUser.username);
+                initForUser(matchedUser.username);
+                showDashboard();
+            })
+            .catch((err) => {
+                console.error("خطأ في التحقق من بيانات الدخول من Firestore:", err);
+                loginError.textContent = 'حدث خطأ أثناء الاتصال بقاعدة البيانات. حاول مرة أخرى.';
+                loginError.style.display = 'block';
+            });
+    });
+
+    // تسجيل الخروج
+    logoutLink.addEventListener('click', function (e) {
+        e.preventDefault();
+        localStorage.removeItem('currentUserName');
+        currentUserName = null;
+
+        if (unsubscribeMeta)   unsubscribeMeta();
+        if (unsubscribeStatus) unsubscribeStatus();
+
+        metaByCode   = {};
+        statusByCode = {};
+        monitors     = [];
+        renderMonitors('');
+        showLogin();
+    });
+
+    // التحقق الدوري من أن الحساب موجود وفعّال
     function checkUserStillActive() {
         if (!currentUserName) return;
 
         db.collection('systemUsers')
-          .where('username', '==', currentUserName)
-          .limit(1)
-          .get()
-          .then((snapshot) => {
-              if (snapshot.empty) {
-                  alert("تم حذف هذا الحساب من قبل مدير البرنامج أو لم يعد موجوداً. سيتم تسجيل الخروج الآن.");
-                  localStorage.removeItem('currentUserName');
-                  currentUserName = null;
-                  STORAGE_KEY = null;
-                  monitors = [];
-                  showLogin();
-                  return;
-              }
+            .where('username', '==', currentUserName)
+            .limit(1)
+            .get()
+            .then((snapshot) => {
+                if (snapshot.empty) {
+                    alert("تم حذف هذا الحساب من قبل مدير البرنامج أو لم يعد موجوداً. سيتم تسجيل الخروج الآن.");
+                    localStorage.removeItem('currentUserName');
+                    currentUserName = null;
+                    showLogin();
+                    return;
+                }
 
-              const data = snapshot.docs[0].data();
-              if (data.active === false) {
-                  alert("تم إيقاف هذا الحساب من قبل مدير البرنامج. سيتم تسجيل الخروج الآن.");
-                  localStorage.removeItem('currentUserName');
-                  currentUserName = null;
-                  STORAGE_KEY = null;
-                  monitors = [];
-                  showLogin();
-              }
-          })
-          .catch((err) => {
-              console.error("خطأ في التحقق من حالة المستخدم:", err);
-          });
+                const data = snapshot.docs[0].data();
+                if (data.active === false) {
+                    alert("تم إيقاف هذا الحساب من قبل مدير البرنامج. سيتم تسجيل الخروج الآن.");
+                    localStorage.removeItem('currentUserName');
+                    currentUserName = null;
+                    showLogin();
+                }
+            })
+            .catch((err) => {
+                console.error("خطأ في التحقق من حالة المستخدم:", err);
+            });
     }
 
     setInterval(checkUserStillActive, 4000);
 
-    // فحص مبدئي عند فتح الصفحة
+    // فحص أولي عند فتح الصفحة
     (function initialCheck() {
         const savedUser = localStorage.getItem('currentUserName');
         if (!savedUser) {
@@ -1375,30 +1295,30 @@
         }
 
         db.collection('systemUsers')
-          .where('username', '==', savedUser)
-          .limit(1)
-          .get()
-          .then((snapshot) => {
-              if (snapshot.empty) {
-                  localStorage.removeItem('currentUserName');
-                  showLogin();
-                  return;
-              }
+            .where('username', '==', savedUser)
+            .limit(1)
+            .get()
+            .then((snapshot) => {
+                if (snapshot.empty) {
+                    localStorage.removeItem('currentUserName');
+                    showLogin();
+                    return;
+                }
 
-              const data = snapshot.docs[0].data();
-              if (data.active === false) {
-                  localStorage.removeItem('currentUserName');
-                  showLogin();
-                  return;
-              }
+                const data = snapshot.docs[0].data();
+                if (data.active === false) {
+                    localStorage.removeItem('currentUserName');
+                    showLogin();
+                    return;
+                }
 
-              initForUser(savedUser);
-              showDashboard();
-          })
-          .catch((err) => {
-              console.error("خطأ في التحقق من المستخدم عند بدء التشغيل:", err);
-              showLogin();
-          });
+                initForUser(savedUser);
+                showDashboard();
+            })
+            .catch((err) => {
+                console.error("خطأ في التحقق من المستخدم عند بدء التشغيل:", err);
+                showLogin();
+            });
     })();
 </script>
 
