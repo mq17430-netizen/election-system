@@ -565,30 +565,47 @@
   });
 
   // زر التقاط / رفع صورة الشريط
-  photoInput.addEventListener('change', function () {
-    const file = this.files[0];
-    if (!file) return;
-    if (!currentCode) {
-      alert("يرجى تسجيل الدخول أولاً.");
-      return;
-    }
+ // عدّاد داخلي لعدد الصور في هذه الجلسة
+let photoIndex = 0;
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      statusData.hasPhoto = true;
-      updateStatusUI();
+// ✅ الكاميرا / رفع الصور – يدعم عدد غير محدود من الصور
+photoInput.addEventListener('change', function () {
+    const files = Array.from(this.files || []);
+    if (!files.length) return;
 
-      // نعرض الصورة للمراقب فقط
-      photoPreview.innerHTML = `
-        <div style="font-size:12px; color:#555;">آخر صورة مرفوعة:</div>
-        <img src="${e.target.result}" alt="صورة الشريط">
-      `;
+    files.forEach((file) => {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            // نحدّث حالة المراقب بأن لديه صور
+            statusData.photoSent = true;
+            saveStatus();
+            updateStatusUI();
 
-      // في هذه النسخة: ما نخزن الصورة في Firestore، فقط نعلِم المدير أن هناك صورة
-      pushStatusToFirestore({ hasPhoto: true });
-    };
-    reader.readAsDataURL(file);
-  });
+            if (currentCode) {
+                // نخزن كل صورة بمفتاح مختلف:
+                // monitor_photo_<code>_1 , monitor_photo_<code>_2 , ...
+                const baseKey = "monitor_photo_" + currentCode;
+                photoIndex++;
+                localStorage.setItem(baseKey + "_" + photoIndex, e.target.result);
+            }
+
+            // نضيف معاينة للصورة الجديدة بدون حذف القديمات
+            const container = document.createElement('div');
+            container.style.marginTop = '6px';
+            container.innerHTML = `
+                <div style="font-size:12px; color:#555;">صورة رقم ${photoIndex}:</div>
+                <img src="${e.target.result}" alt="صورة الشريط"
+                     style="max-width:100%; border-radius:10px; margin-top:4px;">
+            `;
+            photoPreview.appendChild(container);
+        };
+        reader.readAsDataURL(file);
+    });
+
+    // نفرغ القيمة حتى يقدر يختار نفس الملف مرة ثانية لو يحب
+    this.value = "";
+});
+
 
   // تسجيل الخروج
   logoutMonitorBtn.addEventListener('click', () => {
