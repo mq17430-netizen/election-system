@@ -6,112 +6,45 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
-        :root { --primary: #1a9bff; --accent: #00c853; }
+        :root { --primary: #1a9bff; }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; }
-        
-        body { 
-            background: #f4f7f6; 
-            display: flex; align-items: center; justify-content: center; 
-            min-height: 100vh; padding: 15px;
-        }
-
-        .card { 
-            background: #ffffff; padding: 25px; border-radius: 20px; 
-            box-shadow: 0 10px 25px rgba(0,0,0,0.08); 
-            width: 100%; max-width: 400px; text-align: center;
-        }
-
-        h2 { font-size: 20px; margin-bottom: 20px; color: #333; }
-        .input-group { text-align: right; margin-bottom: 15px; }
-        label { font-size: 13px; color: #666; display: block; margin-bottom: 5px; }
-        
-        input { 
-            width: 100%; padding: 12px; border: 1px solid #e0e0e0; 
-            border-radius: 12px; outline: none; transition: 0.3s;
-        }
-        input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(26, 155, 255, 0.1); }
-
-        button { 
-            width: 100%; padding: 13px; border: none; border-radius: 12px; 
-            font-weight: bold; cursor: pointer; transition: 0.2s; 
-            display: flex; align-items: center; justify-content: center; gap: 8px;
-        }
-
-        .btn-main { background: var(--primary); color: #fff; margin-top: 10px; }
-        .btn-main:active { transform: scale(0.98); }
-
-        .action-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 15px; }
-        .btn-green { background: #2ecc71; color: white; }
-        .btn-blue { background: #3498db; color: white; }
-        .btn-red { background: #e74c3c; color: white; }
-        .btn-orange { background: #f39c12; color: white; }
-        .btn-purple { background: #9b59b6; color: white; }
-
-        .status-box { 
-            background: #f9f9f9; padding: 15px; border-radius: 15px; 
-            margin-top: 20px; text-align: right; font-size: 14px;
-            border-right: 4px solid var(--primary);
-        }
-
-        #loadingOverlay { 
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(255,255,255,0.9); z-index: 9999; 
-            flex-direction: column; align-items: center; justify-content: center; 
-        }
-        .loader { 
-            border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); 
-            border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; 
-        }
+        body { background: #f4f7f6; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 15px; }
+        .card { background: #ffffff; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.08); width: 100%; max-width: 400px; text-align: center; }
+        button { width: 100%; padding: 13px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 10px; color: white; }
+        .btn-green { background: #2ecc71; }
+        .btn-blue { background: #3498db; }
+        .btn-red { background: #e74c3c; }
+        .btn-orange { background: #f39c12; }
+        .btn-purple { background: #9b59b6; }
+        .status-box { background: #f9f9f9; padding: 15px; border-radius: 15px; margin-top: 20px; text-align: right; font-size: 14px; border-right: 4px solid var(--primary); }
+        #loadingOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); z-index: 9999; flex-direction: column; align-items: center; justify-content: center; }
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-        .preview-imgs { display: flex; gap: 8px; overflow-x: auto; margin-top: 10px; padding-bottom: 5px; }
-        .preview-imgs img { width: 55px; height: 55px; border-radius: 8px; object-fit: cover; border: 1px solid #ddd; }
     </style>
 </head>
 <body>
 
-<div id="loadingOverlay">
-    <div class="loader"></div>
-    <p id="loadText" style="margin-top:15px; font-weight:bold; color:#555;">جاري المعالجة...</p>
-</div>
+<div id="loadingOverlay"><div class="loader"></div><p style="margin-top:15px;">جاري تحديث لوحة المدير...</p></div>
 
 <div id="loginSection" class="card">
     <h2>تسجيل دخول المراقب</h2>
-    <form id="loginForm">
-        <div class="input-group">
-            <label>اسم المراقب (اختياري)</label>
-            <input id="uName" type="text" placeholder="اسمك الذي سيظهر للمدير">
-        </div>
-        <div class="input-group">
-            <label>كود الدخول السري</label>
-            <input id="uCode" type="password" placeholder="أدخل الكود الخاص بك" required>
-        </div>
-        <button type="submit" class="btn-main">دخول النظام</button>
-        <p id="loginMsg" style="color:red; font-size:12px; margin-top:10px; display:none;">خطأ: الكود غير صحيح!</p>
-    </form>
+    <input id="uCode" type="password" placeholder="أدخل الكود السري" style="width:100%; padding:12px; margin:15px 0; border-radius:10px; border:1px solid #ddd;">
+    <button onclick="login()" style="background:#1a9bff">دخول</button>
 </div>
 
 <div id="monitorSection" class="card" style="display:none;">
-    <h3 style="margin-bottom:5px;">أهلاً، <span id="labelName">...</span></h3>
-    <p style="font-size:12px; color:gray; margin-bottom:20px;">كودك الحالي: <span id="labelCode"></span></p>
+    <h3>أهلاً، <span id="labelName">...</span></h3>
+    <p style="font-size:12px; color:gray; margin-bottom:20px;">كودك: <span id="labelCode"></span></p>
 
-    <div class="action-grid">
-        <button onclick="handleUpdate('arrived', true, 'تأكيد الوصول')" class="btn-green">✅ تم الوصول للمركز</button>
-        <button onclick="handleUpdate('voted', true, 'تأكيد التصويت')" class="btn-blue">🗳 تم الانتهاء من التصويت</button>
-        <button onclick="reportIssue()" class="btn-red">⚠ إبلاغ عن مشكلة</button>
-        <button id="locBtn" onclick="sendLocation()" class="btn-orange">📍 إرسال الموقع الجغرافي</button>
-        <button onclick="document.getElementById('photoInp').click()" class="btn-purple">📷 رفع صور المحاضر</button>
-    </div>
-
-    <input type="file" id="photoInp" multiple hidden onchange="processPhotos(this.files)">
-
-    <div class="status-box" id="summaryUI">
-        جاري مزامنة البيانات...
-    </div>
-
-    <div id="imgContainer" class="preview-imgs"></div>
-
-    <button onclick="logout()" style="background:none; color:#999; font-size:12px; margin-top:20px; text-decoration:underline;">تسجيل الخروج</button>
+    <button onclick="handleUpdate('monitorArrival', true, 'تم الوصول')" class="btn-green">✅ تم الوصول للمركز</button>
+    <button onclick="handleUpdate('monitorVoted', true, 'تم التصويت')" class="btn-blue">🗳 تم الانتهاء من التصويت</button>
+    <button onclick="reportIssue()" class="btn-red">⚠ إبلاغ عن مشكلة</button>
+    <button onclick="sendLocation()" class="btn-orange">📍 إرسال الموقع</button>
+    <button onclick="document.getElementById('photoInp').click()" class="btn-purple">📷 رفع صور الشريط</button>
+    
+    <input type="file" id="photoInp" hidden onchange="processPhotos(this.files)">
+    <div class="status-box" id="summaryUI">جاري المزامنة...</div>
+    <button onclick="logout()" style="background:none; color:gray; font-size:12px; margin-top:15px;">تسجيل خروج</button>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-app-compat.js"></script>
@@ -119,7 +52,6 @@
 <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-storage-compat.js"></script>
 
 <script>
-    // إعدادات Firebase
     const firebaseConfig = {
         apiKey: "AIzaSyDdiudUa5jjcZDwJgYBbLdC-YBNQ5rlqvU",
         authDomain: "election-system-9cbb8.firebaseapp.com",
@@ -134,141 +66,69 @@
     const storage = firebase.storage();
     let currentUser = null;
 
-    const overlay = document.getElementById('loadingOverlay');
-    const loadText = document.getElementById('loadText');
-
-    function toggleLoader(show, text = "جاري المعالجة...") {
-        loadText.innerText = text;
-        overlay.style.display = show ? 'flex' : 'none';
-    }
-
-    // منطق تسجيل الدخول
-    document.getElementById('loginForm').onsubmit = async (e) => {
-        e.preventDefault();
+    async function login() {
         const code = document.getElementById('uCode').value;
-        const name = document.getElementById('uName').value;
-        
-        toggleLoader(true, "يتم الآن التحقق من الكود...");
-        
-        try {
-            const snap = await db.collection('monitors').where('code', '==', code).get();
-            
-            if (snap.empty) {
-                document.getElementById('loginMsg').style.display = 'block';
-                toggleLoader(false);
-            } else {
-                const doc = snap.docs[0];
-                currentUser = { docId: doc.id, ...doc.data() };
-                if (name) currentUser.monitorName = name; // تحديث الاسم إذا أدخل اسماً جديداً
-                
-                localStorage.setItem('monitor_user', JSON.stringify(currentUser));
-                initApp();
-                toggleLoader(false);
-            }
-        } catch (err) {
-            alert("حدث خطأ في الاتصال، حاول مرة أخرى");
-            toggleLoader(false);
+        document.getElementById('loadingOverlay').style.display = 'flex';
+        const snap = await db.collection('monitors').where('code', '==', code).get();
+        if (snap.empty) {
+            alert("الكود غير صحيح");
+            document.getElementById('loadingOverlay').style.display = 'none';
+        } else {
+            currentUser = { docId: snap.docs[0].id, ...snap.docs[0].data() };
+            document.getElementById('loginSection').style.display = 'none';
+            document.getElementById('monitorSection').style.display = 'block';
+            document.getElementById('labelName').innerText = currentUser.monitorName || currentUser.name || "مراقب";
+            document.getElementById('labelCode').innerText = currentUser.code;
+            document.getElementById('loadingOverlay').style.display = 'none';
+            refreshUI();
         }
-    };
-
-    function initApp() {
-        document.getElementById('loginSection').style.display = 'none';
-        document.getElementById('monitorSection').style.display = 'block';
-        document.getElementById('labelName').innerText = currentUser.monitorName || "مراقب";
-        document.getElementById('labelCode').innerText = currentUser.code;
-        refreshUI();
     }
 
     async function handleUpdate(field, value, label) {
-        toggleLoader(true, `جاري إرسال ${label}...`);
+        document.getElementById('loadingOverlay').style.display = 'flex';
         try {
-            const data = { [field]: value, lastUpdate: Date.now() };
-            await db.collection('monitors').doc(currentUser.docId).update(data);
-            
+            // ملاحظة: تم تغيير أسماء الحقول لتطابق ما تطلبه لوحة المدير عادةً
+            await db.collection('monitors').doc(currentUser.docId).update({
+                [field]: value,
+                "lastUpdate": new Date().getTime(),
+                "status": "متصل" // لتغيير "غير متصل" في لوحة المدير
+            });
             currentUser[field] = value;
-            localStorage.setItem('monitor_user', JSON.stringify(currentUser));
             refreshUI();
-            alert("تم التحديث بنجاح");
-        } catch (err) {
-            alert("فشل الإرسال، تحقق من الإنترنت");
-        }
-        toggleLoader(false);
+            alert(label + " بنجاح");
+        } catch (e) { alert("فشل التحديث"); }
+        document.getElementById('loadingOverlay').style.display = 'none';
     }
 
     function reportIssue() {
-        const msg = prompt("يرجى كتابة المشكلة التي تواجهها:");
-        if (msg) handleUpdate('issueMessage', msg, 'البلاغ');
+        const msg = prompt("ما هي المشكلة؟");
+        if(msg) handleUpdate('monitorIssue', msg, 'تم الإبلاغ');
     }
 
     function sendLocation() {
-        if (!navigator.geolocation) return alert("الموقع غير مدعوم في متصفحك");
-        
-        toggleLoader(true, "تحديد الإحداثيات...");
         navigator.geolocation.getCurrentPosition(pos => {
-            handleUpdate('location', {
-                lat: pos.coords.latitude,
-                lng: pos.coords.longitude
-            }, "الموقع");
-        }, () => {
-            toggleLoader(false);
-            alert("يرجى السماح بالوصول للموقع الجغرافي");
+            handleUpdate('monitorLocation', {lat: pos.coords.latitude, lng: pos.coords.longitude}, 'تم إرسال الموقع');
         });
     }
 
     async function processPhotos(files) {
-        if (!files.length) return;
-        toggleLoader(true, "جاري رفع الصور للسيرفر...");
-        
-        const urls = currentUser.photoList || [];
-        try {
-            for (let f of files) {
-                const path = `evidence/${currentUser.code}/${Date.now()}_${f.name}`;
-                const ref = storage.ref(path);
-                await ref.put(f);
-                const link = await ref.getDownloadURL();
-                urls.push(link);
-            }
-            await handleUpdate('photoList', urls, 'الصور');
-        } catch (err) {
-            alert("حدث خطأ أثناء رفع الصور");
-            toggleLoader(false);
-        }
+        if(!files.length) return;
+        document.getElementById('loadingOverlay').style.display = 'flex';
+        const file = files[0];
+        const ref = storage.ref(`reports/${currentUser.code}/${Date.now()}`);
+        await ref.put(file);
+        const url = await ref.getDownloadURL();
+        await handleUpdate('monitorImage', url, 'تم رفع الصورة');
     }
 
     function refreshUI() {
-        const box = document.getElementById('summaryUI');
-        box.innerHTML = `
-            <div style="margin-bottom:5px;">🚩 الوصول: ${currentUser.arrived ? '🟢 تم' : '⚪ لم يتم'}</div>
-            <div style="margin-bottom:5px;">🗳 التصويت: ${currentUser.voted ? '🔵 تم' : '⚪ لم يتم'}</div>
-            <div style="margin-bottom:5px;">📸 الصور: ${currentUser.photoList ? currentUser.photoList.length : 0} صور</div>
-            <div style="color:red; font-size:12px;">⚠ المشاكل: ${currentUser.issueMessage || 'لا يوجد'}</div>
+        document.getElementById('summaryUI').innerHTML = `
+            <p>الوصول للمركز: ${currentUser.monitorArrival ? '✅ تم' : '❌ لم يتم'}</p>
+            <p>التصويت: ${currentUser.monitorVoted ? '✅ تم' : '❌ لم يتم'}</p>
         `;
-
-        const container = document.getElementById('imgContainer');
-        container.innerHTML = '';
-        if (currentUser.photoList) {
-            currentUser.photoList.forEach(url => {
-                const img = document.createElement('img');
-                img.src = url;
-                container.appendChild(img);
-            });
-        }
     }
 
-    function logout() {
-        localStorage.clear();
-        location.reload();
-    }
-
-    // التحقق التلقائي عند فتح الصفحة
-    window.onload = () => {
-        const saved = localStorage.getItem('monitor_user');
-        if (saved) {
-            currentUser = JSON.parse(saved);
-            initApp();
-        }
-    };
+    function logout() { location.reload(); }
 </script>
-
 </body>
 </html>
