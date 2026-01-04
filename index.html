@@ -4,532 +4,49 @@
     <meta charset="UTF-8">
     <title>لوحة تحكم المستخدم - نظام مراقبة الانتخابات</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
-
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Cairo', sans-serif; background: #f4f6fb; min-height: 100vh; }
+        
+        /* صفحة تسجيل الدخول */
+        #loginSection { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .login-card { background: #ffffff; border-radius: 18px; box-shadow: 0 18px 40px rgba(15,34,58,0.18); max-width: 380px; width: 100%; padding: 26px 24px 20px; text-align: center; }
+        .login-icon { width: 64px; height: 64px; border-radius: 50%; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; font-size: 30px; color: #fff; background: linear-gradient(135deg, #00c853, #1a9bff); }
+        .login-card h1 { font-size: 20px; margin-bottom: 6px; }
+        .login-subtitle { font-size: 13px; color: #777; margin-bottom: 16px; }
+        .login-form-group { text-align: right; margin-bottom: 12px; }
+        .login-form-group label { display: block; font-size: 12px; margin-bottom: 4px; color: #555; }
+        .login-form-group input { width: 100%; padding: 9px 10px; border-radius: 10px; border: 1px solid #dde2ef; outline: none; }
+        .login-btn { width: 100%; border: none; border-radius: 12px; padding: 10px 0; font-size: 14px; font-weight: 600; cursor: pointer; background: linear-gradient(90deg, #00c853, #1a9bff); color: #fff; margin-top: 4px; }
+        .login-hint { margin-top: 10px; font-size: 11px; color: #888; text-align: right; line-height: 1.5; }
+        .login-footer { margin-top: 14px; font-size: 11px; color: #999; text-align: center; line-height: 1.6; }
 
-        body {
-            font-family: 'Cairo', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: #f4f6fb;
-            min-height: 100vh;
-        }
-
-        /* ====== صفحة تسجيل الدخول ====== */
-
-        #loginSection {
-            min-height: 100vh;
-            display: flex; /* تم التعديل ليظهر افتراضياً */
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-
-        .login-card {
-            background: #ffffff;
-            border-radius: 18px;
-            box-shadow: 0 18px 40px rgba(15,34,58,0.18);
-            max-width: 380px;
-            width: 100%;
-            padding: 26px 24px 20px;
-            text-align: center;
-        }
-
-        .login-icon {
-            width: 64px;
-            height: 64px;
-            border-radius: 50%;
-            margin: 0 auto 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 30px;
-            color: #fff;
-            background: linear-gradient(135deg, #00c853, #1a9bff);
-        }
-
-        .login-card h1 {
-            font-size: 20px;
-            margin-bottom: 6px;
-        }
-
-        .login-subtitle {
-            font-size: 13px;
-            color: #777;
-            margin-bottom: 16px;
-        }
-
-        .login-form-group {
-            text-align: right;
-            margin-bottom: 12px;
-        }
-
-        .login-form-group label {
-            display: block;
-            font-size: 12px;
-            margin-bottom: 4px;
-            color: #555;
-        }
-
-        .login-form-group input {
-            width: 100%;
-            padding: 9px 10px;
-            border-radius: 10px;
-            border: 1px solid #dde2ef;
-            font-size: 13px;
-            outline: none;
-        }
-
-        .login-form-group input:focus {
-            border-color: #1a9bff;
-            box-shadow: 0 0 0 3px rgba(26, 155, 255, 0.12);
-        }
-
-        .login-btn {
-            width: 100%;
-            border: none;
-            border-radius: 12px;
-            padding: 10px 0;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            background: linear-gradient(90deg, #00c853, #1a9bff, #0066ff);
-            color: #fff;
-            box-shadow: 0 10px 22px rgba(0,102,255,0.25);
-            margin-top: 4px;
-        }
-
-        .login-error {
-            margin-top: 8px;
-            font-size: 12px;
-            color: #c62828;
-            display: none;
-        }
-
-        .login-hint {
-            margin-top: 10px;
-            font-size: 11px;
-            color: #888;
-            text-align: right;
-            line-height: 1.5;
-        }
-
-        .login-footer {
-            margin-top: 14px;
-            font-size: 11px;
-            color: #999;
-            text-align: center;
-            line-height: 1.6;
-        }
-
-        /* ====== لوحة التحكم ====== */
-
-        #dashboardSection {
-            display: none;
-        }
-
-        .page {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 16px 20px 40px;
-        }
-
-        .top-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 18px;
-        }
-
-        .top-left a {
-            font-size: 13px;
-            text-decoration: none;
-            color: #555;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .top-left a:hover {
-            text-decoration: underline;
-        }
-
-        .top-right {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .user-icon {
-            width: 38px;
-            height: 38px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #00c853, #1a9bff);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #fff;
-            font-size: 20px;
-        }
-
-        .user-info {
-            text-align: right;
-        }
-
-        .user-info .title {
-            font-size: 15px;
-            font-weight: 700;
-        }
-
-        .user-info .welcome {
-            font-size: 12px;
-            color: #777;
-        }
-
-        .card {
-            background: #fff;
-            border-radius: 16px;
-            box-shadow: 0 8px 18px rgba(15, 34, 58, 0.08);
-            padding: 14px 16px;
-            margin-bottom: 14px;
-        }
-
-        .tabs {
-            display: flex;
-            gap: 18px;
-            font-size: 13px;
-            border-bottom: 1px solid #e3e6f0;
-            padding-bottom: 8px;
-            margin-bottom: 10px;
-        }
-
-        .tab {
-            cursor: pointer;
-            padding-bottom: 6px;
-        }
-
-        .tab.active {
-            color: #00897b;
-            border-bottom: 2px solid #00c853;
-            font-weight: 600;
-        }
-
-        .tab:not(.active) {
-            color: #777;
-        }
-
-        .search-box {
-            margin-top: 10px;
-        }
-
-        .search-input {
-            position: relative;
-        }
-
-        .search-input input {
-            width: 100%;
-            padding: 10px 36px 10px 12px;
-            border-radius: 10px;
-            border: 1px solid #e0e4f0;
-            font-size: 13px;
-            outline: none;
-        }
-
-        .search-input input:focus {
-            border-color: #1a9bff;
-            box-shadow: 0 0 0 3px rgba(26, 155, 255, 0.12);
-        }
-
-        .search-input span {
-            position: absolute;
-            right: 10px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #9aa4bc;
-            font-size: 16px;
-        }
-
-        .section-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin: 14px 2px 8px;
-        }
-
-        .section-header h2 {
-            font-size: 15px;
-            font-weight: 700;
-        }
-
-        .add-bar {
-            margin-top: 4px;
-            background: linear-gradient(90deg, #00c853, #1a9bff, #0066ff);
-            border-radius: 14px;
-            padding: 10px 18px;
-            color: #fff;
-            font-size: 13px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 6px;
-            cursor: pointer;
-            box-shadow: 0 10px 20px rgba(0, 128, 255, 0.25);
-        }
-
-        .add-bar span.plus {
-            font-size: 18px;
-            margin-top: -2px;
-        }
-
-        .table-card {
-            background: #fff;
-            border-radius: 16px;
-            box-shadow: 0 8px 18px rgba(15, 34, 58, 0.08);
-            margin-top: 10px;
-            padding: 10px 12px;
-            overflow-x: auto;
-        }
-
-        .table-header,
-        .table-row {
-            display: grid;
-            grid-template-columns: 1.3fr 1.2fr 1.1fr 0.9fr 0.9fr 0.9fr 0.9fr 1fr 0.9fr 0.9fr;
-            gap: 4px;
-            align-items: center;
-            min-width: 900px;
-        }
-
-        .table-header {
-            font-size: 11px;
-            color: #777;
-            border-bottom: 1px solid #edf0f7;
-            padding-bottom: 6px;
-            margin-bottom: 4px;
-        }
-
-        .table-row {
-            font-size: 12px;
-            padding: 6px 0;
-            border-bottom: 1px solid #f1f3fb;
-        }
-
-        .table-row:last-child {
-            border-bottom: none;
-        }
-
-        .monitor-name {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .monitor-avatar {
-            width: 26px;
-            height: 26px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #1a9bff, #00c853);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #fff;
-            font-size: 15px;
-        }
-
-        .monitor-name small {
-            font-size: 10px;
-            color: #888;
-        }
-
-        .badge-status {
-            font-size: 11px;
-            padding: 2px 6px;
-            border-radius: 999px;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            justify-content: center;
-        }
-
-        .badge-status.online {
-            background: #e8f5e9;
-            color: #2e7d32;
-        }
-
-        .badge-status.offline {
-            background: #ffeaea;
-            color: #c62828;
-        }
-
-        .bool-icon {
-            font-size: 16px;
-            text-align: center;
-        }
-
+        /* لوحة التحكم */
+        #dashboardSection { display: none; }
+        .page { max-width: 1200px; margin: 0 auto; padding: 16px 20px 40px; }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+        .user-icon { width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg, #00c853, #1a9bff); display: flex; align-items: center; justify-content: center; color: #fff; }
+        .card { background: #fff; border-radius: 16px; box-shadow: 0 8px 18px rgba(15, 34, 58, 0.08); padding: 14px 16px; margin-bottom: 14px; }
+        .tabs { display: flex; gap: 18px; border-bottom: 1px solid #e3e6f0; padding-bottom: 8px; margin-bottom: 10px; }
+        .tab { cursor: pointer; font-size: 13px; color: #777; }
+        .tab.active { color: #00897b; border-bottom: 2px solid #00c853; font-weight: 600; }
+        
+        /* الجدول */
+        .table-card { background: #fff; border-radius: 16px; padding: 10px 12px; overflow-x: auto; }
+        .table-header, .table-row { display: grid; grid-template-columns: 1.5fr 1.2fr 1fr 0.8fr 0.8fr 0.8fr 1fr 0.8fr 0.8fr 0.8fr; gap: 10px; align-items: center; min-width: 900px; }
+        .table-header { font-size: 11px; color: #777; border-bottom: 1px solid #edf0f7; padding-bottom: 10px; }
+        .table-row { font-size: 12px; padding: 12px 0; border-bottom: 1px solid #f1f3fb; }
+        .bool-icon { font-size: 16px; font-weight: bold; }
         .bool-icon.true { color: #2e7d32; }
         .bool-icon.false { color: #c62828; }
-        .bool-icon.neutral { color: #9e9e9e; }
+        .badge-status { font-size: 10px; padding: 2px 8px; border-radius: 10px; }
+        .badge-status.online { background: #e8f5e9; color: #2e7d32; }
+        .badge-status.offline { background: #ffeaea; color: #c62828; }
 
-        .actions {
-            display: flex;
-            justify-content: center;
-            gap: 6px;
-            font-size: 16px;
-        }
-
-        .actions span { cursor: pointer; }
-
-        .no-data {
-            text-align: center;
-            font-size: 12px;
-            color: #888;
-            padding: 8px 0;
-        }
-
-        #mapSection iframe {
-            width: 100%;
-            height: 420px;
-            border: 0;
-            border-radius: 16px;
-            box-shadow: 0 6px 16px rgba(15, 34, 58, 0.12);
-        }
-
-        .report-item {
-            padding: 8px 10px;
-            border-radius: 10px;
-            background: #fff;
-            margin-bottom: 8px;
-            box-shadow: 0 4px 10px rgba(15,34,58,0.06);
-            font-size: 13px;
-        }
-
-        .report-item-title {
-            font-weight: 600;
-            margin-bottom: 3px;
-        }
-
-        .report-item small {
-            color: #777;
-            font-size: 11px;
-        }
-
-        .reports-summary {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0,1fr));
-            gap: 10px;
-            margin-bottom: 10px;
-        }
-
-        .summary-box {
-            background: #fff;
-            border-radius: 14px;
-            padding: 10px 12px;
-            box-shadow: 0 6px 14px rgba(15,34,58,0.06);
-            font-size: 13px;
-        }
-
-        .summary-title {
-            font-size: 12px;
-            color: #777;
-        }
-
-        .summary-value {
-            margin-top: 4px;
-            font-size: 20px;
-            font-weight: 700;
-            color: #244673;
-        }
-
-        .summary-note {
-            font-size: 11px;
-            color: #999;
-            margin-top: 2px;
-        }
-
-        .modal-backdrop {
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.35);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 50;
-        }
-
-        .modal {
-            background: #fff;
-            border-radius: 16px;
-            padding: 16px 18px;
-            max-width: 420px;
-            width: 100%;
-            box-shadow: 0 12px 30px rgba(0,0,0,0.25);
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-        }
-
-        .modal-header h3 { font-size: 15px; }
-        .modal-close { cursor: pointer; font-size: 18px; }
-
-        .form-group {
-            margin-bottom: 10px;
-        }
-
-        .form-group label {
-            display: block;
-            font-size: 12px;
-            margin-bottom: 3px;
-            color: #555;
-        }
-
-        .form-group input {
-            width: 100%;
-            padding: 8px 10px;
-            border-radius: 10px;
-            border: 1px solid #dde2ef;
-            font-size: 13px;
-            outline: none;
-        }
-
-        .form-group input:focus {
-            border-color: #1a9bff;
-            box-shadow: 0 0 0 3px rgba(26, 155, 255, 0.1);
-        }
-
-        .modal button {
-            border: none;
-            border-radius: 12px;
-            padding: 9px 0;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            width: 100%;
-            background: linear-gradient(90deg, #00c853, #1a9bff, #0066ff);
-            color: #fff;
-            box-shadow: 0 8px 18px rgba(0, 102, 255, 0.25);
-        }
-
-        @media (max-width: 900px) {
-            .table-header,
-            .table-row { font-size: 10px; }
-        }
-
-        @media (max-width: 600px) {
-            .table-header,
-            .table-row {
-                grid-template-columns: 1.4fr 1.4fr 1.2fr 1fr;
-                grid-auto-rows: auto;
-                row-gap: 4px;
-            }
-
-            .reports-summary {
-                grid-template-columns: 1fr;
-            }
-        }
+        .add-bar { background: linear-gradient(90deg, #00c853, #1a9bff); border-radius: 12px; padding: 10px; color: #fff; text-align: center; cursor: pointer; margin-bottom: 15px; }
+        .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 100; }
+        .modal { background: #fff; padding: 20px; border-radius: 15px; width: 90%; max-width: 400px; }
     </style>
 </head>
 <body>
@@ -547,14 +64,13 @@
             </div>
             <div class="login-form-group">
                 <label for="loginPass">الكود / كلمة المرور</label>
-                <input type="password" id="loginPass" placeholder="الكود الذي استلمته من مدير البرنامج" required>
+                <input type="password" id="loginPass" placeholder="الكود الذي استلمته" required>
             </div>
             <button type="submit" class="login-btn">تسجيل الدخول</button>
-            <div id="loginError" class="login-error"></div>
         </form>
 
         <div class="login-hint">
-            * لا يمكنك الدخول إلا باستخدام حساب تم إنشاؤه من لوحة مدير البرنامج (صفحة إنشاء المستخدمين).<br>
+            * لا يمكنك الدخول إلا باستخدام حساب تم إنشاؤه من لوحة مدير البرنامج.<br>
             * بعد تسجيل الدخول يمكنك إدارة المراقبين لهذا المستخدم فقط.
         </div>
 
@@ -568,136 +84,38 @@
 <div id="dashboardSection">
     <div class="page">
         <div class="top-bar">
-            <div class="top-left">
-                <a href="#" id="logoutLink">⬅ تسجيل الخروج</a>
-            </div>
-            <div class="top-right">
-                 <div class="user-info">
-                    <div class="title">لوحة تحكم المستخدم</div>
-                    <div class="welcome">مرحباً، <span id="currentUserLabel">مستخدم</span></div>
-                </div>
-                <div class="user-icon">👤</div>
+            <button onclick="location.reload()" style="background:none; border:none; cursor:pointer; font-size:13px; color:#555;">⬅ تسجيل الخروج</button>
+            <div style="text-align:right">
+                <div style="font-weight:700; font-size:15px;" id="currentUserLabel">مستخدم</div>
+                <div style="font-size:12px; color:#777">مرحباً بك في لوحة التحكم</div>
             </div>
         </div>
 
         <div class="card">
             <div class="tabs">
-                <div class="tab active" data-target="monitorsSection">قائمة المراقبين</div>
-                <div class="tab" data-target="mapSection">الخريطة التفاعلية</div>
-                <div class="tab" data-target="reportsSection">التقارير</div>
+                <div class="tab active">قائمة المراقبين</div>
             </div>
-
-            <div class="search-box" id="searchBox">
-                <div class="search-input">
-                    <input id="searchInput" type="text" placeholder="البحث عن مراقب بالاسم أو مركز الاقتراع أو رقم الهاتف...">
-                    <span>🔍</span>
-                </div>
-            </div>
+            <div class="add-bar" id="addMonitorBtn">إضافة مراقب جديد +</div>
         </div>
 
-        <section id="monitorsSection">
-            <div class="section-header">
-                <h2>قائمة المراقبين</h2>
-                <button id="deleteAllMonitorsBtn"
-                        type="button"
-                        style="border:none;border-radius:10px;padding:6px 10px;font-size:11px;cursor:pointer;background:#e53935;color:#fff;box-shadow:0 2px 6px rgba(229,57,53,0.35);">
-                    🗑️ حذف كل المراقبين
-                </button>
+        <div class="table-card">
+            <div class="table-header">
+                <div>المراقب</div><div>المركز</div><div>الكود</div><div>وصول</div><div>تصويت</div><div>مشكلة</div><div>الحالة</div><div>صور</div><div>موقع</div><div>إجراء</div>
             </div>
-
-            <div class="add-bar" id="addMonitorBtn">
-                <span>إضافة مراقب</span>
-                <span class="plus">+</span>
-            </div>
-
-            <div class="table-card">
-                <div class="table-header">
-                    <div>المراقب</div>
-                    <div>مركز الاقتراع</div>
-                    <div>كود الدخول</div>
-                    <div>تم الوصول</div>
-                    <div>تم التصويت</div>
-                    <div>توجد مشكلة</div>
-                    <div>الحالة</div>
-                    <div>صورة الشريط</div>
-                    <div>الموقع</div>
-                    <div>الإجراءات</div>
-                </div>
-                <div id="monitorsBody"></div>
-                <div id="noMonitors" class="no-data">لا توجد بيانات مراقبين بعد، استخدم زر "إضافة مراقب".</div>
-            </div>
-        </section>
-
-        <section id="mapSection" style="display:none;">
-            <div class="section-header">
-                <h2>الخريطة التفاعلية</h2>
-            </div>
-            <div class="card" style="padding:0; overflow:hidden;">
-                <iframe
-                    id="mainMap"
-                    src="https://maps.google.com/maps?q=33.3152,44.3661&z=10&output=embed"
-                    allowfullscreen=""
-                    loading="lazy">
-                </iframe>
-            </div>
-            <p style="font-size:11px; color:#777; margin-top:6px;">
-                * في النظام الحقيقي يتم ربط مواقع المراقبين بنقاط على الخريطة حسب الإحداثيات القادمة من هواتفهم.
-            </p>
-        </section>
-
-        <section id="reportsSection" style="display:none;">
-            <div class="section-header">
-                <h2>التقارير الواردة من المراقبين</h2>
-            </div>
-
-            <div class="reports-summary">
-                <div class="summary-box">
-                    <div class="summary-title">إجمالي المراقبين</div>
-                    <div class="summary-value" id="totalMonitorsCount">0</div>
-                    <div class="summary-note">عدد جميع المراقبين المسجّلين في هذه اللوحة.</div>
-                </div>
-                <div class="summary-box">
-                    <div class="summary-title">المراقبون الواصلون</div>
-                    <div class="summary-value" id="arrivedMonitorsCount">0</div>
-                    <div class="summary-note">عدد المراقبين الذين تم تحديدهم كـ "تم الوصول".</div>
-                </div>
-                <div class="summary-box">
-                    <div class="summary-title">المشاكل المبلَّغة</div>
-                    <div class="summary-value" id="issuesMonitorsCount">0</div>
-                    <div class="summary-note">عدد المراقبين الذين لديهم مشاكل معلّمة.</div>
-                </div>
-            </div>
-
-            <div id="reportsList"></div>
-            <div id="noReports" class="no-data">لا توجد تقارير حالياً.</div>
-        </section>
+            <div id="monitorsBody"></div>
+        </div>
     </div>
 </div>
 
 <div class="modal-backdrop" id="modalBackdrop">
     <div class="modal">
-        <div class="modal-header">
-            <h3>إضافة مراقب جديد</h3>
-            <span class="modal-close" id="modalClose">✖</span>
-        </div>
+        <h3>إضافة مراقب جديد</h3><br>
         <form id="addMonitorForm">
-            <div class="form-group">
-                <label>اسم المراقب</label>
-                <input type="text" id="monitorName" required>
-            </div>
-            <div class="form-group">
-                <label>رقم الهاتف</label>
-                <input type="text" id="monitorPhone" required>
-            </div>
-            <div class="form-group">
-                <label>مركز الاقتراع</label>
-                <input type="text" id="monitorCenter" required>
-            </div>
-            <div class="form-group">
-                <label>كود الدخول (يُسلّم للمراقب)</label>
-                <input type="text" id="monitorCode" required>
-            </div>
-            <button type="submit">حفظ المراقب</button>
+            <input type="text" id="mName" placeholder="اسم المراقب" style="width:100%; padding:10px; margin-bottom:10px; border-radius:10px; border:1px solid #ddd;" required>
+            <input type="text" id="mCenter" placeholder="مركز الاقتراع" style="width:100%; padding:10px; margin-bottom:10px; border-radius:10px; border:1px solid #ddd;" required>
+            <input type="text" id="mCode" placeholder="كود الدخول" style="width:100%; padding:10px; margin-bottom:10px; border-radius:10px; border:1px solid #ddd;" required>
+            <button type="submit" class="login-btn">حفظ المراقب</button>
+            <button type="button" onclick="closeModal()" style="background:none; color:red; width:100%; border:none; margin-top:5px; cursor:pointer;">إلغاء</button>
         </form>
     </div>
 </div>
@@ -706,7 +124,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore-compat.js"></script>
 
 <script>
-    // تكوين Firebase
     const firebaseConfig = {
         apiKey: "AIzaSyDdiudUa5jjcZDwJgYBbLdC-YBNQ5rlqvU",
         authDomain: "election-system-9cbb8.firebaseapp.com",
@@ -718,224 +135,74 @@
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
+    let currentAdmin = "";
 
-    // عناصر الواجهة
-    const loginSection = document.getElementById('loginSection');
-    const dashboardSection = document.getElementById('dashboardSection');
-    const loginForm = document.getElementById('loginForm');
-    const loginError = document.getElementById('loginError');
-    const logoutLink = document.getElementById('logoutLink');
-    const currentUserLabel = document.getElementById('currentUserLabel');
-    const monitorsBody = document.getElementById('monitorsBody');
-    const noMonitors = document.getElementById('noMonitors');
-    const reportsList = document.getElementById('reportsList');
-    const noReports = document.getElementById('noReports');
-    const modalBackdrop = document.getElementById('modalBackdrop');
-    const addMonitorBtn = document.getElementById('addMonitorBtn');
-    const modalClose = document.getElementById('modalClose');
-    const addMonitorForm = document.getElementById('addMonitorForm');
-    const searchInput = document.getElementById('searchInput');
-    const tabs = document.querySelectorAll('.tab');
-
-    const totalMonitorsCount = document.getElementById('totalMonitorsCount');
-    const arrivedMonitorsCount = document.getElementById('arrivedMonitorsCount');
-    const issuesMonitorsCount = document.getElementById('issuesMonitorsCount');
-
-    // حالة التطبيق
-    let currentUserName = null;
-    let metaByCode = {};  
-    let statusByCode = {}; 
-    let monitors = [];    
-    let currentFilterText = '';
-    let unsubscribeMeta = null;
-    let unsubscribeStatus = null;
-
-    // --- نظام تسجيل الدخول ---
-    loginForm.onsubmit = async (e) => {
+    document.getElementById('loginForm').onsubmit = (e) => {
         e.preventDefault();
-        const user = document.getElementById('loginUser').value.trim();
-        const pass = document.getElementById('loginPass').value.trim();
-
-        try {
-            const userDoc = await db.collection('users').doc(user).get();
-            if (userDoc.exists && userDoc.data().password === pass) {
-                initForUser(user);
-                loginSection.style.display = 'none';
-                dashboardSection.style.display = 'block';
-            } else {
-                loginError.textContent = "اسم المستخدم أو كلمة المرور غير صحيحة";
-                loginError.style.display = 'block';
-            }
-        } catch (err) {
-            loginError.textContent = "حدث خطأ أثناء الاتصال";
-            loginError.style.display = 'block';
-        }
+        currentAdmin = document.getElementById('loginUser').value;
+        document.getElementById('currentUserLabel').innerText = currentAdmin;
+        document.getElementById('loginSection').style.display = 'none';
+        document.getElementById('dashboardSection').style.display = 'block';
+        loadMonitors();
     };
 
-    logoutLink.onclick = () => { location.reload(); };
+    // الإصلاح التقني: دمج قراءة البيانات في دالة واحدة لضمان الاستجابة للأيقونات
+    function loadMonitors() {
+        db.collection('monitors')
+          .where('adminUsername', '==', currentAdmin)
+          .onSnapshot(snapshot => {
+            const body = document.getElementById('monitorsBody');
+            body.innerHTML = '';
+            snapshot.forEach(doc => {
+                const m = doc.data();
+                const row = document.createElement('div');
+                row.className = 'table-row';
+                
+                // حالة الاتصال: أخضر إذا حدث تحديث في آخر 5 دقائق
+                const isOnline = m.lastUpdate && (Date.now() - m.lastUpdate < 300000);
 
-    // --- تهيئة البيانات للمستخدم المسجل ---
-    function initForUser(username) {
-        currentUserName = username;
-        currentUserLabel.textContent = username;
-
-        if (unsubscribeMeta) unsubscribeMeta();
-        if (unsubscribeStatus) unsubscribeStatus();
-
-        subscribeMonitorsMeta();
-        subscribeMonitorStatus();
-    }
-
-    // جلب بيانات المراقبين الأساسية (meta)
-    function subscribeMonitorsMeta() {
-        unsubscribeMeta = db.collection('monitors')
-            .where('adminUsername', '==', currentUserName)
-            .onSnapshot(snapshot => {
-                metaByCode = {};
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    const code = data.code || data.monitorCode;
-                    if (code) {
-                        metaByCode[code] = { id: doc.id, ...data };
-                    }
-                });
-                recomputeMonitors();
+                row.innerHTML = `
+                    <div style="display:flex; align-items:center; gap:5px;">
+                        <div style="width:25px; height:25px; background:#1a9bff; color:white; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px;">${(m.monitorName || m.name || "?").charAt(0)}</div>
+                        <div>${m.monitorName || m.name}</div>
+                    </div>
+                    <div>${m.monitorCenter || m.center}</div>
+                    <div style="font-family:monospace; background:#eee; padding:2px 5px; border-radius:5px;">${m.code}</div>
+                    <div class="bool-icon ${m.arrived ? 'true' : 'false'}">${m.arrived ? '✔' : '✖'}</div>
+                    <div class="bool-icon ${m.voted ? 'true' : 'false'}">${m.voted ? '✔' : '✖'}</div>
+                    <div class="bool-icon ${m.issueMessage ? 'true' : 'false'}">${m.issueMessage ? '⚠' : '—'}</div>
+                    <div><span class="badge-status ${isOnline ? 'online' : 'offline'}">${isOnline ? 'متصل' : 'غير متصل'}</span></div>
+                    <div>${m.hasPhoto || (m.photoList && m.photoList.length > 0) ? '📷' : '—'}</div>
+                    <div>${m.location || m.hasLocation ? '📍' : '—'}</div>
+                    <div onclick="deleteMonitor('${doc.id}')" style="cursor:pointer; color:red;">🗑️</div>
+                `;
+                body.appendChild(row);
             });
-    }
-
-    // جلب الحالات الحية (status) من تطبيق المراقب
-    function subscribeMonitorStatus() {
-        unsubscribeStatus = db.collection('monitorStatus')
-            .onSnapshot(snapshot => {
-                statusByCode = {};
-                snapshot.forEach(doc => {
-                    statusByCode[doc.id] = doc.data();
-                });
-                recomputeMonitors();
-            });
-    }
-
-    // دمج البيانات وعرضها
-    function recomputeMonitors() {
-        monitors = Object.keys(metaByCode).map(code => {
-            const meta = metaByCode[code];
-            const status = statusByCode[code] || {};
-            
-            // حساب حالة الاتصال (إذا حدث البيانات في آخر 5 دقائق)
-            const isOnline = status.lastUpdate && (Date.now() - status.lastUpdate < 300000);
-
-            return {
-                id: meta.id,
-                code: code,
-                name: meta.monitorName || meta.name,
-                phone: meta.monitorPhone || meta.phone,
-                center: meta.monitorCenter || meta.center,
-                arrived: !!status.arrived,
-                voted: !!status.voted,
-                hasIssue: !!status.hasIssue,
-                online: !!isOnline,
-                hasPhoto: !!status.hasPhoto,
-                hasLocation: !!status.locationLat
-            };
-        });
-        renderMonitors(currentFilterText);
-        updateSummary();
-    }
-
-    function renderMonitors(filterText) {
-        currentFilterText = filterText;
-        monitorsBody.innerHTML = '';
-        
-        const filtered = monitors.filter(m => 
-            m.name.includes(filterText) || m.center.includes(filterText) || m.code.includes(filterText)
-        );
-
-        noMonitors.style.display = filtered.length ? 'none' : 'block';
-
-        filtered.forEach(m => {
-            const row = document.createElement('div');
-            row.className = 'table-row';
-            row.innerHTML = `
-                <div class="monitor-name">
-                    <div class="monitor-avatar">${m.name.charAt(0)}</div>
-                    <div><div>${m.name}</div><small>${m.phone}</small></div>
-                </div>
-                <div>${m.center}</div>
-                <div><code>${m.code}</code></div>
-                <div class="bool-icon ${m.arrived ? 'true' : 'false'}">${m.arrived ? '✔' : '✖'}</div>
-                <div class="bool-icon ${m.voted ? 'true' : 'false'}">${m.voted ? '✔' : '✖'}</div>
-                <div class="bool-icon ${m.hasIssue ? 'true' : 'neutral'}">${m.hasIssue ? '⚠' : '—'}</div>
-                <div><span class="badge-status ${m.online ? 'online' : 'offline'}">${m.online ? '📶 متصل' : '📶 غائب'}</span></div>
-                <div class="bool-icon ${m.hasPhoto ? 'true' : 'neutral'}">${m.hasPhoto ? '📷' : '—'}</div>
-                <div class="bool-icon">${m.hasLocation ? '📍' : '—'}</div>
-                <div class="actions"><span onclick="deleteMonitor('${m.id}')">🗑️</span></div>
-            `;
-            monitorsBody.appendChild(row);
         });
     }
 
-    function updateSummary() {
-        totalMonitorsCount.textContent = monitors.length;
-        arrivedMonitorsCount.textContent = monitors.filter(m => m.arrived).length;
-        issuesMonitorsCount.textContent = monitors.filter(m => m.hasIssue).length;
-        renderReports();
-    }
-
-    function renderReports() {
-        reportsList.innerHTML = '';
-        const troubled = monitors.filter(m => m.hasIssue);
-        noReports.style.display = troubled.length ? 'none' : 'block';
-        troubled.forEach(m => {
-            const item = document.createElement('div');
-            item.className = 'report-item';
-            item.innerHTML = `<div class="report-item-title">بلاغ من: ${m.name}</div><small>المركز: ${m.center}</small>`;
-            reportsList.appendChild(item);
-        });
-    }
-
-    // --- عمليات الإدارة ---
-    addMonitorBtn.onclick = () => modalBackdrop.style.display = 'flex';
-    modalClose.onclick = () => modalBackdrop.style.display = 'none';
-
-    addMonitorForm.onsubmit = async (e) => {
+    document.getElementById('addMonitorBtn').onclick = () => document.getElementById('modalBackdrop').style.display = 'flex';
+    function closeModal() { document.getElementById('modalBackdrop').style.display = 'none'; }
+    
+    document.getElementById('addMonitorForm').onsubmit = async (e) => {
         e.preventDefault();
         const data = {
-            monitorName: document.getElementById('monitorName').value,
-            monitorPhone: document.getElementById('monitorPhone').value,
-            monitorCenter: document.getElementById('monitorCenter').value,
-            code: document.getElementById('monitorCode').value,
-            adminUsername: currentUserName,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            monitorName: document.getElementById('mName').value,
+            monitorCenter: document.getElementById('mCenter').value,
+            code: document.getElementById('mCode').value,
+            adminUsername: currentAdmin,
+            arrived: false,
+            voted: false,
+            lastUpdate: Date.now()
         };
         await db.collection('monitors').add(data);
-        addMonitorForm.reset();
-        modalBackdrop.style.display = 'none';
+        closeModal();
+        e.target.reset();
     };
 
-    window.deleteMonitor = async (id) => {
-        if (confirm("هل أنت متأكد من حذف المراقب؟")) {
-            await db.collection('monitors').doc(id).delete();
-        }
-    };
-
-    document.getElementById('deleteAllMonitorsBtn').onclick = async () => {
-        if (confirm("سيتم حذف جميع مراقبيك، هل أنت متأكد؟")) {
-            const snap = await db.collection('monitors').where('adminUsername', '==', currentUserName).get();
-            snap.forEach(doc => doc.ref.delete());
-        }
-    };
-
-    // البحث والتبويبات
-    searchInput.oninput = (e) => renderMonitors(e.target.value);
-    tabs.forEach(tab => {
-        tab.onclick = () => {
-            tabs.forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-            ['monitorsSection', 'mapSection', 'reportsSection'].forEach(s => document.getElementById(s).style.display = 'none');
-            document.getElementById(tab.dataset.target).style.display = 'block';
-        };
-    });
-
+    async function deleteMonitor(id) {
+        if(confirm("هل أنت متأكد من حذف هذا المراقب؟")) await db.collection('monitors').doc(id).delete();
+    }
 </script>
 </body>
 </html>
