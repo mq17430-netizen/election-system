@@ -2,973 +2,2362 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>نظام مراقبة الانتخابات - لوحة التحكم</title>
+    <title>نظام مراقبة الانتخابات - لوحة تحكم المستخدم</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- الخطوط والأيقونات -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
         :root {
             --primary: #1a9bff;
-            --success: #2ecc71;
-            --warning: #f39c12;
-            --danger: #e74c3c;
-            --info: #3498db;
-            --secondary: #9b59b6;
-            --dark: #2c3e50;
+            --primary-dark: #0066ff;
+            --primary-light: #e3f2fd;
+            --success: #00c853;
+            --success-light: #e8f5e9;
+            --warning: #ff9800;
+            --warning-light: #fff3e0;
+            --danger: #f44336;
+            --danger-light: #ffebee;
+            --info: #2196f3;
+            --info-light: #e3f2fd;
+            --secondary: #9c27b0;
+            --secondary-light: #f3e5f5;
+            --dark: #263238;
             --light: #f8f9fa;
+            --gray: #78909c;
+            --border: #e0e0e0;
+            --shadow: rgba(15, 34, 58, 0.12);
+            --radius: 12px;
+            --transition: all 0.3s ease;
         }
-        
+
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: 'Cairo', sans-serif;
         }
-        
+
         body {
-            background: #f5f7fa;
-            color: #333;
-        }
-        
-        .header {
-            background: white;
-            padding: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .header h1 {
+            font-family: 'Cairo', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
+            min-height: 100vh;
             color: var(--dark);
-            font-size: 24px;
         }
-        
-        .header-stats {
-            display: flex;
-            gap: 20px;
-        }
-        
-        .stat-badge {
-            background: var(--light);
-            padding: 8px 15px;
-            border-radius: 20px;
-            font-size: 14px;
+
+        /* ====== صفحة تسجيل الدخول ====== */
+        #loginSection {
+            min-height: 100vh;
             display: flex;
             align-items: center;
-            gap: 8px;
+            justify-content: center;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            position: relative;
+            overflow: hidden;
         }
-        
-        .stat-badge.online { color: var(--success); border-right: 3px solid var(--success); }
-        .stat-badge.offline { color: var(--danger); border-right: 3px solid var(--danger); }
-        .stat-badge.arrived { color: var(--info); border-right: 3px solid var(--info); }
-        .stat-badge.voted { color: var(--secondary); border-right: 3px solid var(--secondary); }
-        
-        .container {
+
+        #loginSection::before {
+            content: '';
+            position: absolute;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: float 20s linear infinite;
+        }
+
+        @keyframes float {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            100% { transform: translate(-50px, -50px) rotate(360deg); }
+        }
+
+        .login-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 420px;
+            width: 100%;
+            padding: 32px;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .login-logo {
+            margin-bottom: 24px;
             display: flex;
-            min-height: calc(100vh - 80px);
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
         }
-        
-        .sidebar {
-            width: 280px;
-            background: white;
-            border-left: 1px solid #eee;
-            padding: 20px;
-            box-shadow: 2px 0 10px rgba(0,0,0,0.05);
+
+        .logo-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--success));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 36px;
+            box-shadow: 0 10px 30px rgba(26, 155, 255, 0.4);
         }
-        
-        .main-content {
-            flex: 1;
-            padding: 20px;
-            overflow-y: auto;
+
+        .login-logo h1 {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--dark);
+            margin: 0;
         }
-        
-        .filter-section {
-            background: white;
-            padding: 20px;
-            border-radius: 15px;
+
+        .login-subtitle {
+            font-size: 14px;
+            color: var(--gray);
+            margin-bottom: 24px;
+            line-height: 1.6;
+        }
+
+        .login-form-group {
+            text-align: right;
             margin-bottom: 20px;
-            box-shadow: 0 3px 15px rgba(0,0,0,0.05);
         }
-        
-        .filters {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-top: 15px;
+
+        .login-form-group label {
+            display: block;
+            font-size: 13px;
+            margin-bottom: 8px;
+            color: var(--dark);
+            font-weight: 600;
         }
-        
-        select, input {
+
+        .input-with-icon {
+            position: relative;
+        }
+
+        .input-with-icon i {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--gray);
+            font-size: 18px;
+        }
+
+        .login-form-group input {
+            width: 100%;
+            padding: 14px 52px 14px 14px;
+            border-radius: 12px;
+            border: 2px solid var(--border);
+            font-size: 14px;
+            outline: none;
+            transition: var(--transition);
+            background: var(--light);
+        }
+
+        .login-form-group input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(26, 155, 255, 0.1);
+            background: white;
+        }
+
+        .login-btn {
+            width: 100%;
+            border: none;
+            border-radius: 12px;
+            padding: 16px 0;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            background: linear-gradient(90deg, var(--success), var(--primary));
+            color: white;
+            box-shadow: 0 10px 25px rgba(0, 102, 255, 0.3);
+            transition: var(--transition);
+            margin-top: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 30px rgba(0, 102, 255, 0.4);
+        }
+
+        .login-btn:active {
+            transform: translateY(0);
+        }
+
+        .login-btn::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 5px;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.5);
+            opacity: 0;
+            border-radius: 100%;
+            transform: scale(1, 1) translate(-50%);
+            transform-origin: 50% 50%;
+        }
+
+        .login-btn:focus:not(:active)::after {
+            animation: ripple 1s ease-out;
+        }
+
+        @keyframes ripple {
+            0% { transform: scale(0, 0); opacity: 0.5; }
+            100% { transform: scale(20, 20); opacity: 0; }
+        }
+
+        .login-error {
+            margin-top: 12px;
+            font-size: 13px;
+            color: var(--danger);
+            display: none;
+            background: var(--danger-light);
+            padding: 10px;
+            border-radius: 8px;
+            border-right: 4px solid var(--danger);
+        }
+
+        .login-footer {
+            margin-top: 24px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+            font-size: 12px;
+            color: var(--gray);
+            line-height: 1.6;
+        }
+
+        .login-footer strong {
+            color: var(--primary);
+        }
+
+        /* ====== لوحة التحكم ====== */
+        #dashboardSection {
+            display: none;
+        }
+
+        .dashboard-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* الشريط الجانبي */
+        .sidebar {
+            width: 260px;
+            background: white;
+            border-left: 1px solid var(--border);
+            box-shadow: 2px 0 20px var(--shadow);
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            height: 100vh;
+            z-index: 100;
+        }
+
+        .sidebar-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--border);
+            text-align: center;
+        }
+
+        .sidebar-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            justify-content: center;
+        }
+
+        .sidebar-logo i {
+            font-size: 24px;
+            color: var(--primary);
+            background: var(--primary-light);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .sidebar-logo span {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--dark);
+        }
+
+        .sidebar-menu {
+            flex: 1;
+            padding: 20px 0;
+        }
+
+        .menu-item {
+            padding: 14px 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: var(--transition);
+            color: var(--gray);
+            text-decoration: none;
+            border-right: 4px solid transparent;
+        }
+
+        .menu-item:hover {
+            background: var(--primary-light);
+            color: var(--primary);
+        }
+
+        .menu-item.active {
+            background: var(--primary-light);
+            color: var(--primary);
+            border-right-color: var(--primary);
+            font-weight: 600;
+        }
+
+        .menu-item i {
+            font-size: 18px;
+            width: 24px;
+            text-align: center;
+        }
+
+        .sidebar-footer {
+            padding: 20px;
+            border-top: 1px solid var(--border);
+            text-align: center;
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--success));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .user-info h4 {
+            font-size: 14px;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .user-info p {
+            font-size: 12px;
+            color: var(--gray);
+            margin: 0;
+        }
+
+        .logout-btn {
             width: 100%;
             padding: 10px;
-            border: 2px solid #e0e0e0;
+            border: 1px solid var(--border);
             border-radius: 8px;
-            font-size: 14px;
-        }
-        
-        .monitors-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 20px;
-            margin-top: 20px;
-        }
-        
-        .monitor-card {
             background: white;
-            border-radius: 15px;
-            padding: 20px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
-            transition: transform 0.3s;
-            border: 1px solid #eee;
-        }
-        
-        .monitor-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.12);
-        }
-        
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid #f0f0f0;
-        }
-        
-        .monitor-name {
-            font-size: 18px;
-            font-weight: bold;
-            color: var(--dark);
-        }
-        
-        .monitor-code {
-            background: var(--light);
-            padding: 3px 10px;
-            border-radius: 20px;
-            font-size: 12px;
-            color: #666;
-        }
-        
-        .status-indicators {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            margin: 15px 0;
-        }
-        
-        .status-badge {
-            padding: 5px 10px;
-            border-radius: 20px;
-            font-size: 12px;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-        
-        .status-online { background: rgba(46, 204, 113, 0.1); color: var(--success); }
-        .status-offline { background: rgba(231, 76, 60, 0.1); color: var(--danger); }
-        .status-arrived { background: rgba(52, 152, 219, 0.1); color: var(--info); }
-        .status-voted { background: rgba(155, 89, 182, 0.1); color: var(--secondary); }
-        .status-issue { background: rgba(243, 156, 18, 0.1); color: var(--warning); }
-        
-        .details-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin: 15px 0;
-            font-size: 13px;
-        }
-        
-        .detail-item {
-            padding: 8px;
-            background: #f8f9fa;
-            border-radius: 8px;
-        }
-        
-        .detail-label {
-            color: #666;
-            font-size: 11px;
-            margin-bottom: 3px;
-        }
-        
-        .detail-value {
-            font-weight: bold;
-            color: var(--dark);
-        }
-        
-        .action-buttons {
-            display: flex;
-            gap: 10px;
-            margin-top: 15px;
-        }
-        
-        .action-btn {
-            flex: 1;
-            padding: 8px;
-            border: none;
-            border-radius: 8px;
-            font-size: 12px;
+            color: var(--danger);
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 5px;
-            transition: all 0.2s;
+            gap: 8px;
+            transition: var(--transition);
+            font-size: 13px;
         }
-        
-        .action-btn:hover {
-            opacity: 0.9;
-            transform: translateY(-2px);
+
+        .logout-btn:hover {
+            background: var(--danger-light);
+            border-color: var(--danger);
         }
-        
-        .btn-send { background: var(--info); color: white; }
-        .btn-view { background: var(--secondary); color: white; }
-        .btn-alert { background: var(--warning); color: white; }
-        
-        .issues-panel {
-            background: white;
-            border-radius: 15px;
+
+        /* المحتوى الرئيسي */
+        .main-content {
+            flex: 1;
+            margin-right: 260px;
             padding: 20px;
-            margin-top: 30px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+            background: var(--light);
         }
-        
-        .issues-list {
-            margin-top: 15px;
-        }
-        
-        .issue-item {
-            padding: 15px;
-            border: 1px solid #eee;
-            border-radius: 10px;
-            margin-bottom: 10px;
-            background: #f8f9fa;
-        }
-        
-        .issue-header {
+
+        /* شريط البحث والإحصائيات */
+        .top-bar {
+            background: white;
+            border-radius: var(--radius);
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px var(--shadow);
             display: flex;
             justify-content: space-between;
-            margin-bottom: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
         }
-        
-        .issue-priority {
-            padding: 3px 10px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-weight: bold;
+
+        .search-container {
+            flex: 1;
+            min-width: 300px;
+            position: relative;
         }
-        
-        .priority-high { background: #ffebee; color: #d32f2f; }
-        .priority-medium { background: #fff3e0; color: #f57c00; }
-        .priority-low { background: #e8f5e8; color: #388e3c; }
-        
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
+
+        .search-input {
             width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.7);
-            z-index: 1000;
+            padding: 14px 52px 14px 14px;
+            border-radius: 12px;
+            border: 2px solid var(--border);
+            font-size: 14px;
+            outline: none;
+            transition: var(--transition);
+            background: var(--light);
+        }
+
+        .search-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(26, 155, 255, 0.1);
+            background: white;
+        }
+
+        .search-icon {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--gray);
+            font-size: 20px;
+        }
+
+        .stats-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: var(--radius);
+            padding: 20px;
+            box-shadow: 0 4px 12px var(--shadow);
+            transition: var(--transition);
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px var(--shadow);
+            border-color: var(--primary-light);
+        }
+
+        .stat-card i {
+            font-size: 32px;
+            margin-bottom: 12px;
+            display: inline-block;
+            padding: 12px;
+            border-radius: 12px;
+        }
+
+        .stat-card.total i { color: var(--primary); background: var(--primary-light); }
+        .stat-card.online i { color: var(--success); background: var(--success-light); }
+        .stat-card.arrived i { color: var(--info); background: var(--info-light); }
+        .stat-card.issues i { color: var(--warning); background: var(--warning-light); }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            margin: 8px 0;
+            color: var(--dark);
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: var(--gray);
+        }
+
+        /* جدول المراقبين */
+        .table-container {
+            background: white;
+            border-radius: var(--radius);
+            box-shadow: 0 4px 12px var(--shadow);
+            overflow: hidden;
+        }
+
+        .table-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .table-header h3 {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--dark);
+            margin: 0;
+        }
+
+        .add-btn {
+            padding: 10px 20px;
+            background: linear-gradient(90deg, var(--success), var(--primary));
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            transition: var(--transition);
+        }
+
+        .add-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 102, 255, 0.3);
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 1000px;
+        }
+
+        .data-table th {
+            background: var(--light);
+            padding: 16px;
+            text-align: right;
+            font-weight: 600;
+            color: var(--dark);
+            border-bottom: 2px solid var(--border);
+            font-size: 13px;
+            white-space: nowrap;
+        }
+
+        .data-table td {
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+            font-size: 14px;
+        }
+
+        .data-table tr:hover {
+            background: var(--primary-light);
+        }
+
+        .monitor-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .monitor-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--success));
+            display: flex;
             align-items: center;
             justify-content: center;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
         }
-        
-        .modal-content {
+
+        .monitor-details h4 {
+            font-size: 14px;
+            font-weight: 600;
+            margin: 0 0 4px 0;
+        }
+
+        .monitor-details p {
+            font-size: 12px;
+            color: var(--gray);
+            margin: 0;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .status-online { background: var(--success-light); color: var(--success); }
+        .status-offline { background: var(--danger-light); color: var(--danger); }
+        .status-pending { background: var(--warning-light); color: var(--warning); }
+
+        .action-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 16px;
+        }
+
+        .action-badge.true { background: var(--success-light); color: var(--success); }
+        .action-badge.false { background: var(--danger-light); color: var(--danger); }
+        .action-badge.neutral { background: var(--light); color: var(--gray); }
+
+        .action-badge:hover {
+            transform: scale(1.1);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .action-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: var(--transition);
+            background: var(--light);
+            border: 1px solid var(--border);
+            color: var(--gray);
+        }
+
+        .action-btn:hover {
+            background: var(--primary-light);
+            color: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: var(--gray);
+            font-size: 14px;
+        }
+
+        /* الخريطة */
+        .map-container {
+            background: white;
+            border-radius: var(--radius);
+            box-shadow: 0 4px 12px var(--shadow);
+            overflow: hidden;
+            margin-bottom: 24px;
+        }
+
+        .map-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .map-header h3 {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--dark);
+            margin: 0;
+        }
+
+        #mainMap {
+            width: 100%;
+            height: 500px;
+            border: none;
+        }
+
+        /* التقارير */
+        .reports-container {
+            display: grid;
+            gap: 16px;
+        }
+
+        .report-card {
+            background: white;
+            border-radius: var(--radius);
+            padding: 20px;
+            box-shadow: 0 4px 12px var(--shadow);
+            transition: var(--transition);
+            border: 2px solid transparent;
+        }
+
+        .report-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px var(--shadow);
+        }
+
+        .report-card.emergency {
+            border-color: var(--danger);
+            background: linear-gradient(to right, white 96%, var(--danger) 4%);
+        }
+
+        .report-card.high {
+            border-color: var(--warning);
+            background: linear-gradient(to right, white 96%, var(--warning) 4%);
+        }
+
+        .report-card.normal {
+            border-color: var(--info);
+            background: linear-gradient(to right, white 96%, var(--info) 4%);
+        }
+
+        .report-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+
+        .report-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--dark);
+            margin: 0;
+        }
+
+        .report-time {
+            font-size: 12px;
+            color: var(--gray);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .report-content {
+            margin-bottom: 16px;
+            font-size: 14px;
+            line-height: 1.6;
+            color: var(--dark);
+        }
+
+        .report-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            color: var(--gray);
+        }
+
+        /* المودال */
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal {
             background: white;
             border-radius: 20px;
-            padding: 30px;
-            max-width: 600px;
             width: 90%;
-            max-height: 80vh;
+            max-width: 500px;
+            max-height: 90vh;
             overflow-y: auto;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+            animation: slideUp 0.4s ease;
         }
-        
-        .chart-container {
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(40px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--dark);
+            margin: 0;
+        }
+
+        .modal-close {
+            font-size: 24px;
+            color: var(--gray);
+            cursor: pointer;
+            transition: var(--transition);
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+        }
+
+        .modal-close:hover {
+            background: var(--light);
+            color: var(--danger);
+        }
+
+        .modal-body {
+            padding: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--dark);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            font-size: 14px;
+            transition: var(--transition);
+            background: var(--light);
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(26, 155, 255, 0.1);
             background: white;
-            padding: 20px;
-            border-radius: 15px;
-            margin: 20px 0;
-            box-shadow: 0 3px 15px rgba(0,0,0,0.05);
-            height: 300px;
         }
-        
-        .last-update {
-            font-size: 12px;
-            color: #888;
-            text-align: center;
-            margin-top: 20px;
+
+        .form-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
         }
-        
+
+        .btn {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(90deg, var(--primary), var(--primary-dark));
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(26, 155, 255, 0.3);
+        }
+
+        .btn-secondary {
+            background: var(--light);
+            color: var(--gray);
+            border: 2px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border);
+        }
+
+        /* التنبيهات */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 16px 24px;
+            border-radius: 12px;
+            background: white;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            z-index: 1001;
+            animation: slideInRight 0.3s ease;
+            max-width: 400px;
+            border-right: 4px solid;
+        }
+
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .notification.success {
+            border-color: var(--success);
+        }
+
+        .notification.error {
+            border-color: var(--danger);
+        }
+
+        .notification.warning {
+            border-color: var(--warning);
+        }
+
+        .notification.info {
+            border-color: var(--info);
+        }
+
+        .notification-icon {
+            font-size: 24px;
+        }
+
+        .notification.success .notification-icon { color: var(--success); }
+        .notification.error .notification-icon { color: var(--danger); }
+        .notification.warning .notification-icon { color: var(--warning); }
+        .notification.info .notification-icon { color: var(--info); }
+
+        .notification-content h4 {
+            font-size: 14px;
+            font-weight: 600;
+            margin: 0 0 4px 0;
+        }
+
+        .notification-content p {
+            font-size: 13px;
+            color: var(--gray);
+            margin: 0;
+        }
+
+        /* زر العودة للأعلى */
+        .scroll-top {
+            position: fixed;
+            bottom: 24px;
+            left: 24px;
+            width: 48px;
+            height: 48px;
+            background: var(--primary);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 8px 25px rgba(26, 155, 255, 0.4);
+            transition: var(--transition);
+            z-index: 999;
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .scroll-top.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .scroll-top:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 30px rgba(26, 155, 255, 0.6);
+        }
+
+        /* التحميل */
+        .loader {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.9);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .loader-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid var(--light);
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .loader p {
+            font-size: 14px;
+            color: var(--dark);
+            font-weight: 600;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* الوسائط المتعددة */
+        @media (max-width: 1024px) {
+            .sidebar {
+                width: 80px;
+            }
+            
+            .sidebar-header span,
+            .menu-item span,
+            .user-info,
+            .logout-btn span {
+                display: none;
+            }
+            
+            .main-content {
+                margin-right: 80px;
+            }
+            
+            .menu-item {
+                justify-content: center;
+                padding: 16px;
+            }
+            
+            .menu-item i {
+                font-size: 20px;
+            }
+        }
+
         @media (max-width: 768px) {
-            .container { flex-direction: column; }
-            .sidebar { width: 100%; border-left: none; border-bottom: 1px solid #eee; }
-            .header { flex-direction: column; gap: 15px; }
-            .header-stats { flex-wrap: wrap; justify-content: center; }
-            .monitors-grid { grid-template-columns: 1fr; }
-            .filters { grid-template-columns: 1fr; }
+            .stats-cards {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .top-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .search-container {
+                min-width: 100%;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .stats-cards {
+                grid-template-columns: 1fr;
+            }
+            
+            .modal {
+                width: 95%;
+                margin: 10px;
+            }
+            
+            .form-actions {
+                flex-direction: column;
+            }
+            
+            .login-card {
+                padding: 24px;
+                margin: 16px;
+            }
         }
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
-<div class="header">
-    <h1><i class="fas fa-tachometer-alt"></i> لوحة تحكم مراقبة الانتخابات</h1>
-    <div class="header-stats">
-        <div class="stat-badge online" id="onlineCount">
-            <i class="fas fa-wifi"></i> <span>0</span> متصل
+<!-- محمل التحميل -->
+<div class="loader" id="loader">
+    <div class="loader-spinner"></div>
+    <p>جاري التحميل...</p>
+</div>
+
+<!-- صفحة تسجيل الدخول -->
+<div id="loginSection">
+    <div class="login-card">
+        <div class="login-logo">
+            <div class="logo-icon">
+                <i class="fas fa-shield-alt"></i>
+            </div>
+            <h1>نظام مراقبة الانتخابات</h1>
         </div>
-        <div class="stat-badge offline" id="offlineCount">
-            <i class="fas fa-wifi-slash"></i> <span>0</span> غير متصل
-        </div>
-        <div class="stat-badge arrived" id="arrivedCount">
-            <i class="fas fa-check-circle"></i> <span>0</span> وصلوا
-        </div>
-        <div class="stat-badge voted" id="votedCount">
-            <i class="fas fa-vote-yea"></i> <span>0</span> صوتوا
+        
+        <p class="login-subtitle">دخول مدير / مستخدم النظام</p>
+        
+        <form id="loginForm">
+            <div class="login-form-group">
+                <label for="loginUser"><i class="fas fa-user"></i> اسم المستخدم</label>
+                <div class="input-with-icon">
+                    <input type="text" id="loginUser" placeholder="أدخل اسم المستخدم" required>
+                    <i class="fas fa-user"></i>
+                </div>
+            </div>
+            
+            <div class="login-form-group">
+                <label for="loginPass"><i class="fas fa-lock"></i> كلمة المرور</label>
+                <div class="input-with-icon">
+                    <input type="password" id="loginPass" placeholder="أدخل كلمة المرور" required>
+                    <i class="fas fa-lock"></i>
+                </div>
+            </div>
+            
+            <button type="submit" class="login-btn">
+                <i class="fas fa-sign-in-alt"></i> تسجيل الدخول
+            </button>
+            
+            <div id="loginError" class="login-error"></div>
+        </form>
+        
+        <div class="login-footer">
+            <p><strong>ملاحظات هامة:</strong></p>
+            <p>• يرجى استخدام بيانات الدخول التي حصلت عليها من مدير النظام</p>
+            <p>• يتم حفظ بيانات المراقبين بشكل مؤقت في المتصفح</p>
+            <p>• تأكد من حفظ الرابط للوصول السريع</p>
+            <p style="margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border);">
+                <i class="fas fa-copyright"></i> نظام مراقبة الانتخابات 2024
+            </p>
         </div>
     </div>
 </div>
 
-<div class="container">
+<!-- لوحة التحكم -->
+<div id="dashboardSection">
+    <!-- الشريط الجانبي -->
     <div class="sidebar">
-        <h3><i class="fas fa-filter"></i> الفلاتر والبحث</h3>
-        
-        <div class="filter-section">
-            <input type="text" id="searchInput" placeholder="بحث بالاسم أو الكود..." onkeyup="filterMonitors()">
-            
-            <div class="filters">
-                <select id="statusFilter" onchange="filterMonitors()">
-                    <option value="">جميع الحالات</option>
-                    <option value="online">متصل فقط</option>
-                    <option value="offline">غير متصل</option>
-                    <option value="arrived">وصلوا للمركز</option>
-                    <option value="voted">انتهوا من التصويت</option>
-                    <option value="issues">لديهم بلاغات</option>
-                </select>
-                
-                <select id="centerFilter" onchange="filterMonitors()">
-                    <option value="">جميع المراكز</option>
-                    <!-- سيتم ملؤها ديناميكياً -->
-                </select>
-                
-                <select id="priorityFilter" onchange="filterIssues()">
-                    <option value="">جميع البلاغات</option>
-                    <option value="high">عالية الأولوية</option>
-                    <option value="medium">متوسطة</option>
-                    <option value="low">منخفضة</option>
-                </select>
+        <div class="sidebar-header">
+            <div class="sidebar-logo">
+                <i class="fas fa-chart-line"></i>
+                <span>لوحة التحكم</span>
             </div>
         </div>
         
-        <div class="chart-container">
-            <h4><i class="fas fa-chart-pie"></i> إحصائيات سريعة</h4>
-            <canvas id="statsChart"></canvas>
+        <div class="sidebar-menu">
+            <a href="#" class="menu-item active" data-section="dashboard">
+                <i class="fas fa-tachometer-alt"></i>
+                <span>الإحصائيات</span>
+            </a>
+            <a href="#" class="menu-item" data-section="monitors">
+                <i class="fas fa-users"></i>
+                <span>المراقبون</span>
+            </a>
+            <a href="#" class="menu-item" data-section="map">
+                <i class="fas fa-map-marked-alt"></i>
+                <span>الخريطة</span>
+            </a>
+            <a href="#" class="menu-item" data-section="reports">
+                <i class="fas fa-file-alt"></i>
+                <span>التقارير</span>
+            </a>
+            <a href="#" class="menu-item" data-section="settings">
+                <i class="fas fa-cog"></i>
+                <span>الإعدادات</span>
+            </a>
         </div>
         
-        <div class="last-update">
-            <i class="fas fa-sync-alt"></i> آخر تحديث: <span id="lastUpdateTime">--:--</span>
+        <div class="sidebar-footer">
+            <div class="user-profile">
+                <div class="user-avatar" id="userAvatar">U</div>
+                <div class="user-info">
+                    <h4 id="currentUserName">مستخدم</h4>
+                    <p>مدير النظام</p>
+                </div>
+            </div>
+            
+            <button class="logout-btn" id="logoutBtn">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>تسجيل خروج</span>
+            </button>
         </div>
     </div>
     
+    <!-- المحتوى الرئيسي -->
     <div class="main-content">
-        <h2><i class="fas fa-users"></i> المراقبون النشطون <span id="activeCount">(0)</span></h2>
-        
-        <div class="monitors-grid" id="monitorsContainer">
-            <!-- سيتم ملؤها ديناميكياً -->
+        <!-- شريط البحث والإحصائيات -->
+        <div class="top-bar">
+            <div class="search-container">
+                <input type="text" class="search-input" id="searchInput" placeholder="ابحث عن مراقب...">
+                <i class="fas fa-search search-icon"></i>
+            </div>
+            
+            <div class="current-time" id="currentTime"></div>
         </div>
         
-        <div class="issues-panel">
-            <h3><i class="fas fa-exclamation-triangle"></i> البلاغات والمشاكل <span id="issuesCount">(0)</span></h3>
+        <!-- الإحصائيات -->
+        <div id="dashboardSectionContent" class="section-content">
+            <div class="stats-cards">
+                <div class="stat-card total">
+                    <i class="fas fa-users"></i>
+                    <div class="stat-value" id="totalMonitors">0</div>
+                    <div class="stat-label">إجمالي المراقبين</div>
+                </div>
+                
+                <div class="stat-card online">
+                    <i class="fas fa-wifi"></i>
+                    <div class="stat-value" id="onlineMonitors">0</div>
+                    <div class="stat-label">متصلون الآن</div>
+                </div>
+                
+                <div class="stat-card arrived">
+                    <i class="fas fa-check-circle"></i>
+                    <div class="stat-value" id="arrivedMonitors">0</div>
+                    <div class="stat-label">وصلوا للمركز</div>
+                </div>
+                
+                <div class="stat-card issues">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <div class="stat-value" id="issuesCount">0</div>
+                    <div class="stat-label">مشاكل مبلغ عنها</div>
+                </div>
+            </div>
             
-            <div class="issues-list" id="issuesContainer">
-                <!-- سيتم ملؤها ديناميكياً -->
+            <!-- جدول سريع -->
+            <div class="table-container">
+                <div class="table-header">
+                    <h3>آخر النشاطات</h3>
+                </div>
+                <div class="table-responsive">
+                    <table class="data-table" id="quickTable">
+                        <thead>
+                            <tr>
+                                <th>المراقب</th>
+                                <th>الحالة</th>
+                                <th>الموقع</th>
+                                <th>آخر تحديث</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="quickTableBody">
+                            <!-- يتم ملؤه ديناميكياً -->
+                        </tbody>
+                    </table>
+                </div>
+                <div id="noQuickData" class="no-data">لا توجد نشاطات حديثة</div>
+            </div>
+        </div>
+        
+        <!-- المراقبون -->
+        <div id="monitorsSectionContent" class="section-content" style="display: none;">
+            <div class="table-container">
+                <div class="table-header">
+                    <h3>إدارة المراقبين</h3>
+                    <button class="add-btn" id="addMonitorBtn">
+                        <i class="fas fa-plus"></i>
+                        إضافة مراقب
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="data-table" id="monitorsTable">
+                        <thead>
+                            <tr>
+                                <th>المراقب</th>
+                                <th>رقم الهاتف</th>
+                                <th>مركز الاقتراع</th>
+                                <th>كود الدخول</th>
+                                <th>الحالة</th>
+                                <th>الوصول</th>
+                                <th>التصويت</th>
+                                <th>المشاكل</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="monitorsTableBody">
+                            <!-- يتم ملؤه ديناميكياً -->
+                        </tbody>
+                    </table>
+                </div>
+                <div id="noMonitorsData" class="no-data">لا توجد بيانات مراقبين</div>
+            </div>
+        </div>
+        
+        <!-- الخريطة -->
+        <div id="mapSectionContent" class="section-content" style="display: none;">
+            <div class="map-container">
+                <div class="map-header">
+                    <h3>الخريطة التفاعلية</h3>
+                </div>
+                <iframe 
+                    id="mainMap" 
+                    src="https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d13641.508635171438!2d31.2334333!3d31.0413665!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1sen!2seg!4v1680000000000!5m2!1sen!2seg"
+                    allowfullscreen="" 
+                    loading="lazy" 
+                    referrerpolicy="no-referrer-when-downgrade">
+                </iframe>
+            </div>
+            
+            <div class="stats-cards">
+                <div class="stat-card">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <div class="stat-value" id="locatedMonitors">0</div>
+                    <div class="stat-label">مراقبون موثقون على الخريطة</div>
+                </div>
+                
+                <div class="stat-card">
+                    <i class="fas fa-clock"></i>
+                    <div class="stat-value" id="lastLocationUpdate">--:--</div>
+                    <div class="stat-label">آخر تحديث للمواقع</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- التقارير -->
+        <div id="reportsSectionContent" class="section-content" style="display: none;">
+            <div class="stats-cards">
+                <div class="stat-card">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <div class="stat-value" id="totalReports">0</div>
+                    <div class="stat-label">إجمالي التقارير</div>
+                </div>
+                
+                <div class="stat-card">
+                    <i class="fas fa-fire"></i>
+                    <div class="stat-value" id="emergencyReports">0</div>
+                    <div class="stat-label">تقارير طارئة</div>
+                </div>
+                
+                <div class="stat-card">
+                    <i class="fas fa-check"></i>
+                    <div class="stat-value" id="resolvedReports">0</div>
+                    <div class="stat-label">تم حلها</div>
+                </div>
+            </div>
+            
+            <div class="reports-container" id="reportsContainer">
+                <!-- يتم ملؤه ديناميكياً -->
+            </div>
+            <div id="noReportsData" class="no-data">لا توجد تقارير</div>
+        </div>
+        
+        <!-- الإعدادات -->
+        <div id="settingsSectionContent" class="section-content" style="display: none;">
+            <div class="table-container">
+                <div class="table-header">
+                    <h3>الإعدادات</h3>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>تحديث البيانات التلقائي</label>
+                        <select class="form-control" id="autoRefresh">
+                            <option value="5000">كل 5 ثواني</option>
+                            <option value="10000">كل 10 ثواني</option>
+                            <option value="30000" selected>كل 30 ثانية</option>
+                            <option value="60000">كل دقيقة</option>
+                            <option value="0">معطل</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>نوع التنبيهات</label>
+                        <div style="display: flex; gap: 20px; margin-top: 10px;">
+                            <label style="display: flex; align-items: center; gap: 8px;">
+                                <input type="checkbox" id="soundAlerts" checked>
+                                <span>صوت التنبيه</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px;">
+                                <input type="checkbox" id="desktopAlerts">
+                                <span>تنبيهات سطح المكتب</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>تصدير البيانات</label>
+                        <div class="form-actions">
+                            <button class="btn btn-secondary" onclick="exportData('excel')">
+                                <i class="fas fa-file-excel"></i> تصدير Excel
+                            </button>
+                            <button class="btn btn-secondary" onclick="exportData('pdf')">
+                                <i class="fas fa-file-pdf"></i> تصدير PDF
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>نسخ احتياطي</label>
+                        <div class="form-actions">
+                            <button class="btn btn-secondary" onclick="backupData()">
+                                <i class="fas fa-save"></i> حفظ نسخة احتياطية
+                            </button>
+                            <button class="btn btn-secondary" onclick="restoreData()">
+                                <i class="fas fa-upload"></i> استعادة نسخة
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Modal لعرض التفاصيل -->
-<div id="detailsModal" class="modal">
-    <div class="modal-content">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h3><i class="fas fa-info-circle"></i> تفاصيل المراقب</h3>
-            <button onclick="closeModal()" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #666;">✕</button>
+<!-- المودالات -->
+<div class="modal-backdrop" id="modalBackdrop">
+    <div class="modal" id="addMonitorModal">
+        <div class="modal-header">
+            <h3>إضافة مراقب جديد</h3>
+            <span class="modal-close" onclick="closeModal()">×</span>
         </div>
-        
-        <div id="modalContent">
-            <!-- سيتم ملؤها ديناميكياً -->
+        <div class="modal-body">
+            <form id="addMonitorForm">
+                <div class="form-group">
+                    <label>اسم المراقب</label>
+                    <input type="text" class="form-control" id="monitorName" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>رقم الهاتف</label>
+                    <input type="tel" class="form-control" id="monitorPhone" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>مركز الاقتراع</label>
+                    <input type="text" class="form-control" id="monitorCenter" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>كود الدخول</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" class="form-control" id="monitorCode" required style="flex: 1;">
+                        <button type="button" class="btn btn-secondary" onclick="generateCode()" style="width: auto; padding: 0 20px;">
+                            توليد
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">
+                        <i class="fas fa-times"></i> إلغاء
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> حفظ
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
 
-<script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-storage-compat.js"></script>
+<div class="modal-backdrop" id="photoModalBackdrop" style="display: none;">
+    <div class="modal" id="photoModal">
+        <div class="modal-header">
+            <h3>صورة الشريط</h3>
+            <span class="modal-close" onclick="closePhotoModal()">×</span>
+        </div>
+        <div class="modal-body">
+            <div id="photoContent"></div>
+        </div>
+    </div>
+</div>
+
+<!-- التنبيهات -->
+<div id="notificationContainer"></div>
+
+<!-- زر العودة للأعلى -->
+<div class="scroll-top" id="scrollTop" onclick="scrollToTop()">
+    <i class="fas fa-arrow-up"></i>
+</div>
 
 <script>
-    const firebaseConfig = {
-        apiKey: "AIzaSyDdiudUa5jjcZDwJgYBbLdC-YBNQ5rlqvU",
-        authDomain: "election-system-9cbb8.firebaseapp.com",
-        projectId: "election-system-9cbb8",
-        storageBucket: "election-system-9cbb8.firebasestorage.app",
-        messagingSenderId: "886706894008",
-        appId: "1:886706894008:web:270556771843614e56b04d"
-    };
+    // المتغيرات العامة
+    let currentUser = null;
+    let monitors = [];
+    let reports = [];
+    let settings = {};
+    let autoRefreshInterval = null;
+    let STORAGE_KEY = null;
+    let isConnected = true;
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-    
-    let allMonitors = [];
-    let allIssues = [];
-    let centers = new Set();
-    let statsChart = null;
-    let lastUpdateTime = new Date();
-
-    // تهيئة التطبيق
-    async function init() {
-        await loadMonitors();
-        await loadIssues();
-        setupRealtimeListeners();
-        initCharts();
-        updateLastUpdateTime();
+    // تهيئة النظام
+    function init() {
+        loadSettings();
+        setupEventListeners();
+        updateCurrentTime();
+        checkConnection();
         
         // تحديث الوقت كل دقيقة
-        setInterval(updateLastUpdateTime, 60000);
+        setInterval(updateCurrentTime, 60000);
         
-        // تحديث التلقائي كل 30 ثانية
-        setInterval(() => {
-            loadMonitors();
-            loadIssues();
-        }, 30000);
+        // تحديث حالة الاتصال
+        setInterval(checkConnection, 10000);
+        
+        // إعداد تحديث تلقائي
+        setupAutoRefresh();
+        
+        // إعداد زر العودة للأعلى
+        window.addEventListener('scroll', handleScroll);
     }
 
-    // تحميل بيانات المراقبين
-    async function loadMonitors() {
+    // ====== إدارة البيانات ======
+    function loadMonitors() {
         try {
-            const snapshot = await db.collection('monitors').get();
-            allMonitors = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data(),
-                lastSeen: doc.data().lastSeen || null,
-                isOnline: doc.data().isOnline || false
-            }));
-            
-            // جمع أسماء المراكز
-            centers = new Set();
-            allMonitors.forEach(monitor => {
-                if (monitor.centerName) centers.add(monitor.centerName);
-            });
-            
-            // تحديث قائمة المراكز
-            updateCentersFilter();
-            
-            // تحديث الإحصائيات
-            updateStatistics();
-            
-            // عرض المراقبين
-            displayMonitors(allMonitors);
-            
+            const data = localStorage.getItem(STORAGE_KEY + '_monitors');
+            monitors = data ? JSON.parse(data) : [];
         } catch (error) {
-            console.error('Error loading monitors:', error);
+            monitors = [];
+            showNotification('خطأ في تحميل بيانات المراقبين', 'error');
         }
+        renderMonitors();
+        updateStats();
     }
 
-    // تحميل البلاغات
-    async function loadIssues() {
+    function saveMonitors() {
         try {
-            const snapshot = await db.collection('issues')
-                .orderBy('timestamp', 'desc')
-                .limit(50)
-                .get();
-            
-            allIssues = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            }));
-            
-            displayIssues(allIssues);
-            
+            localStorage.setItem(STORAGE_KEY + '_monitors', JSON.stringify(monitors));
         } catch (error) {
-            console.error('Error loading issues:', error);
+            showNotification('خطأ في حفظ بيانات المراقبين', 'error');
         }
     }
 
-    // إعداد الاستماع الفوري للتحديثات
-    function setupRealtimeListeners() {
-        // الاستماع لتحديثات المراقبين
-        db.collection('monitors').onSnapshot((snapshot) => {
-            snapshot.docChanges().forEach((change) => {
-                if (change.type === 'added' || change.type === 'modified') {
-                    const monitor = { id: change.doc.id, ...change.doc.data() };
-                    const index = allMonitors.findIndex(m => m.id === monitor.id);
-                    
-                    if (index !== -1) {
-                        allMonitors[index] = monitor;
-                    } else {
-                        allMonitors.push(monitor);
-                    }
-                    
-                    updateStatistics();
-                    displayMonitors(allMonitors);
-                }
-            });
-        });
-        
-        // الاستماع للبلاغات الجديدة
-        db.collection('issues').onSnapshot((snapshot) => {
-            snapshot.docChanges().forEach((change) => {
-                if (change.type === 'added') {
-                    const issue = { id: change.doc.id, ...change.doc.data() };
-                    allIssues.unshift(issue); // إضافة في البداية
-                    displayIssues(allIssues);
-                }
-            });
-        });
+    function loadReports() {
+        try {
+            const data = localStorage.getItem(STORAGE_KEY + '_reports');
+            reports = data ? JSON.parse(data) : [];
+        } catch (error) {
+            reports = [];
+        }
+        renderReports();
     }
 
-    // عرض المراقبين
-    function displayMonitors(monitors) {
-        const container = document.getElementById('monitorsContainer');
-        const activeCount = monitors.filter(m => m.isOnline).length;
-        document.getElementById('activeCount').textContent = `(${activeCount})`;
-        
-        let html = '';
-        
-        monitors.forEach(monitor => {
-            const lastSeen = monitor.lastSeen ? formatTime(monitor.lastSeen) : 'غير معروف';
-            const arrivalTime = monitor.arrivalTime ? formatTime(monitor.arrivalTime) : '--:--';
-            const votingTime = monitor.votingCompleteTime ? formatTime(monitor.votingCompleteTime) : '--:--';
-            
-            html += `
-                <div class="monitor-card" data-status="${monitor.isOnline ? 'online' : 'offline'}" 
-                     data-arrived="${monitor.monitorArrival || false}" 
-                     data-voted="${monitor.monitorVoted || false}">
-                    
-                    <div class="card-header">
-                        <div class="monitor-name">${monitor.monitorName || monitor.name || 'مراقب'}</div>
-                        <div class="monitor-code">${monitor.code || 'N/A'}</div>
-                    </div>
-                    
-                    <div class="status-indicators">
-                        <div class="status-badge ${monitor.isOnline ? 'status-online' : 'status-offline'}">
-                            <i class="fas fa-${monitor.isOnline ? 'wifi' : 'wifi-slash'}"></i>
-                            ${monitor.isOnline ? 'متصل' : 'غير متصل'}
-                        </div>
-                        
-                        ${monitor.monitorArrival ? 
-                            `<div class="status-badge status-arrived">
-                                <i class="fas fa-check-circle"></i> وصل للمركز
-                            </div>` : ''}
-                        
-                        ${monitor.monitorVoted ? 
-                            `<div class="status-badge status-voted">
-                                <i class="fas fa-vote-yea"></i> انتهى من التصويت
-                            </div>` : ''}
-                        
-                        ${monitor.hasActiveIssue ? 
-                            `<div class="status-badge status-issue">
-                                <i class="fas fa-exclamation-triangle"></i> لديه بلاغ
-                            </div>` : ''}
-                    </div>
-                    
-                    <div class="details-grid">
-                        <div class="detail-item">
-                            <div class="detail-label">المركز</div>
-                            <div class="detail-value">${monitor.centerName || 'غير محدد'}</div>
-                        </div>
-                        
-                        <div class="detail-item">
-                            <div class="detail-label">وقت الوصول</div>
-                            <div class="detail-value">${arrivalTime}</div>
-                        </div>
-                        
-                        <div class="detail-item">
-                            <div class="detail-label">وقت التصويت</div>
-                            <div class="detail-value">${votingTime}</div>
-                        </div>
-                        
-                        <div class="detail-item">
-                            <div class="detail-label">آخر ظهور</div>
-                            <div class="detail-value">${lastSeen}</div>
-                        </div>
-                    </div>
-                    
-                    <div class="action-buttons">
-                        <button class="action-btn btn-send" onclick="sendMessage('${monitor.id}')">
-                            <i class="fas fa-comment-alt"></i> رسالة
-                        </button>
-                        
-                        <button class="action-btn btn-view" onclick="viewDetails('${monitor.id}')">
-                            <i class="fas fa-eye"></i> تفاصيل
-                        </button>
-                        
-                        <button class="action-btn btn-alert" onclick="sendAlert('${monitor.id}')">
-                            <i class="fas fa-bell"></i> تنبيه
-                        </button>
-                    </div>
-                </div>
-            `;
-        });
-        
-        container.innerHTML = html || '<p style="text-align:center; color:#666;">لا توجد بيانات</p>';
+    function saveReports() {
+        try {
+            localStorage.setItem(STORAGE_KEY + '_reports', JSON.stringify(reports));
+        } catch (error) {
+            console.error('Error saving reports:', error);
+        }
     }
 
-    // عرض البلاغات
-    function displayIssues(issues) {
-        const container = document.getElementById('issuesContainer');
-        document.getElementById('issuesCount').textContent = `(${issues.length})`;
-        
-        let html = '';
-        
-        issues.forEach(issue => {
-            const time = issue.timestamp ? formatTime(issue.timestamp) : 'غير معروف';
-            
-            html += `
-                <div class="issue-item" data-priority="${issue.priority || 'medium'}">
-                    <div class="issue-header">
-                        <div>
-                            <strong>${issue.monitorName || 'مراقب'}</strong> 
-                            <small style="color:#666;">(${issue.monitorCode})</small>
-                        </div>
-                        <div class="issue-priority priority-${issue.priority || 'medium'}">
-                            ${getPriorityText(issue.priority)}
-                        </div>
-                    </div>
-                    
-                    <div style="margin-bottom: 10px;">
-                        <strong>النوع:</strong> ${issue.issueType}
-                    </div>
-                    
-                    <div style="margin-bottom: 10px;">
-                        <strong>التفاصيل:</strong> ${issue.issueDetails || 'لا توجد تفاصيل'}
-                    </div>
-                    
-                    <div style="display: flex; justify-content: space-between; font-size: 12px; color: #666;">
-                        <span><i class="far fa-clock"></i> ${time}</span>
-                        <span><i class="fas fa-map-marker-alt"></i> ${issue.centerName || 'غير محدد'}</span>
-                    </div>
-                </div>
-            `;
-        });
-        
-        container.innerHTML = html || '<p style="text-align:center; color:#666;">لا توجد بلاغات</p>';
-    }
-
-    // تصفية المراقبين
-    function filterMonitors() {
-        const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-        const statusFilter = document.getElementById('statusFilter').value;
-        const centerFilter = document.getElementById('centerFilter').value;
-        
-        let filtered = allMonitors;
-        
-        // البحث
-        if (searchTerm) {
-            filtered = filtered.filter(monitor => 
-                (monitor.monitorName && monitor.monitorName.toLowerCase().includes(searchTerm)) ||
-                (monitor.code && monitor.code.toLowerCase().includes(searchTerm))
-            );
+    function loadSettings() {
+        try {
+            const data = localStorage.getItem(STORAGE_KEY + '_settings');
+            settings = data ? JSON.parse(data) : {
+                autoRefresh: 30000,
+                soundAlerts: true,
+                desktopAlerts: false
+            };
+        } catch (error) {
+            settings = {
+                autoRefresh: 30000,
+                soundAlerts: true,
+                desktopAlerts: false
+            };
         }
         
-        // تصفية حسب الحالة
-        if (statusFilter) {
-            switch(statusFilter) {
-                case 'online':
-                    filtered = filtered.filter(m => m.isOnline);
-                    break;
-                case 'offline':
-                    filtered = filtered.filter(m => !m.isOnline);
-                    break;
-                case 'arrived':
-                    filtered = filtered.filter(m => m.monitorArrival);
-                    break;
-                case 'voted':
-                    filtered = filtered.filter(m => m.monitorVoted);
-                    break;
-                case 'issues':
-                    filtered = filtered.filter(m => m.hasActiveIssue);
-                    break;
-            }
-        }
-        
-        // تصفية حسب المركز
-        if (centerFilter) {
-            filtered = filtered.filter(m => m.centerName === centerFilter);
-        }
-        
-        displayMonitors(filtered);
+        // تطبيق الإعدادات
+        document.getElementById('autoRefresh').value = settings.autoRefresh;
+        document.getElementById('soundAlerts').checked = settings.soundAlerts;
+        document.getElementById('desktopAlerts').checked = settings.desktopAlerts;
     }
 
-    // تصفية البلاغات
-    function filterIssues() {
-        const priorityFilter = document.getElementById('priorityFilter').value;
+    function saveSettings() {
+        try {
+            localStorage.setItem(STORAGE_KEY + '_settings', JSON.stringify(settings));
+        } catch (error) {
+            console.error('Error saving settings:', error);
+        }
+    }
+
+    // ====== تسجيل الدخول والخروج ======
+    document.getElementById('loginForm').addEventListener('submit', function(e) {
+        e.preventDefault();
         
-        if (!priorityFilter) {
-            displayIssues(allIssues);
+        const username = document.getElementById('loginUser').value.trim();
+        const password = document.getElementById('loginPass').value.trim();
+        
+        if (!username || !password) {
+            showLoginError('يرجى إدخال جميع البيانات');
             return;
         }
         
-        const filtered = allIssues.filter(issue => issue.priority === priorityFilter);
-        displayIssues(filtered);
+        // التحقق من المستخدم
+        const systemUsers = JSON.parse(localStorage.getItem('systemUsers') || '[]');
+        const user = systemUsers.find(u => 
+            u.username.toLowerCase() === username.toLowerCase() && 
+            u.password === password
+        );
+        
+        if (!user) {
+            showLoginError('بيانات الدخول غير صحيحة');
+            return;
+        }
+        
+        // تسجيل الدخول
+        currentUser = user;
+        STORAGE_KEY = 'election_system_' + currentUser.username;
+        
+        // حفظ جلسة المستخدم
+        localStorage.setItem('currentSession', JSON.stringify({
+            username: currentUser.username,
+            timestamp: new Date().getTime()
+        }));
+        
+        // إعداد واجهة المستخدم
+        document.getElementById('currentUserName').textContent = currentUser.username;
+        document.getElementById('userAvatar').textContent = currentUser.username.charAt(0).toUpperCase();
+        
+        // تحميل البيانات
+        loadMonitors();
+        loadReports();
+        
+        // إظهار لوحة التحكم
+        document.getElementById('loginSection').style.display = 'none';
+        document.getElementById('dashboardSection').style.display = 'flex';
+        
+        showNotification('تم تسجيل الدخول بنجاح', 'success');
+        
+        // تشغيل النظام
+        init();
+    });
+
+    function showLoginError(message) {
+        const errorEl = document.getElementById('loginError');
+        errorEl.textContent = message;
+        errorEl.style.display = 'block';
+        
+        // اهتزاز الحقول
+        const inputs = document.querySelectorAll('#loginForm input');
+        inputs.forEach(input => {
+            input.style.borderColor = 'var(--danger)';
+            setTimeout(() => {
+                input.style.borderColor = '';
+            }, 1000);
+        });
     }
 
-    // تحديث قائمة المراكز في الفلتر
-    function updateCentersFilter() {
-        const select = document.getElementById('centerFilter');
-        let options = '<option value="">جميع المراكز</option>';
+    document.getElementById('logoutBtn').addEventListener('click', function() {
+        if (confirm('هل تريد تسجيل الخروج؟')) {
+            localStorage.removeItem('currentSession');
+            location.reload();
+        }
+    });
+
+    // ====== إدارة المراقبين ======
+    function renderMonitors(searchTerm = '') {
+        const tbody = document.getElementById('monitorsTableBody');
+        const quickTbody = document.getElementById('quickTableBody');
         
-        centers.forEach(center => {
-            options += `<option value="${center}">${center}</option>`;
+        if (!tbody || !quickTbody) return;
+        
+        // تصفية المراقبين
+        const filteredMonitors = monitors.filter(monitor => {
+            if (!searchTerm) return true;
+            
+            const search = searchTerm.toLowerCase();
+            return (
+                monitor.name.toLowerCase().includes(search) ||
+                monitor.phone.includes(search) ||
+                monitor.center.toLowerCase().includes(search) ||
+                monitor.code.toLowerCase().includes(search)
+            );
         });
         
-        select.innerHTML = options;
-    }
-
-    // تحديث الإحصائيات
-    function updateStatistics() {
-        const onlineCount = allMonitors.filter(m => m.isOnline).length;
-        const offlineCount = allMonitors.filter(m => !m.isOnline).length;
-        const arrivedCount = allMonitors.filter(m => m.monitorArrival).length;
-        const votedCount = allMonitors.filter(m => m.monitorVoted).length;
+        // عرض جدول المراقبين الرئيسي
+        if (filteredMonitors.length === 0) {
+            tbody.innerHTML = '';
+            document.getElementById('noMonitorsData').style.display = 'block';
+        } else {
+            tbody.innerHTML = filteredMonitors.map((monitor, index) => `
+                <tr>
+                    <td>
+                        <div class="monitor-info">
+                            <div class="monitor-avatar">${monitor.name.charAt(0)}</div>
+                            <div class="monitor-details">
+                                <h4>${monitor.name}</h4>
+                                <p>${monitor.center}</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td>${monitor.phone}</td>
+                    <td>${monitor.center}</td>
+                    <td><code>${monitor.code}</code></td>
+                    <td>
+                        <span class="status-badge ${monitor.online ? 'status-online' : 'status-offline'}">
+                            <i class="fas fa-${monitor.online ? 'wifi' : 'wifi-slash'}"></i>
+                            ${monitor.online ? 'متصل' : 'غير متصل'}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="action-badge ${monitor.arrived ? 'true' : 'false'}" 
+                              onclick="toggleArrived(${index})">
+                            <i class="fas fa-${monitor.arrived ? 'check' : 'times'}"></i>
+                        </span>
+                    </td>
+                    <td>
+                        <span class="action-badge ${monitor.voted ? 'true' : 'false'}" 
+                              onclick="toggleVoted(${index})">
+                            <i class="fas fa-${monitor.voted ? 'check' : 'times'}"></i>
+                        </span>
+                    </td>
+                    <td>
+                        <span class="action-badge ${monitor.hasIssue ? 'true' : 'neutral'}" 
+                              onclick="viewIssue(${index})">
+                            <i class="fas fa-${monitor.hasIssue ? 'exclamation-triangle' : 'check'}"></i>
+                        </span>
+                    </td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="action-btn" onclick="showLocation(${index})" title="عرض الموقع">
+                                <i class="fas fa-map-marker-alt"></i>
+                            </button>
+                            <button class="action-btn" onclick="viewPhoto(${index})" title="عرض الصورة">
+                                <i class="fas fa-camera"></i>
+                            </button>
+                            <button class="action-btn" onclick="deleteMonitor(${index})" title="حذف">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+            document.getElementById('noMonitorsData').style.display = 'none';
+        }
         
-        document.getElementById('onlineCount').querySelector('span').textContent = onlineCount;
-        document.getElementById('offlineCount').querySelector('span').textContent = offlineCount;
-        document.getElementById('arrivedCount').querySelector('span').textContent = arrivedCount;
-        document.getElementById('votedCount').querySelector('span').textContent = votedCount;
+        // عرض آخر 5 نشاطات
+        const recentMonitors = monitors
+            .sort((a, b) => new Date(b.lastUpdate || 0) - new Date(a.lastUpdate || 0))
+            .slice(0, 5);
         
-        // تحديث الرسم البياني
-        if (statsChart) {
-            statsChart.data.datasets[0].data = [onlineCount, offlineCount, arrivedCount, votedCount];
-            statsChart.update();
+        if (recentMonitors.length === 0) {
+            quickTbody.innerHTML = '';
+            document.getElementById('noQuickData').style.display = 'block';
+        } else {
+            quickTbody.innerHTML = recentMonitors.map((monitor, index) => `
+                <tr>
+                    <td>
+                        <div class="monitor-info">
+                            <div class="monitor-avatar">${monitor.name.charAt(0)}</div>
+                            <div class="monitor-details">
+                                <h4>${monitor.name}</h4>
+                                <p>${monitor.center}</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="status-badge ${monitor.online ? 'status-online' : 'status-offline'}">
+                            <i class="fas fa-${monitor.online ? 'wifi' : 'wifi-slash'}"></i>
+                            ${monitor.online ? 'متصل' : 'غير متصل'}
+                        </span>
+                    </td>
+                    <td>${monitor.location || 'غير محدد'}</td>
+                    <td>${formatTime(monitor.lastUpdate)}</td>
+                    <td>
+                        <button class="action-btn" onclick="showMonitorDetails(${monitors.findIndex(m => m.code === monitor.code)})">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+            document.getElementById('noQuickData').style.display = 'none';
         }
     }
 
-    // عرض تفاصيل المراقب
-    async function viewDetails(monitorId) {
-        const monitor = allMonitors.find(m => m.id === monitorId);
-        if (!monitor) return;
+    function addMonitor(monitorData) {
+        const monitor = {
+            id: generateId(),
+            ...monitorData,
+            online: false,
+            arrived: false,
+            voted: false,
+            hasIssue: false,
+            issueText: '',
+            location: null,
+            lastUpdate: new Date().toISOString(),
+            createdAt: new Date().toISOString()
+        };
         
-        // تحميل النشاطات الأخيرة
-        const activities = await getRecentActivities(monitor.code);
+        monitors.push(monitor);
+        saveMonitors();
+        renderMonitors();
+        updateStats();
         
-        let html = `
-            <div style="margin-bottom: 20px;">
-                <h4>${monitor.monitorName || monitor.name || 'مراقب'}</h4>
-                <p style="color:#666;">الكود: ${monitor.code}</p>
-            </div>
+        showNotification('تم إضافة المراقب بنجاح', 'success');
+    }
+
+    function deleteMonitor(index) {
+        if (confirm('هل أنت متأكد من حذف هذا المراقب؟')) {
+            monitors.splice(index, 1);
+            saveMonitors();
+            renderMonitors();
+            updateStats();
             
-            <div class="details-grid" style="grid-template-columns: repeat(2, 1fr);">
-                <div class="detail-item">
-                    <div class="detail-label">الحالة</div>
-                    <div class="detail-value" style="color: ${monitor.isOnline ? 'var(--success)' : 'var(--danger)'};">
-                        ${monitor.isOnline ? '🟢 متصل' : '🔴 غير متصل'}
-                    </div>
-                </div>
+            showNotification('تم حذف المراقب', 'success');
+        }
+    }
+
+    function toggleArrived(index) {
+        monitors[index].arrived = !monitors[index].arrived;
+        monitors[index].lastUpdate = new Date().toISOString();
+        saveMonitors();
+        renderMonitors();
+        updateStats();
+        
+        const status = monitors[index].arrived ? 'تم تحديد الوصول' : 'تم إلغاء الوصول';
+        showNotification(`${monitors[index].name}: ${status}`, 'info');
+    }
+
+    function toggleVoted(index) {
+        monitors[index].voted = !monitors[index].voted;
+        monitors[index].lastUpdate = new Date().toISOString();
+        saveMonitors();
+        renderMonitors();
+        updateStats();
+        
+        const status = monitors[index].voted ? 'تم التصويت' : 'لم يتم التصويت';
+        showNotification(`${monitors[index].name}: ${status}`, 'info');
+    }
+
+    function viewIssue(index) {
+        const monitor = monitors[index];
+        if (monitor.hasIssue && monitor.issueText) {
+            alert(`مشكلة مبلغ عنها من ${monitor.name}:\n\n${monitor.issueText}`);
+        } else {
+            alert('لا توجد مشكلة مبلغ عنها من هذا المراقب');
+        }
+    }
+
+    function showLocation(index) {
+        const monitor = monitors[index];
+        const locationKey = `monitor_location_${monitor.code}`;
+        const locationData = localStorage.getItem(locationKey);
+        
+        if (!locationData) {
+            alert('لا يوجد موقع مخزن لهذا المراقب');
+            return;
+        }
+        
+        try {
+            const location = JSON.parse(locationData);
+            if (location.lat && location.lng) {
+                // تحديث رابط الخريطة
+                const mapIframe = document.getElementById('mainMap');
+                mapIframe.src = `https://www.google.com/maps?q=${location.lat},${location.lng}&z=17&output=embed`;
                 
-                <div class="detail-item">
-                    <div class="detail-label">المركز</div>
-                    <div class="detail-value">${monitor.centerName || 'غير محدد'}</div>
-                </div>
+                // التبديل إلى قسم الخريطة
+                switchSection('map');
                 
-                <div class="detail-item">
-                    <div class="detail-label">الوصول للمركز</div>
-                    <div class="detail-value" style="color: ${monitor.monitorArrival ? 'var(--success)' : 'var(--danger)'};">
-                        ${monitor.monitorArrival ? '✅ تم' : '❌ لم يتم'}
-                    </div>
-                </div>
-                
-                <div class="detail-item">
-                    <div class="detail-label">انتهاء التصويت</div>
-                    <div class="detail-value" style="color: ${monitor.monitorVoted ? 'var(--success)' : 'var(--danger)'};">
-                        ${monitor.monitorVoted ? '✅ تم' : '❌ لم يتم'}
-                    </div>
-                </div>
-                
-                <div class="detail-item">
-                    <div class="detail-label">آخر تحديث</div>
-                    <div class="detail-value">${formatTime(monitor.lastUpdate)}</div>
-                </div>
-                
-                <div class="detail-item">
-                    <div class="detail-label">آخر ظهور</div>
-                    <div class="detail-value">${formatTime(monitor.lastSeen)}</div>
-                </div>
-            </div>
-            
-            ${monitor.monitorLocation ? `
-                <div style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 10px;">
-                    <h5><i class="fas fa-map-marker-alt"></i> الموقع الجغرافي</h5>
-                    <p>الإحداثيات: ${monitor.monitorLocation.lat.toFixed(6)}, ${monitor.monitorLocation.lng.toFixed(6)}</p>
-                    <p>الدقة: ${monitor.monitorLocation.accuracy ? monitor.monitorLocation.accuracy.toFixed(2) + ' متر' : 'غير معروفة'}</p>
-                    <p>آخر تحديث: ${formatTime(monitor.monitorLocation.timestamp)}</p>
-                    <a href="https://maps.google.com/?q=${monitor.monitorLocation.lat},${monitor.monitorLocation.lng}" 
-                       target="_blank" style="color: var(--primary); text-decoration: none;">
-                       <i class="fas fa-external-link-alt"></i> عرض على الخريطة
-                    </a>
-                </div>
-            ` : ''}
-            
-            ${monitor.mediaAttachments && monitor.mediaAttachments.length > 0 ? `
-                <div style="margin: 20px 0;">
-                    <h5><i class="fas fa-images"></i> الوسائط المرفوعة</h5>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; margin-top: 10px;">
-                        ${monitor.mediaAttachments.slice(0, 4).map(media => `
-                            <div style="border-radius: 8px; overflow: hidden; border: 1px solid #ddd;">
-                                ${media.type === 'image' ? 
-                                    `<img src="${media.url}" style="width: 100%; height: 80px; object-fit: cover;" alt="صورة">` :
-                                    `<div style="width: 100%; height: 80px; background: #e0e0e0; display: flex; align-items: center; justify-content: center;">
-                                        <i class="fas fa-video" style="font-size: 24px; color: #666;"></i>
-                                    </div>`
-                                }
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-            ` : ''}
-            
-            <div style="margin: 20px 0;">
-                <h5><i class="fas fa-history"></i> النشاطات الأخيرة</h5>
-                <div style="max-height: 200px; overflow-y: auto;">
-                    ${activities.length > 0 ? 
-                        activities.map(activity => `
-                            <div style="padding: 8px; border-bottom: 1px solid #eee; font-size: 13px;">
-                                <div style="display: flex; justify-content: space-between;">
-                                    <span>${getActivityText(activity.activityType)}</span>
-                                    <span style="color: #666;">${formatTime(activity.timestamp)}</span>
-                                </div>
-                            </div>
-                        `).join('') :
-                        '<p style="text-align:center; color:#666; padding: 20px;">لا توجد نشاطات مسجلة</p>'
-                    }
+                showNotification(`تم عرض موقع ${monitor.name} على الخريطة`, 'info');
+            }
+        } catch (error) {
+            alert('خطأ في بيانات الموقع');
+        }
+    }
+
+    function viewPhoto(index) {
+        const monitor = monitors[index];
+        const photoKey = `monitor_photo_${monitor.code}`;
+        const photoData = localStorage.getItem(photoKey);
+        
+        if (!photoData) {
+            alert('لا توجد صورة مخزنة لهذا المراقب');
+            return;
+        }
+        
+        const photoModal = document.getElementById('photoModalBackdrop');
+        const photoContent = document.getElementById('photoContent');
+        
+        photoContent.innerHTML = `
+            <div style="text-align: center;">
+                <h4 style="margin-bottom: 20px;">صورة الشريط - ${monitor.name}</h4>
+                <img src="${photoData}" style="max-width: 100%; max-height: 400px; border-radius: 10px;">
+                <div style="margin-top: 20px;">
+                    <button class="btn btn-primary" onclick="downloadPhoto('${monitor.code}')">
+                        <i class="fas fa-download"></i> تحميل الصورة
+                    </button>
                 </div>
             </div>
         `;
         
-        document.getElementById('modalContent').innerHTML = html;
-        document.getElementById('detailsModal').style.display = 'flex';
+        photoModal.style.display = 'flex';
     }
 
-    // إرسال رسالة للمراقب
-    async function sendMessage(monitorId) {
-        const message = prompt('أدخل الرسالة التي تريد إرسالها:');
-        if (!message) return;
+    function closePhotoModal() {
+        document.getElementById('photoModalBackdrop').style.display = 'none';
+    }
+
+    function downloadPhoto(code) {
+        const photoKey = `monitor_photo_${code}`;
+        const photoData = localStorage.getItem(photoKey);
         
-        try {
-            const monitor = allMonitors.find(m => m.id === monitorId);
-            await db.collection('messages').add({
-                monitorId: monitorId,
-                monitorCode: monitor.code,
-                message: message,
-                sender: 'admin',
-                timestamp: new Date().toISOString(),
-                read: false
-            });
-            
-            alert('تم إرسال الرسالة بنجاح');
-        } catch (error) {
-            console.error('Error sending message:', error);
-            alert('فشل في إرسال الرسالة');
+        if (!photoData) {
+            alert('لا توجد صورة للتحميل');
+            return;
         }
-    }
-
-    // إرسال تنبيه
-    async function sendAlert(monitorId) {
-        try {
-            const monitor = allMonitors.find(m => m.id === monitorId);
-            await db.collection('alerts').add({
-                monitorId: monitorId,
-                monitorCode: monitor.code,
-                type: 'admin_alert',
-                message: 'تنبيه من المسؤول',
-                timestamp: new Date().toISOString(),
-                priority: 'high'
-            });
-            
-            alert('تم إرسال التنبيه بنجاح');
-        } catch (error) {
-            console.error('Error sending alert:', error);
-            alert('فشل في إرسال التنبيه');
-        }
-    }
-
-    // الحصول على النشاطات الأخيرة
-    async function getRecentActivities(monitorCode) {
-        try {
-            const snapshot = await db.collection('activityLogs')
-                .where('monitorCode', '==', monitorCode)
-                .orderBy('timestamp', 'desc')
-                .limit(10)
-                .get();
-            
-            return snapshot.docs.map(doc => doc.data());
-        } catch (error) {
-            console.error('Error getting activities:', error);
-            return [];
-        }
-    }
-
-    // إغلاق المودال
-    function closeModal() {
-        document.getElementById('detailsModal').style.display = 'none';
-    }
-
-    // تهيئة الرسوم البيانية
-    function initCharts() {
-        const ctx = document.getElementById('statsChart').getContext('2d');
         
-        statsChart = new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: ['متصلون', 'غير متصلين', 'وصلوا', 'صوتوا'],
-                datasets: [{
-                    data: [0, 0, 0, 0],
-                    backgroundColor: [
-                        'rgba(46, 204, 113, 0.8)',
-                        'rgba(231, 76, 60, 0.8)',
-                        'rgba(52, 152, 219, 0.8)',
-                        'rgba(155, 89, 182, 0.8)'
-                    ],
-                    borderColor: [
-                        '#2ecc71',
-                        '#e74c3c',
-                        '#3498db',
-                        '#9b59b6'
-                    ],
-                    borderWidth: 2
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        rtl: true
-                    }
-                }
-            }
-        });
+        const a = document.createElement('a');
+        a.href = photoData;
+        a.download = `strip_${code}_${Date.now()}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
     }
 
-    // تحديث وقت آخر تحديث
-    function updateLastUpdateTime() {
+    // ====== التقارير ======
+    function renderReports() {
+        const container = document.getElementById('reportsContainer');
+        
+        if (!reports || reports.length === 0) {
+            container.innerHTML = '';
+            document.getElementById('noReportsData').style.display = 'block';
+            return;
+        }
+        
+        container.innerHTML = reports
+            .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+            .map(report => `
+                <div class="report-card ${report.priority}">
+                    <div class="report-header">
+                        <h4 class="report-title">${report.title}</h4>
+                        <div class="report-time">
+                            <i class="far fa-clock"></i>
+                            ${formatTime(report.timestamp)}
+                        </div>
+                    </div>
+                    <div class="report-content">
+                        ${report.description}
+                    </div>
+                    <div class="report-footer">
+                        <span><i class="fas fa-user"></i> ${report.monitorName}</span>
+                        <span><i class="fas fa-map-marker-alt"></i> ${report.location}</span>
+                        <span class="status-badge ${report.resolved ? 'status-online' : 'status-pending'}">
+                            ${report.resolved ? 'تم الحل' : 'قيد المعالجة'}
+                        </span>
+                    </div>
+                </div>
+            `).join('');
+        
+        document.getElementById('noReportsData').style.display = 'none';
+    }
+
+    // ====== الإحصائيات والتحديثات ======
+    function updateStats() {
+        if (!monitors) return;
+        
+        const total = monitors.length;
+        const online = monitors.filter(m => m.online).length;
+        const arrived = monitors.filter(m => m.arrived).length;
+        const issues = monitors.filter(m => m.hasIssue).length;
+        
+        document.getElementById('totalMonitors').textContent = total;
+        document.getElementById('onlineMonitors').textContent = online;
+        document.getElementById('arrivedMonitors').textContent = arrived;
+        document.getElementById('issuesCount').textContent = issues;
+    }
+
+    function updateCurrentTime() {
         const now = new Date();
-        const timeStr = now.toLocaleTimeString('ar-EG', { 
-            hour: '2-digit', 
+        const timeString = now.toLocaleTimeString('ar-EG', {
+            hour: '2-digit',
             minute: '2-digit',
             second: '2-digit'
         });
-        document.getElementById('lastUpdateTime').textContent = timeStr;
+        const dateString = now.toLocaleDateString('ar-EG', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+        
+        const timeElement = document.getElementById('currentTime');
+        if (timeElement) {
+            timeElement.innerHTML = `
+                <i class="far fa-clock"></i>
+                ${timeString}<br>
+                <small>${dateString}</small>
+            `;
+        }
     }
 
-    // تنسيق الوقت
+    function checkConnection() {
+        const online = navigator.onLine;
+        
+        if (online !== isConnected) {
+            isConnected = online;
+            if (online) {
+                showNotification('تم استعادة الاتصال بالإنترنت', 'success');
+            } else {
+                showNotification('فقدان الاتصال بالإنترنت', 'warning');
+            }
+        }
+        
+        // تحديث حالة المراقبين من التخزين المحلي
+        monitors.forEach(monitor => {
+            const onlineKey = `online_status_${monitor.code}`;
+            const statusKey = `monitor_status_${monitor.code}`;
+            
+            const onlineStatus = localStorage.getItem(onlineKey);
+            const statusData = localStorage.getItem(statusKey);
+            
+            if (onlineStatus === 'online') {
+                monitor.online = true;
+            } else if (onlineStatus === 'offline') {
+                monitor.online = false;
+            }
+            
+            if (statusData) {
+                try {
+                    const status = JSON.parse(statusData);
+                    monitor.arrived = status.arrived || false;
+                    monitor.voted = status.voted || false;
+                    monitor.hasIssue = status.hasIssue || false;
+                    monitor.issueText = status.issueText || '';
+                    monitor.location = status.location || null;
+                    monitor.lastUpdate = status.timestamp || monitor.lastUpdate;
+                } catch (error) {
+                    console.error('Error parsing status data:', error);
+                }
+            }
+        });
+        
+        saveMonitors();
+        renderMonitors();
+        updateStats();
+    }
+
+    // ====== واجهة المستخدم ======
+    function setupEventListeners() {
+        // البحث
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            searchInput.addEventListener('input', function() {
+                renderMonitors(this.value);
+            });
+        }
+        
+        // التبويبات
+        const menuItems = document.querySelectorAll('.menu-item');
+        menuItems.forEach(item => {
+            item.addEventListener('click', function(e) {
+                e.preventDefault();
+                const section = this.dataset.section;
+                switchSection(section);
+            });
+        });
+        
+        // إضافة مراقب
+        const addMonitorBtn = document.getElementById('addMonitorBtn');
+        if (addMonitorBtn) {
+            addMonitorBtn.addEventListener('click', openAddMonitorModal);
+        }
+        
+        // حفظ مراقب جديد
+        const addMonitorForm = document.getElementById('addMonitorForm');
+        if (addMonitorForm) {
+            addMonitorForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const monitorData = {
+                    name: document.getElementById('monitorName').value.trim(),
+                    phone: document.getElementById('monitorPhone').value.trim(),
+                    center: document.getElementById('monitorCenter').value.trim(),
+                    code: document.getElementById('monitorCode').value.trim()
+                };
+                
+                if (!monitorData.name || !monitorData.phone || !monitorData.center || !monitorData.code) {
+                    showNotification('يرجى ملء جميع الحقول', 'error');
+                    return;
+                }
+                
+                // التحقق من عدم تكرار الكود
+                const codeExists = monitors.some(m => m.code === monitorData.code);
+                if (codeExists) {
+                    showNotification('هذا الكود مستخدم مسبقاً', 'error');
+                    return;
+                }
+                
+                addMonitor(monitorData);
+                closeModal();
+            });
+        }
+        
+        // إعدادات التحديث التلقائي
+        const autoRefreshSelect = document.getElementById('autoRefresh');
+        if (autoRefreshSelect) {
+            autoRefreshSelect.addEventListener('change', function() {
+                settings.autoRefresh = parseInt(this.value);
+                saveSettings();
+                setupAutoRefresh();
+                showNotification('تم تحديث إعدادات التحديث التلقائي', 'success');
+            });
+        }
+        
+        // إعدادات التنبيهات
+        document.getElementById('soundAlerts').addEventListener('change', function() {
+            settings.soundAlerts = this.checked;
+            saveSettings();
+        });
+        
+        document.getElementById('desktopAlerts').addEventListener('change', function() {
+            settings.desktopAlerts = this.checked;
+            saveSettings();
+            
+            if (this.checked && Notification.permission === 'default') {
+                Notification.requestPermission();
+            }
+        });
+        
+        // زر إغلاق المودال
+        document.querySelector('.modal-close').addEventListener('click', closeModal);
+        document.getElementById('modalBackdrop').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+    }
+
+    function switchSection(section) {
+        // إخفاء جميع الأقسام
+        const sections = document.querySelectorAll('.section-content');
+        sections.forEach(sec => sec.style.display = 'none');
+        
+        // إزالة النشط من جميع التبويبات
+        const menuItems = document.querySelectorAll('.menu-item');
+        menuItems.forEach(item => item.classList.remove('active'));
+        
+        // إظهار القسم المطلوب
+        document.getElementById(`${section}SectionContent`).style.display = 'block';
+        
+        // تفعيل التبويب النشط
+        document.querySelector(`.menu-item[data-section="${section}"]`).classList.add('active');
+        
+        // تحديث البيانات إذا لزم الأمر
+        if (section === 'dashboard') {
+            updateStats();
+        } else if (section === 'monitors') {
+            renderMonitors();
+        } else if (section === 'reports') {
+            renderReports();
+        }
+    }
+
+    function openAddMonitorModal() {
+        generateCode();
+        document.getElementById('modalBackdrop').style.display = 'flex';
+    }
+
+    function closeModal() {
+        document.getElementById('modalBackdrop').style.display = 'none';
+        document.getElementById('addMonitorForm').reset();
+    }
+
+    function generateCode() {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        let code = '';
+        for (let i = 0; i < 6; i++) {
+            code += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        document.getElementById('monitorCode').value = code;
+    }
+
+    function generateId() {
+        return Date.now().toString(36) + Math.random().toString(36).substr(2);
+    }
+
+    // ====== التنبيهات والإشعارات ======
+    function showNotification(message, type = 'info') {
+        const container = document.getElementById('notificationContainer');
+        
+        const notification = document.createElement('div');
+        notification.className = `notification ${type}`;
+        notification.innerHTML = `
+            <div class="notification-icon">
+                <i class="fas fa-${getNotificationIcon(type)}"></i>
+            </div>
+            <div class="notification-content">
+                <h4>${getNotificationTitle(type)}</h4>
+                <p>${message}</p>
+            </div>
+        `;
+        
+        container.appendChild(notification);
+        
+        // إزالة التنبيه بعد 5 ثواني
+        setTimeout(() => {
+            notification.style.animation = 'slideInRight 0.3s ease reverse';
+            setTimeout(() => notification.remove(), 300);
+        }, 5000);
+        
+        // تشغيل صوت التنبيه إذا كان مفعلاً
+        if (settings.soundAlerts) {
+            playNotificationSound(type);
+        }
+        
+        // عرض تنبيه سطح المكتب إذا كان مفعلاً ومصرحاً
+        if (settings.desktopAlerts && Notification.permission === 'granted') {
+            new Notification(getNotificationTitle(type), {
+                body: message,
+                icon: '/favicon.ico'
+            });
+        }
+    }
+
+    function getNotificationIcon(type) {
+        const icons = {
+            success: 'check-circle',
+            error: 'exclamation-circle',
+            warning: 'exclamation-triangle',
+            info: 'info-circle'
+        };
+        return icons[type] || 'info-circle';
+    }
+
+    function getNotificationTitle(type) {
+        const titles = {
+            success: 'نجاح',
+            error: 'خطأ',
+            warning: 'تحذير',
+            info: 'معلومة'
+        };
+        return titles[type] || 'إشعار';
+    }
+
+    function playNotificationSound(type) {
+        const audio = new Audio();
+        audio.src = type === 'error' ? 'error.mp3' : 'notification.mp3';
+        audio.play().catch(() => {});
+    }
+
+    // ====== التحديث التلقائي ======
+    function setupAutoRefresh() {
+        if (autoRefreshInterval) {
+            clearInterval(autoRefreshInterval);
+        }
+        
+        const interval = settings.autoRefresh;
+        if (interval > 0) {
+            autoRefreshInterval = setInterval(() => {
+                checkConnection();
+            }, interval);
+        }
+    }
+
+    // ====== التصدير والنسخ الاحتياطي ======
+    function exportData(format) {
+        const data = {
+            monitors: monitors,
+            reports: reports,
+            exportedAt: new Date().toISOString(),
+            user: currentUser.username
+        };
+        
+        const jsonString = JSON.stringify(data, null, 2);
+        
+        if (format === 'excel') {
+            // محاكاة تصدير Excel
+            let csv = 'اسم المراقب,رقم الهاتف,مركز الاقتراع,كود الدخول,الحالة,الوصول,التصويت,المشاكل\n';
+            monitors.forEach(m => {
+                csv += `${m.name},${m.phone},${m.center},${m.code},${m.online ? 'متصل' : 'غير متصل'},${m.arrived ? 'نعم' : 'لا'},${m.voted ? 'نعم' : 'لا'},${m.hasIssue ? 'نعم' : 'لا'}\n`;
+            });
+            
+            const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `مراقبين_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            
+            showNotification('تم تصدير البيانات كملف Excel', 'success');
+        } else {
+            // تصدير PDF
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `نسخة_احتياطية_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            
+            showNotification('تم تصدير البيانات كملف JSON', 'success');
+        }
+    }
+
+    function backupData() {
+        const backup = {
+            monitors: monitors,
+            reports: reports,
+            settings: settings,
+            timestamp: new Date().toISOString()
+        };
+        
+        const jsonString = JSON.stringify(backup, null, 2);
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `backup_${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+        
+        showNotification('تم إنشاء نسخة احتياطية', 'success');
+    }
+
+    function restoreData() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+        
+        input.onchange = function(e) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            
+            reader.onload = function(event) {
+                try {
+                    const data = JSON.parse(event.target.result);
+                    
+                    if (confirm('هل تريد استعادة النسخة الاحتياطية؟ سيتم فقدان البيانات الحالية.')) {
+                        monitors = data.monitors || [];
+                        reports = data.reports || [];
+                        settings = data.settings || {};
+                        
+                        saveMonitors();
+                        saveReports();
+                        saveSettings();
+                        
+                        loadMonitors();
+                        loadReports();
+                        loadSettings();
+                        
+                        showNotification('تم استعادة النسخة الاحتياطية بنجاح', 'success');
+                    }
+                } catch (error) {
+                    showNotification('خطأ في قراءة ملف النسخة الاحتياطية', 'error');
+                }
+            };
+            
+            reader.readAsText(file);
+        };
+        
+        input.click();
+    }
+
+    // ====== أدوات مساعدة ======
     function formatTime(timestamp) {
         if (!timestamp) return '--:--';
         
@@ -979,39 +2368,73 @@
         
         if (diffMins < 1) return 'الآن';
         if (diffMins < 60) return `قبل ${diffMins} دقيقة`;
+        if (diffMins < 1440) return `قبل ${Math.floor(diffMins / 60)} ساعة`;
         
-        return date.toLocaleTimeString('ar-EG', { 
-            hour: '2-digit', 
+        return date.toLocaleTimeString('ar-EG', {
+            hour: '2-digit',
             minute: '2-digit',
-            hour12: true 
+            hour12: true
         });
     }
 
-    // الحصول على نص الأولوية
-    function getPriorityText(priority) {
-        const priorities = {
-            'high': 'عالية',
-            'medium': 'متوسطة',
-            'low': 'منخفضة'
-        };
-        return priorities[priority] || 'متوسطة';
+    function handleScroll() {
+        const scrollTop = document.getElementById('scrollTop');
+        if (window.pageYOffset > 300) {
+            scrollTop.classList.add('visible');
+        } else {
+            scrollTop.classList.remove('visible');
+        }
     }
 
-    // الحصول على نص النشاط
-    function getActivityText(activityType) {
-        const activities = {
-            'login': 'تسجيل دخول',
-            'logout': 'تسجيل خروج',
-            'status_update': 'تحديث الحالة',
-            'location_update': 'تحديث الموقع',
-            'media_upload': 'رفع وسائط',
-            'issue_report': 'إبلاغ عن مشكلة'
-        };
-        return activities[activityType] || activityType;
+    function scrollToTop() {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // تشغيل التطبيق
-    init();
+    // ====== التحقق من الجلسة عند التحميل ======
+    window.addEventListener('load', function() {
+        const sessionData = localStorage.getItem('currentSession');
+        
+        if (sessionData) {
+            try {
+                const session = JSON.parse(sessionData);
+                const systemUsers = JSON.parse(localStorage.getItem('systemUsers') || '[]');
+                const user = systemUsers.find(u => u.username === session.username);
+                
+                if (user && (Date.now() - session.timestamp < 24 * 60 * 60 * 1000)) {
+                    // جلسة نشطة
+                    currentUser = user;
+                    STORAGE_KEY = 'election_system_' + currentUser.username;
+                    
+                    document.getElementById('currentUserName').textContent = currentUser.username;
+                    document.getElementById('userAvatar').textContent = currentUser.username.charAt(0).toUpperCase();
+                    
+                    document.getElementById('loginSection').style.display = 'none';
+                    document.getElementById('dashboardSection').style.display = 'flex';
+                    
+                    loadMonitors();
+                    loadReports();
+                    init();
+                    
+                    showNotification('مرحباً بعودتك!', 'success');
+                    return;
+                }
+            } catch (error) {
+                console.error('Session error:', error);
+            }
+        }
+        
+        // لا توجد جلسة نشطة
+        document.getElementById('loginSection').style.display = 'flex';
+        document.getElementById('dashboardSection').style.display = 'none';
+    });
+
+    // إضافة بيانات مستخدم افتراضية للتجربة
+    if (!localStorage.getItem('systemUsers')) {
+        localStorage.setItem('systemUsers', JSON.stringify([
+            { username: 'admin', password: 'admin123' },
+            { username: 'user1', password: 'pass123' }
+        ]));
+    }
 </script>
 </body>
 </html>
