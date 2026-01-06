@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>نظام مراقبة الانتخابات - لوحة تحكم المستخدم</title>
+    <title>نظام مراقبة الانتخابات - لوحة تحكم المدير</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     
     <!-- الخطوط والأيقونات -->
@@ -1114,10 +1114,10 @@
             <div class="logo-icon">
                 <i class="fas fa-shield-alt"></i>
             </div>
-            <h1>نظام مراقبة الانتخابات</h1>
+            <h1>لوحة تحكم المدير</h1>
         </div>
         
-        <p class="login-subtitle">دخول مدير / مستخدم النظام</p>
+        <p class="login-subtitle">دخول مدير النظام</p>
         
         <form id="loginForm">
             <div class="login-form-group">
@@ -1145,9 +1145,9 @@
         
         <div class="login-footer">
             <p><strong>ملاحظات هامة:</strong></p>
-            <p>• يرجى استخدام بيانات الدخول التي حصلت عليها من مدير النظام</p>
-            <p>• يتم حفظ بيانات المراقبين بشكل مؤقت في المتصفح</p>
-            <p>• تأكد من حفظ الرابط للوصول السريع</p>
+            <p>• يرجى استخدام بيانات الدخول الخاصة بمدير النظام</p>
+            <p>• يمكنك إضافة مراقبين وتوليد أكواد لهم</p>
+            <p>• المراقبون يستخدمون هذه الأكواد للدخول في تطبيق المراقب</p>
             <p style="margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border);">
                 <i class="fas fa-copyright"></i> نظام مراقبة الانتخابات 2024
             </p>
@@ -1191,9 +1191,9 @@
         
         <div class="sidebar-footer">
             <div class="user-profile">
-                <div class="user-avatar" id="userAvatar">U</div>
+                <div class="user-avatar" id="userAvatar">M</div>
                 <div class="user-info">
-                    <h4 id="currentUserName">مستخدم</h4>
+                    <h4 id="currentUserName">مدير</h4>
                     <p>مدير النظام</p>
                 </div>
             </div>
@@ -1393,30 +1393,6 @@
                             </label>
                         </div>
                     </div>
-                    
-                    <div class="form-group">
-                        <label>تصدير البيانات</label>
-                        <div class="form-actions">
-                            <button class="btn btn-secondary" onclick="exportData('excel')">
-                                <i class="fas fa-file-excel"></i> تصدير Excel
-                            </button>
-                            <button class="btn btn-secondary" onclick="exportData('pdf')">
-                                <i class="fas fa-file-pdf"></i> تصدير PDF
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>نسخ احتياطي</label>
-                        <div class="form-actions">
-                            <button class="btn btn-secondary" onclick="backupData()">
-                                <i class="fas fa-save"></i> حفظ نسخة احتياطية
-                            </button>
-                            <button class="btn btn-secondary" onclick="restoreData()">
-                                <i class="fas fa-upload"></i> استعادة نسخة
-                            </button>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
@@ -1448,13 +1424,16 @@
                 </div>
                 
                 <div class="form-group">
-                    <label>كود الدخول</label>
+                    <label>كود الدخول (يستخدمه المراقب للدخول)</label>
                     <div style="display: flex; gap: 10px;">
                         <input type="text" class="form-control" id="monitorCode" required style="flex: 1;">
                         <button type="button" class="btn btn-secondary" onclick="generateCode()" style="width: auto; padding: 0 20px;">
                             توليد
                         </button>
                     </div>
+                    <small style="color: var(--gray); display: block; margin-top: 5px;">
+                        سلم هذا الكود للمراقب ليدخل به في تطبيق المراقب
+                    </small>
                 </div>
                 
                 <div class="form-actions">
@@ -1462,7 +1441,7 @@
                         <i class="fas fa-times"></i> إلغاء
                     </button>
                     <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save"></i> حفظ
+                        <i class="fas fa-save"></i> حفظ المراقب
                     </button>
                 </div>
             </form>
@@ -1491,43 +1470,47 @@
 </div>
 
 <script>
-    // المتغيرات العامة
+    // ====== النظام الرئيسي ======
     let currentUser = null;
     let monitors = [];
     let reports = [];
     let settings = {};
     let autoRefreshInterval = null;
-    let STORAGE_KEY = null;
     let isConnected = true;
 
-    // تهيئة النظام
+    // ====== تهيئة النظام ======
     function init() {
         loadSettings();
         setupEventListeners();
         updateCurrentTime();
-        checkConnection();
+        loadMonitors();
+        loadReports();
         
         // تحديث الوقت كل دقيقة
         setInterval(updateCurrentTime, 60000);
         
+        // تحديث تلقائي للبيانات
+        setupAutoRefresh();
+        
         // تحديث حالة الاتصال
         setInterval(checkConnection, 10000);
         
-        // إعداد تحديث تلقائي
-        setupAutoRefresh();
-        
         // إعداد زر العودة للأعلى
         window.addEventListener('scroll', handleScroll);
+        
+        // تحديث الإحصائيات
+        updateStats();
     }
 
     // ====== إدارة البيانات ======
     function loadMonitors() {
         try {
-            const data = localStorage.getItem(STORAGE_KEY + '_monitors');
+            const data = localStorage.getItem('election_monitors');
             monitors = data ? JSON.parse(data) : [];
+            console.log('Loaded monitors:', monitors.length);
         } catch (error) {
             monitors = [];
-            showNotification('خطأ في تحميل بيانات المراقبين', 'error');
+            console.error('Error loading monitors:', error);
         }
         renderMonitors();
         updateStats();
@@ -1535,15 +1518,17 @@
 
     function saveMonitors() {
         try {
-            localStorage.setItem(STORAGE_KEY + '_monitors', JSON.stringify(monitors));
+            localStorage.setItem('election_monitors', JSON.stringify(monitors));
+            console.log('Saved monitors:', monitors.length);
         } catch (error) {
+            console.error('Error saving monitors:', error);
             showNotification('خطأ في حفظ بيانات المراقبين', 'error');
         }
     }
 
     function loadReports() {
         try {
-            const data = localStorage.getItem(STORAGE_KEY + '_reports');
+            const data = localStorage.getItem('monitor_issues_list');
             reports = data ? JSON.parse(data) : [];
         } catch (error) {
             reports = [];
@@ -1551,17 +1536,9 @@
         renderReports();
     }
 
-    function saveReports() {
-        try {
-            localStorage.setItem(STORAGE_KEY + '_reports', JSON.stringify(reports));
-        } catch (error) {
-            console.error('Error saving reports:', error);
-        }
-    }
-
     function loadSettings() {
         try {
-            const data = localStorage.getItem(STORAGE_KEY + '_settings');
+            const data = localStorage.getItem('admin_settings');
             settings = data ? JSON.parse(data) : {
                 autoRefresh: 30000,
                 soundAlerts: true,
@@ -1583,13 +1560,13 @@
 
     function saveSettings() {
         try {
-            localStorage.setItem(STORAGE_KEY + '_settings', JSON.stringify(settings));
+            localStorage.setItem('admin_settings', JSON.stringify(settings));
         } catch (error) {
             console.error('Error saving settings:', error);
         }
     }
 
-    // ====== تسجيل الدخول والخروج ======
+    // ====== تسجيل دخول المدير ======
     document.getElementById('loginForm').addEventListener('submit', function(e) {
         e.preventDefault();
         
@@ -1601,9 +1578,13 @@
             return;
         }
         
-        // التحقق من المستخدم
-        const systemUsers = JSON.parse(localStorage.getItem('systemUsers') || '[]');
-        const user = systemUsers.find(u => 
+        // بيانات المدير الثابتة
+        const adminUsers = [
+            { username: 'admin', password: 'admin123', name: 'مدير النظام' },
+            { username: 'مدير', password: '123456', name: 'مدير النظام' }
+        ];
+        
+        const user = adminUsers.find(u => 
             u.username.toLowerCase() === username.toLowerCase() && 
             u.password === password
         );
@@ -1615,27 +1596,23 @@
         
         // تسجيل الدخول
         currentUser = user;
-        STORAGE_KEY = 'election_system_' + currentUser.username;
         
         // حفظ جلسة المستخدم
-        localStorage.setItem('currentSession', JSON.stringify({
+        localStorage.setItem('admin_session', JSON.stringify({
             username: currentUser.username,
+            name: currentUser.name,
             timestamp: new Date().getTime()
         }));
         
         // إعداد واجهة المستخدم
-        document.getElementById('currentUserName').textContent = currentUser.username;
-        document.getElementById('userAvatar').textContent = currentUser.username.charAt(0).toUpperCase();
-        
-        // تحميل البيانات
-        loadMonitors();
-        loadReports();
+        document.getElementById('currentUserName').textContent = currentUser.name;
+        document.getElementById('userAvatar').textContent = currentUser.name.charAt(0);
         
         // إظهار لوحة التحكم
         document.getElementById('loginSection').style.display = 'none';
         document.getElementById('dashboardSection').style.display = 'flex';
         
-        showNotification('تم تسجيل الدخول بنجاح', 'success');
+        showNotification(`مرحباً ${currentUser.name}`, 'success');
         
         // تشغيل النظام
         init();
@@ -1658,7 +1635,7 @@
 
     document.getElementById('logoutBtn').addEventListener('click', function() {
         if (confirm('هل تريد تسجيل الخروج؟')) {
-            localStorage.removeItem('currentSession');
+            localStorage.removeItem('admin_session');
             location.reload();
         }
     });
@@ -1688,7 +1665,40 @@
             tbody.innerHTML = '';
             document.getElementById('noMonitorsData').style.display = 'block';
         } else {
-            tbody.innerHTML = filteredMonitors.map((monitor, index) => `
+            tbody.innerHTML = filteredMonitors.map((monitor, index) => {
+                // جلب الحالة الحالية من التخزين المحلي
+                const statusKey = `monitor_status_${monitor.code}`;
+                const statusData = localStorage.getItem(statusKey);
+                let status = { arrived: false, voted: false, hasIssue: false };
+                
+                if (statusData) {
+                    try {
+                        status = JSON.parse(statusData);
+                    } catch (e) {
+                        console.error('Error parsing status:', e);
+                    }
+                }
+                
+                // جلب حالة الاتصال
+                const onlineKey = `monitor_online_${monitor.code}`;
+                const onlineStatus = localStorage.getItem(onlineKey);
+                const isOnline = onlineStatus === 'true';
+                
+                // جلب آخر تحديث
+                const lastSeenKey = `monitor_lastseen_${monitor.code}`;
+                const lastSeenData = localStorage.getItem(lastSeenKey);
+                let lastUpdate = monitor.lastUpdate;
+                
+                if (lastSeenData) {
+                    try {
+                        const lastSeen = JSON.parse(lastSeenData);
+                        lastUpdate = lastSeen.timestamp;
+                    } catch (e) {
+                        console.error('Error parsing last seen:', e);
+                    }
+                }
+                
+                return `
                 <tr>
                     <td>
                         <div class="monitor-info">
@@ -1701,85 +1711,105 @@
                     </td>
                     <td>${monitor.phone}</td>
                     <td>${monitor.center}</td>
-                    <td><code>${monitor.code}</code></td>
+                    <td><code style="background: #f1f3fa; padding: 4px 8px; border-radius: 6px;">${monitor.code}</code></td>
                     <td>
-                        <span class="status-badge ${monitor.online ? 'status-online' : 'status-offline'}">
-                            <i class="fas fa-${monitor.online ? 'wifi' : 'wifi-slash'}"></i>
-                            ${monitor.online ? 'متصل' : 'غير متصل'}
+                        <span class="status-badge ${isOnline ? 'status-online' : 'status-offline'}">
+                            <i class="fas fa-${isOnline ? 'wifi' : 'wifi-slash'}"></i>
+                            ${isOnline ? 'متصل' : 'غير متصل'}
                         </span>
                     </td>
                     <td>
-                        <span class="action-badge ${monitor.arrived ? 'true' : 'false'}" 
-                              onclick="toggleArrived(${index})">
-                            <i class="fas fa-${monitor.arrived ? 'check' : 'times'}"></i>
+                        <span class="action-badge ${status.arrived ? 'true' : 'false'}" 
+                              title="${status.arrived ? 'تم الوصول' : 'لم يتم الوصول'}"
+                              onclick="toggleMonitorArrived('${monitor.code}')">
+                            <i class="fas fa-${status.arrived ? 'check' : 'times'}"></i>
                         </span>
                     </td>
                     <td>
-                        <span class="action-badge ${monitor.voted ? 'true' : 'false'}" 
-                              onclick="toggleVoted(${index})">
-                            <i class="fas fa-${monitor.voted ? 'check' : 'times'}"></i>
+                        <span class="action-badge ${status.voted ? 'true' : 'false'}" 
+                              title="${status.voted ? 'تم التصويت' : 'لم يتم التصويت'}"
+                              onclick="toggleMonitorVoted('${monitor.code}')">
+                            <i class="fas fa-${status.voted ? 'check' : 'times'}"></i>
                         </span>
                     </td>
                     <td>
-                        <span class="action-badge ${monitor.hasIssue ? 'true' : 'neutral'}" 
-                              onclick="viewIssue(${index})">
-                            <i class="fas fa-${monitor.hasIssue ? 'exclamation-triangle' : 'check'}"></i>
+                        <span class="action-badge ${status.hasIssue ? 'true' : 'neutral'}" 
+                              title="${status.hasIssue ? 'يوجد مشكلة' : 'لا توجد مشكلة'}"
+                              onclick="viewMonitorIssue('${monitor.code}')">
+                            <i class="fas fa-${status.hasIssue ? 'exclamation-triangle' : 'check'}"></i>
                         </span>
                     </td>
                     <td>
                         <div class="action-buttons">
-                            <button class="action-btn" onclick="showLocation(${index})" title="عرض الموقع">
+                            <button class="action-btn" onclick="showMonitorLocation('${monitor.code}')" title="عرض الموقع">
                                 <i class="fas fa-map-marker-alt"></i>
                             </button>
-                            <button class="action-btn" onclick="viewPhoto(${index})" title="عرض الصورة">
+                            <button class="action-btn" onclick="viewMonitorPhoto('${monitor.code}')" title="عرض الصورة">
                                 <i class="fas fa-camera"></i>
                             </button>
-                            <button class="action-btn" onclick="deleteMonitor(${index})" title="حذف">
+                            <button class="action-btn" onclick="deleteMonitor(${index})" title="حذف المراقب">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </div>
                     </td>
                 </tr>
-            `).join('');
+                `;
+            }).join('');
             document.getElementById('noMonitorsData').style.display = 'none';
         }
         
         // عرض آخر 5 نشاطات
-        const recentMonitors = monitors
-            .sort((a, b) => new Date(b.lastUpdate || 0) - new Date(a.lastUpdate || 0))
-            .slice(0, 5);
+        const updatesList = JSON.parse(localStorage.getItem('monitor_updates_list') || '[]');
+        const recentUpdates = updatesList.slice(0, 5);
         
-        if (recentMonitors.length === 0) {
+        if (recentUpdates.length === 0) {
             quickTbody.innerHTML = '';
             document.getElementById('noQuickData').style.display = 'block';
         } else {
-            quickTbody.innerHTML = recentMonitors.map((monitor, index) => `
+            quickTbody.innerHTML = recentUpdates.map((update, index) => {
+                const monitor = monitors.find(m => m.code === update.code);
+                return `
                 <tr>
                     <td>
                         <div class="monitor-info">
-                            <div class="monitor-avatar">${monitor.name.charAt(0)}</div>
+                            <div class="monitor-avatar">${monitor ? monitor.name.charAt(0) : '?'}</div>
                             <div class="monitor-details">
-                                <h4>${monitor.name}</h4>
-                                <p>${monitor.center}</p>
+                                <h4>${update.name || monitor?.name || 'مراقب'}</h4>
+                                <p>${monitor?.center || 'غير محدد'}</p>
                             </div>
                         </div>
                     </td>
                     <td>
-                        <span class="status-badge ${monitor.online ? 'status-online' : 'status-offline'}">
-                            <i class="fas fa-${monitor.online ? 'wifi' : 'wifi-slash'}"></i>
-                            ${monitor.online ? 'متصل' : 'غير متصل'}
+                        <span class="status-badge status-pending">
+                            <i class="fas fa-sync-alt"></i>
+                            ${update.label}
                         </span>
                     </td>
-                    <td>${monitor.location || 'غير محدد'}</td>
-                    <td>${formatTime(monitor.lastUpdate)}</td>
+                    <td>${getLocationText(update.code)}</td>
+                    <td>${formatTime(update.timestamp)}</td>
                     <td>
-                        <button class="action-btn" onclick="showMonitorDetails(${monitors.findIndex(m => m.code === monitor.code)})">
+                        <button class="action-btn" onclick="showMonitorDetails('${update.code}')">
                             <i class="fas fa-eye"></i>
                         </button>
                     </td>
                 </tr>
-            `).join('');
+                `;
+            }).join('');
             document.getElementById('noQuickData').style.display = 'none';
+        }
+    }
+
+    function getLocationText(code) {
+        const locationKey = `monitor_location_${code}`;
+        const locationData = localStorage.getItem(locationKey);
+        
+        if (!locationData) return 'غير محدد';
+        
+        try {
+            const location = JSON.parse(locationData);
+            return `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`;
+        } catch (e) {
+            return 'غير محدد';
         }
     }
 
@@ -1787,13 +1817,6 @@
         const monitor = {
             id: generateId(),
             ...monitorData,
-            online: false,
-            arrived: false,
-            voted: false,
-            hasIssue: false,
-            issueText: '',
-            location: null,
-            lastUpdate: new Date().toISOString(),
             createdAt: new Date().toISOString()
         };
         
@@ -1802,11 +1825,38 @@
         renderMonitors();
         updateStats();
         
-        showNotification('تم إضافة المراقب بنجاح', 'success');
+        // تهيئة الحالة الأولية للمراقب
+        const statusKey = `monitor_status_${monitor.code}`;
+        localStorage.setItem(statusKey, JSON.stringify({
+            arrived: false,
+            voted: false,
+            hasIssue: false,
+            issueText: '',
+            lastUpdate: new Date().toISOString(),
+            monitorName: monitor.name,
+            monitorCode: monitor.code,
+            monitorPhone: monitor.phone,
+            monitorCenter: monitor.center
+        }));
+        
+        showNotification(`تم إضافة المراقب ${monitor.name} بنجاح`, 'success');
+        console.log('Added monitor:', monitor);
     }
 
     function deleteMonitor(index) {
         if (confirm('هل أنت متأكد من حذف هذا المراقب؟')) {
+            const monitor = monitors[index];
+            
+            // حذف البيانات المرتبطة
+            const statusKey = `monitor_status_${monitor.code}`;
+            localStorage.removeItem(statusKey);
+            
+            const onlineKey = `monitor_online_${monitor.code}`;
+            localStorage.removeItem(onlineKey);
+            
+            const locationKey = `monitor_location_${monitor.code}`;
+            localStorage.removeItem(locationKey);
+            
             monitors.splice(index, 1);
             saveMonitors();
             renderMonitors();
@@ -1816,40 +1866,57 @@
         }
     }
 
-    function toggleArrived(index) {
-        monitors[index].arrived = !monitors[index].arrived;
-        monitors[index].lastUpdate = new Date().toISOString();
-        saveMonitors();
+    function toggleMonitorArrived(code) {
+        const statusKey = `monitor_status_${code}`;
+        const currentStatus = JSON.parse(localStorage.getItem(statusKey) || '{}');
+        
+        currentStatus.arrived = !currentStatus.arrived;
+        currentStatus.lastUpdate = new Date().toISOString();
+        
+        localStorage.setItem(statusKey, JSON.stringify(currentStatus));
+        
+        // تحديث السجل
+        updateActivityLog(code, currentStatus.arrived ? 'arrived_true' : 'arrived_false');
+        
         renderMonitors();
         updateStats();
         
-        const status = monitors[index].arrived ? 'تم تحديد الوصول' : 'تم إلغاء الوصول';
-        showNotification(`${monitors[index].name}: ${status}`, 'info');
+        const status = currentStatus.arrived ? 'تم تحديد الوصول' : 'تم إلغاء الوصول';
+        showNotification(`${currentStatus.monitorName || 'مراقب'}: ${status}`, 'info');
     }
 
-    function toggleVoted(index) {
-        monitors[index].voted = !monitors[index].voted;
-        monitors[index].lastUpdate = new Date().toISOString();
-        saveMonitors();
+    function toggleMonitorVoted(code) {
+        const statusKey = `monitor_status_${code}`;
+        const currentStatus = JSON.parse(localStorage.getItem(statusKey) || '{}');
+        
+        currentStatus.voted = !currentStatus.voted;
+        currentStatus.lastUpdate = new Date().toISOString();
+        
+        localStorage.setItem(statusKey, JSON.stringify(currentStatus));
+        
+        // تحديث السجل
+        updateActivityLog(code, currentStatus.voted ? 'voted_true' : 'voted_false');
+        
         renderMonitors();
         updateStats();
         
-        const status = monitors[index].voted ? 'تم التصويت' : 'لم يتم التصويت';
-        showNotification(`${monitors[index].name}: ${status}`, 'info');
+        const status = currentStatus.voted ? 'تم التصويت' : 'لم يتم التصويت';
+        showNotification(`${currentStatus.monitorName || 'مراقب'}: ${status}`, 'info');
     }
 
-    function viewIssue(index) {
-        const monitor = monitors[index];
-        if (monitor.hasIssue && monitor.issueText) {
-            alert(`مشكلة مبلغ عنها من ${monitor.name}:\n\n${monitor.issueText}`);
+    function viewMonitorIssue(code) {
+        const statusKey = `monitor_status_${code}`;
+        const currentStatus = JSON.parse(localStorage.getItem(statusKey) || '{}');
+        
+        if (currentStatus.hasIssue && currentStatus.issueText) {
+            alert(`مشكلة مبلغ عنها من ${currentStatus.monitorName || 'مراقب'}:\n\n${currentStatus.issueText}`);
         } else {
             alert('لا توجد مشكلة مبلغ عنها من هذا المراقب');
         }
     }
 
-    function showLocation(index) {
-        const monitor = monitors[index];
-        const locationKey = `monitor_location_${monitor.code}`;
+    function showMonitorLocation(code) {
+        const locationKey = `monitor_location_${code}`;
         const locationData = localStorage.getItem(locationKey);
         
         if (!locationData) {
@@ -1867,16 +1934,16 @@
                 // التبديل إلى قسم الخريطة
                 switchSection('map');
                 
-                showNotification(`تم عرض موقع ${monitor.name} على الخريطة`, 'info');
+                const monitor = monitors.find(m => m.code === code);
+                showNotification(`تم عرض موقع ${monitor?.name || 'المراقب'} على الخريطة`, 'info');
             }
         } catch (error) {
             alert('خطأ في بيانات الموقع');
         }
     }
 
-    function viewPhoto(index) {
-        const monitor = monitors[index];
-        const photoKey = `monitor_photo_${monitor.code}`;
+    function viewMonitorPhoto(code) {
+        const photoKey = `monitor_photo_${code}`;
         const photoData = localStorage.getItem(photoKey);
         
         if (!photoData) {
@@ -1887,12 +1954,14 @@
         const photoModal = document.getElementById('photoModalBackdrop');
         const photoContent = document.getElementById('photoContent');
         
+        const monitor = monitors.find(m => m.code === code);
+        
         photoContent.innerHTML = `
             <div style="text-align: center;">
-                <h4 style="margin-bottom: 20px;">صورة الشريط - ${monitor.name}</h4>
+                <h4 style="margin-bottom: 20px;">صورة الشريط - ${monitor?.name || 'مراقب'}</h4>
                 <img src="${photoData}" style="max-width: 100%; max-height: 400px; border-radius: 10px;">
                 <div style="margin-top: 20px;">
-                    <button class="btn btn-primary" onclick="downloadPhoto('${monitor.code}')">
+                    <button class="btn btn-primary" onclick="downloadMonitorPhoto('${code}')">
                         <i class="fas fa-download"></i> تحميل الصورة
                     </button>
                 </div>
@@ -1906,7 +1975,7 @@
         document.getElementById('photoModalBackdrop').style.display = 'none';
     }
 
-    function downloadPhoto(code) {
+    function downloadMonitorPhoto(code) {
         const photoKey = `monitor_photo_${code}`;
         const photoData = localStorage.getItem(photoKey);
         
@@ -1921,6 +1990,50 @@
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
+    }
+
+    function showMonitorDetails(code) {
+        const monitor = monitors.find(m => m.code === code);
+        const statusKey = `monitor_status_${code}`;
+        const statusData = localStorage.getItem(statusKey);
+        const locationKey = `monitor_location_${code}`;
+        const locationData = localStorage.getItem(locationKey);
+        
+        let status = { arrived: false, voted: false, hasIssue: false };
+        let location = null;
+        
+        if (statusData) {
+            try {
+                status = JSON.parse(statusData);
+            } catch (e) {
+                console.error('Error parsing status:', e);
+            }
+        }
+        
+        if (locationData) {
+            try {
+                location = JSON.parse(locationData);
+            } catch (e) {
+                console.error('Error parsing location:', e);
+            }
+        }
+        
+        const message = `
+معلومات المراقب:
+الاسم: ${monitor?.name || 'غير محدد'}
+الهاتف: ${monitor?.phone || 'غير محدد'}
+المركز: ${monitor?.center || 'غير محدد'}
+الكود: ${code}
+
+الحالة:
+الوصول للمركز: ${status.arrived ? '✅ تم' : '❌ لم يتم'}
+التصويت: ${status.voted ? '✅ تم' : '❌ لم يتم'}
+المشاكل: ${status.hasIssue ? '⚠ يوجد' : '✅ لا يوجد'}
+
+${location ? `الموقع: ${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}` : 'الموقع: غير محدد'}
+        `;
+        
+        alert(message);
     }
 
     // ====== التقارير ======
@@ -1938,20 +2051,20 @@
             .map(report => `
                 <div class="report-card ${report.priority}">
                     <div class="report-header">
-                        <h4 class="report-title">${report.title}</h4>
+                        <h4 class="report-title">${report.issueType || 'مشكلة'}</h4>
                         <div class="report-time">
                             <i class="far fa-clock"></i>
                             ${formatTime(report.timestamp)}
                         </div>
                     </div>
                     <div class="report-content">
-                        ${report.description}
+                        ${report.issueDetails || 'لا توجد تفاصيل'}
                     </div>
                     <div class="report-footer">
-                        <span><i class="fas fa-user"></i> ${report.monitorName}</span>
-                        <span><i class="fas fa-map-marker-alt"></i> ${report.location}</span>
-                        <span class="status-badge ${report.resolved ? 'status-online' : 'status-pending'}">
-                            ${report.resolved ? 'تم الحل' : 'قيد المعالجة'}
+                        <span><i class="fas fa-user"></i> ${report.monitorName || 'مراقب'}</span>
+                        <span><i class="fas fa-map-marker-alt"></i> ${report.monitorCenter || 'غير محدد'}</span>
+                        <span class="status-badge ${report.status === 'resolved' ? 'status-online' : 'status-pending'}">
+                            ${report.status === 'resolved' ? 'تم الحل' : 'قيد المعالجة'}
                         </span>
                     </div>
                 </div>
@@ -1962,17 +2075,56 @@
 
     // ====== الإحصائيات والتحديثات ======
     function updateStats() {
-        if (!monitors) return;
-        
+        // حساب الإحصائيات
         const total = monitors.length;
-        const online = monitors.filter(m => m.online).length;
-        const arrived = monitors.filter(m => m.arrived).length;
-        const issues = monitors.filter(m => m.hasIssue).length;
+        
+        let online = 0;
+        let arrived = 0;
+        let issues = 0;
+        
+        monitors.forEach(monitor => {
+            const onlineKey = `monitor_online_${monitor.code}`;
+            if (localStorage.getItem(onlineKey) === 'true') online++;
+            
+            const statusKey = `monitor_status_${monitor.code}`;
+            const statusData = localStorage.getItem(statusKey);
+            if (statusData) {
+                try {
+                    const status = JSON.parse(statusData);
+                    if (status.arrived) arrived++;
+                    if (status.hasIssue) issues++;
+                } catch (e) {
+                    console.error('Error parsing status for stats:', e);
+                }
+            }
+        });
         
         document.getElementById('totalMonitors').textContent = total;
         document.getElementById('onlineMonitors').textContent = online;
         document.getElementById('arrivedMonitors').textContent = arrived;
         document.getElementById('issuesCount').textContent = issues;
+        
+        // تحديث المراقبين على الخريطة
+        const locatedMonitors = monitors.filter(monitor => {
+            const locationKey = `monitor_location_${monitor.code}`;
+            return localStorage.getItem(locationKey);
+        }).length;
+        document.getElementById('locatedMonitors').textContent = locatedMonitors;
+        
+        // تحديث آخر تحديث للموقع
+        const locationsList = JSON.parse(localStorage.getItem('monitor_locations_list') || '[]');
+        if (locationsList.length > 0) {
+            document.getElementById('lastLocationUpdate').textContent = formatTime(locationsList[0].timestamp);
+        }
+        
+        // تحديث التقارير
+        const totalReports = reports.length;
+        const emergencyReports = reports.filter(r => r.priority === 'high').length;
+        const resolvedReports = reports.filter(r => r.status === 'resolved').length;
+        
+        document.getElementById('totalReports').textContent = totalReports;
+        document.getElementById('emergencyReports').textContent = emergencyReports;
+        document.getElementById('resolvedReports').textContent = resolvedReports;
     }
 
     function updateCurrentTime() {
@@ -2011,38 +2163,26 @@
             }
         }
         
-        // تحديث حالة المراقبين من التخزين المحلي
-        monitors.forEach(monitor => {
-            const onlineKey = `online_status_${monitor.code}`;
-            const statusKey = `monitor_status_${monitor.code}`;
-            
-            const onlineStatus = localStorage.getItem(onlineKey);
-            const statusData = localStorage.getItem(statusKey);
-            
-            if (onlineStatus === 'online') {
-                monitor.online = true;
-            } else if (onlineStatus === 'offline') {
-                monitor.online = false;
-            }
-            
-            if (statusData) {
-                try {
-                    const status = JSON.parse(statusData);
-                    monitor.arrived = status.arrived || false;
-                    monitor.voted = status.voted || false;
-                    monitor.hasIssue = status.hasIssue || false;
-                    monitor.issueText = status.issueText || '';
-                    monitor.location = status.location || null;
-                    monitor.lastUpdate = status.timestamp || monitor.lastUpdate;
-                } catch (error) {
-                    console.error('Error parsing status data:', error);
-                }
-            }
+        // تحديث البيانات
+        loadMonitors();
+        loadReports();
+        updateStats();
+    }
+
+    function updateActivityLog(code, action) {
+        const updatesList = JSON.parse(localStorage.getItem('monitor_updates_list') || '[]');
+        const monitor = monitors.find(m => m.code === code);
+        
+        updatesList.unshift({
+            code: code,
+            name: monitor?.name || 'مراقب',
+            action: action,
+            timestamp: new Date().toISOString()
         });
         
-        saveMonitors();
-        renderMonitors();
-        updateStats();
+        // الحفاظ على آخر 50 تحديث
+        if (updatesList.length > 50) updatesList.pop();
+        localStorage.setItem('monitor_updates_list', JSON.stringify(updatesList));
     }
 
     // ====== واجهة المستخدم ======
@@ -2156,6 +2296,9 @@
             renderMonitors();
         } else if (section === 'reports') {
             renderReports();
+        } else if (section === 'map') {
+            // تحديث الخريطة
+            loadMonitors();
         }
     }
 
@@ -2255,106 +2398,11 @@
         const interval = settings.autoRefresh;
         if (interval > 0) {
             autoRefreshInterval = setInterval(() => {
-                checkConnection();
+                loadMonitors();
+                loadReports();
+                updateStats();
             }, interval);
         }
-    }
-
-    // ====== التصدير والنسخ الاحتياطي ======
-    function exportData(format) {
-        const data = {
-            monitors: monitors,
-            reports: reports,
-            exportedAt: new Date().toISOString(),
-            user: currentUser.username
-        };
-        
-        const jsonString = JSON.stringify(data, null, 2);
-        
-        if (format === 'excel') {
-            // محاكاة تصدير Excel
-            let csv = 'اسم المراقب,رقم الهاتف,مركز الاقتراع,كود الدخول,الحالة,الوصول,التصويت,المشاكل\n';
-            monitors.forEach(m => {
-                csv += `${m.name},${m.phone},${m.center},${m.code},${m.online ? 'متصل' : 'غير متصل'},${m.arrived ? 'نعم' : 'لا'},${m.voted ? 'نعم' : 'لا'},${m.hasIssue ? 'نعم' : 'لا'}\n`;
-            });
-            
-            const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `مراقبين_${new Date().toISOString().split('T')[0]}.csv`;
-            a.click();
-            
-            showNotification('تم تصدير البيانات كملف Excel', 'success');
-        } else {
-            // تصدير PDF
-            const blob = new Blob([jsonString], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `نسخة_احتياطية_${new Date().toISOString().split('T')[0]}.json`;
-            a.click();
-            
-            showNotification('تم تصدير البيانات كملف JSON', 'success');
-        }
-    }
-
-    function backupData() {
-        const backup = {
-            monitors: monitors,
-            reports: reports,
-            settings: settings,
-            timestamp: new Date().toISOString()
-        };
-        
-        const jsonString = JSON.stringify(backup, null, 2);
-        const blob = new Blob([jsonString], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `backup_${new Date().toISOString().split('T')[0]}.json`;
-        a.click();
-        
-        showNotification('تم إنشاء نسخة احتياطية', 'success');
-    }
-
-    function restoreData() {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = '.json';
-        
-        input.onchange = function(e) {
-            const file = e.target.files[0];
-            const reader = new FileReader();
-            
-            reader.onload = function(event) {
-                try {
-                    const data = JSON.parse(event.target.result);
-                    
-                    if (confirm('هل تريد استعادة النسخة الاحتياطية؟ سيتم فقدان البيانات الحالية.')) {
-                        monitors = data.monitors || [];
-                        reports = data.reports || [];
-                        settings = data.settings || {};
-                        
-                        saveMonitors();
-                        saveReports();
-                        saveSettings();
-                        
-                        loadMonitors();
-                        loadReports();
-                        loadSettings();
-                        
-                        showNotification('تم استعادة النسخة الاحتياطية بنجاح', 'success');
-                    }
-                } catch (error) {
-                    showNotification('خطأ في قراءة ملف النسخة الاحتياطية', 'error');
-                }
-            };
-            
-            reader.readAsText(file);
-        };
-        
-        input.click();
     }
 
     // ====== أدوات مساعدة ======
@@ -2392,27 +2440,28 @@
 
     // ====== التحقق من الجلسة عند التحميل ======
     window.addEventListener('load', function() {
-        const sessionData = localStorage.getItem('currentSession');
+        // التحقق من جلسة المدير
+        const sessionData = localStorage.getItem('admin_session');
         
         if (sessionData) {
             try {
                 const session = JSON.parse(sessionData);
-                const systemUsers = JSON.parse(localStorage.getItem('systemUsers') || '[]');
-                const user = systemUsers.find(u => u.username === session.username);
-                
-                if (user && (Date.now() - session.timestamp < 24 * 60 * 60 * 1000)) {
-                    // جلسة نشطة
-                    currentUser = user;
-                    STORAGE_KEY = 'election_system_' + currentUser.username;
+                // إذا كانت الجلسة حديثة (أقل من 8 ساعات)
+                if (Date.now() - session.timestamp < 8 * 60 * 60 * 1000) {
+                    currentUser = {
+                        username: session.username,
+                        name: session.name
+                    };
                     
-                    document.getElementById('currentUserName').textContent = currentUser.username;
-                    document.getElementById('userAvatar').textContent = currentUser.username.charAt(0).toUpperCase();
+                    document.getElementById('currentUserName').textContent = session.name;
+                    document.getElementById('userAvatar').textContent = session.name.charAt(0);
                     
                     document.getElementById('loginSection').style.display = 'none';
                     document.getElementById('dashboardSection').style.display = 'flex';
                     
-                    loadMonitors();
-                    loadReports();
+                    // تهيئة بيانات اختبارية إذا لزم الأمر
+                    initializeSampleData();
+                    
                     init();
                     
                     showNotification('مرحباً بعودتك!', 'success');
@@ -2428,12 +2477,51 @@
         document.getElementById('dashboardSection').style.display = 'none';
     });
 
-    // إضافة بيانات مستخدم افتراضية للتجربة
-    if (!localStorage.getItem('systemUsers')) {
-        localStorage.setItem('systemUsers', JSON.stringify([
-            { username: 'admin', password: 'admin123' },
-            { username: 'user1', password: 'pass123' }
-        ]));
+    // تهيئة بيانات عينة
+    function initializeSampleData() {
+        // فقط إذا لم تكن هناك بيانات
+        if (!localStorage.getItem('election_monitors')) {
+            const sampleMonitors = [
+                {
+                    id: '1',
+                    code: 'MON001',
+                    name: 'أحمد محمد',
+                    phone: '07701234567',
+                    center: 'مدرسة النصر الابتدائية',
+                    createdAt: new Date().toISOString()
+                },
+                {
+                    id: '2',
+                    code: 'MON002',
+                    name: 'سارة علي',
+                    phone: '07707654321',
+                    center: 'قاعة المؤتمرات المركزية',
+                    createdAt: new Date().toISOString()
+                }
+            ];
+            localStorage.setItem('election_monitors', JSON.stringify(sampleMonitors));
+            
+            // تهيئة حالات المراقبين
+            sampleMonitors.forEach(monitor => {
+                const statusKey = `monitor_status_${monitor.code}`;
+                localStorage.setItem(statusKey, JSON.stringify({
+                    arrived: false,
+                    voted: false,
+                    hasIssue: false,
+                    issueText: '',
+                    lastUpdate: new Date().toISOString(),
+                    monitorName: monitor.name,
+                    monitorCode: monitor.code,
+                    monitorPhone: monitor.phone,
+                    monitorCenter: monitor.center
+                }));
+            });
+        }
+    }
+
+    // تمكين الإشعارات إذا كان المستخدم يريد
+    if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
     }
 </script>
 </body>
