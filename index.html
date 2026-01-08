@@ -9,54 +9,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Firebase SDK -->
-    <script type="module">
-        // Import the functions you need from the SDKs you need
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
-        import { getDatabase, ref, set, get, update, remove, onValue, push } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-database.js";
-        import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
-        import { getFirestore, collection, query, where, getDocs, doc, updateDoc, Timestamp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
-
-        // Your web app's Firebase configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyDdiudUa5jjcZDwJgYBbLdC-YBNQ5rlqvU",
-            authDomain: "election-system-9cbb8.firebaseapp.com",
-            projectId: "election-system-9cbb8",
-            storageBucket: "election-system-9cbb8.firebasestorage.app",
-            messagingSenderId: "886706894008",
-            appId: "1:886706894008:web:270556771843614e56b04d",
-            databaseURL: "https://election-system-9cbb8-default-rtdb.firebaseio.com/"
-        };
-
-        // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const database = getDatabase(app);
-        const auth = getAuth(app);
-        
-        // جعل المتغيرات متاحة عالمياً
-        window.firebaseApp = app;
-        window.firebaseDatabase = database;
-        window.firebaseAuth = auth;
-        window.firebaseFirestore = getFirestore(app);
-        window.firebaseRef = ref;
-        window.firebaseSet = set;
-        window.firebaseGet = get;
-        window.firebaseUpdate = update;
-        window.firebaseRemove = remove;
-        window.firebaseOnValue = onValue;
-        window.firebasePush = push;
-        window.firebaseSignInWithEmailAndPassword = signInWithEmailAndPassword;
-        window.firebaseSignOut = signOut;
-        window.firebaseOnAuthStateChanged = onAuthStateChanged;
-        window.firebaseCollection = collection;
-        window.firebaseQuery = query;
-        window.firebaseWhere = where;
-        window.firebaseGetDocs = getDocs;
-        window.firebaseDoc = doc;
-        window.firebaseUpdateDoc = updateDoc;
-        window.firebaseTimestamp = Timestamp;
-    </script>
-    
     <style>
         :root {
             --primary: #1a9bff;
@@ -1553,229 +1505,22 @@
     let isConnected = true;
     let currentSession = null;
     
-    // ====== Firebase References ======
-    let database, auth, firestore;
+    // Firebase Configuration
+    const firebaseConfig = {
+        apiKey: "AIzaSyDdiudUa5jjcZDwJgYBbLdC-YBNQ5rlqvU",
+        authDomain: "election-system-9cbb8.firebaseapp.com",
+        projectId: "election-system-9cbb8",
+        storageBucket: "election-system-9cbb8.firebasestorage.app",
+        messagingSenderId: "886706894008",
+        appId: "1:886706894008:web:270556771843614e56b04d",
+        databaseURL: "https://election-system-9cbb8-default-rtdb.firebaseio.com/"
+    };
+
+    // Firebase variables
+    let app, database, auth;
     let monitorsRef, reportsRef, updatesRef, settingsRef;
 
-    // ====== تهيئة Firebase ======
-    function initFirebase() {
-        // مراجع قاعدة البيانات
-        database = window.firebaseDatabase;
-        auth = window.firebaseAuth;
-        firestore = window.firebaseFirestore;
-        
-        monitorsRef = window.firebaseRef(database, 'monitors');
-        reportsRef = window.firebaseRef(database, 'reports');
-        updatesRef = window.firebaseRef(database, 'updates');
-        settingsRef = window.firebaseRef(database, 'adminSettings');
-    }
-
-    // ====== تهيئة النظام ======
-    async function init() {
-        try {
-            // انتظار تهيئة Firebase
-            await waitForFirebase();
-            initFirebase();
-            
-            await loadSettings();
-            setupEventListeners();
-            updateCurrentTime();
-            
-            // تحميل البيانات من Firebase
-            await loadMonitors();
-            await loadReports();
-            await loadUpdates();
-            
-            // تحديث الوقت كل دقيقة
-            setInterval(updateCurrentTime, 60000);
-            
-            // تحديث تلقائي للبيانات
-            setupAutoRefresh();
-            
-            // تحديث حالة الاتصال
-            setInterval(checkConnection, 10000);
-            
-            // إعداد زر العودة للأعلى
-            window.addEventListener('scroll', handleScroll);
-            
-            // تحديث الإحصائيات
-            updateStats();
-            
-            // الاستماع للتحديثات في الوقت الحقيقي
-            setupRealtimeListeners();
-            
-            showNotification('✅ تم التوصيل بقاعدة البيانات', 'success');
-        } catch (error) {
-            console.error('Error initializing:', error);
-            showNotification('خطأ في تهيئة النظام. تحقق من اتصال الإنترنت.', 'error');
-        }
-    }
-
-    // ====== انتظار تهيئة Firebase ======
-    function waitForFirebase() {
-        return new Promise((resolve, reject) => {
-            const maxAttempts = 30;
-            let attempts = 0;
-            
-            const checkFirebase = () => {
-                if (window.firebaseDatabase && window.firebaseAuth && window.firebaseFirestore) {
-                    resolve();
-                } else if (attempts >= maxAttempts) {
-                    reject(new Error('Firebase initialization timeout'));
-                } else {
-                    attempts++;
-                    setTimeout(checkFirebase, 100);
-                }
-            };
-            
-            checkFirebase();
-        });
-    }
-
-    // ====== الاستماع للتحديثات في الوقت الحقيقي ======
-    function setupRealtimeListeners() {
-        // الاستماع لتحديثات المراقبين
-        window.firebaseOnValue(monitorsRef, (snapshot) => {
-            if (snapshot.exists()) {
-                const data = snapshot.val();
-                monitors = Object.keys(data).map(key => ({
-                    id: key,
-                    ...data[key]
-                }));
-                renderMonitors();
-                updateStats();
-            } else {
-                monitors = [];
-                renderMonitors();
-            }
-        });
-        
-        // الاستماع لتحديثات التقارير
-        window.firebaseOnValue(reportsRef, (snapshot) => {
-            if (snapshot.exists()) {
-                const data = snapshot.val();
-                reports = Object.keys(data).map(key => ({
-                    id: key,
-                    ...data[key]
-                }));
-                renderReports();
-                updateStats();
-            } else {
-                reports = [];
-                renderReports();
-            }
-        });
-        
-        // الاستماع للتحديثات الفورية
-        window.firebaseOnValue(updatesRef, (snapshot) => {
-            if (snapshot.exists()) {
-                const data = snapshot.val();
-                updates = Object.keys(data).map(key => ({
-                    id: key,
-                    ...data[key]
-                }));
-                renderQuickUpdates(updates.slice(0, 5));
-            } else {
-                updates = [];
-                renderQuickUpdates([]);
-            }
-        });
-    }
-
-    // ====== إدارة البيانات ======
-    async function loadMonitors() {
-        try {
-            const snapshot = await window.firebaseGet(monitorsRef);
-            if (snapshot.exists()) {
-                const data = snapshot.val();
-                monitors = Object.keys(data).map(key => ({
-                    id: key,
-                    ...data[key]
-                }));
-                console.log('✅ تم تحميل المراقبين من Firebase:', monitors.length);
-            } else {
-                monitors = [];
-                console.log('لا توجد بيانات مراقبين في Firebase');
-            }
-            renderMonitors();
-            updateStats();
-        } catch (error) {
-            console.error('Error loading monitors:', error);
-            showNotification('خطأ في تحميل بيانات المراقبين', 'error');
-        }
-    }
-
-    async function loadReports() {
-        try {
-            const snapshot = await window.firebaseGet(reportsRef);
-            if (snapshot.exists()) {
-                const data = snapshot.val();
-                reports = Object.keys(data).map(key => ({
-                    id: key,
-                    ...data[key]
-                }));
-            } else {
-                reports = [];
-            }
-            renderReports();
-        } catch (error) {
-            console.error('Error loading reports:', error);
-        }
-    }
-
-    async function loadUpdates() {
-        try {
-            const snapshot = await window.firebaseGet(updatesRef);
-            if (snapshot.exists()) {
-                const data = snapshot.val();
-                updates = Object.keys(data).map(key => ({
-                    id: key,
-                    ...data[key]
-                }));
-            } else {
-                updates = [];
-            }
-        } catch (error) {
-            console.error('Error loading updates:', error);
-        }
-    }
-
-    async function loadSettings() {
-        try {
-            const snapshot = await window.firebaseGet(settingsRef);
-            if (snapshot.exists()) {
-                settings = snapshot.val();
-            } else {
-                settings = {
-                    autoRefresh: 30000,
-                    soundAlerts: true,
-                    desktopAlerts: false
-                };
-            }
-            
-            // تطبيق الإعدادات
-            document.getElementById('autoRefresh').value = settings.autoRefresh;
-            document.getElementById('soundAlerts').checked = settings.soundAlerts;
-            document.getElementById('desktopAlerts').checked = settings.desktopAlerts;
-        } catch (error) {
-            console.error('Error loading settings:', error);
-            settings = {
-                autoRefresh: 30000,
-                soundAlerts: true,
-                desktopAlerts: false
-            };
-        }
-    }
-
-    async function saveSettings() {
-        try {
-            await window.firebaseSet(settingsRef, settings);
-        } catch (error) {
-            console.error('Error saving settings:', error);
-        }
-    }
-
-    // ====== تسجيل دخول المدير - النظام الموحد ======
+    // ====== تسجيل دخول المدير ======
     document.getElementById('loginForm').addEventListener('submit', async function(e) {
         e.preventDefault();
         
@@ -1790,50 +1535,66 @@
         showLoader(true);
         
         try {
-            // 🔍 المحاولة الأولى: البحث في Firestore (نفس قاعدة الصفحة الأولى)
-            const usersRef = window.firebaseCollection(firestore, 'systemUsers');
-            const userQuery = window.firebaseQuery(
-                usersRef,
-                window.firebaseWhere('username', '==', username),
-                window.firebaseWhere('password', '==', password),
-                window.firebaseWhere('active', '==', true)
-            );
-            
-            const querySnapshot = await window.firebaseGetDocs(userQuery);
-            
-            if (!querySnapshot.empty) {
-                // ✅ المستخدم موجود في Firestore (نظام موحد مع الصفحة الأولى)
-                const userDoc = querySnapshot.docs[0];
-                const userData = userDoc.data();
-                
-                console.log('✅ تم العثور على المستخدم في Firestore:', userData);
-                
-                // تحديث آخر دخول في Firestore
-                try {
-                    await window.firebaseUpdateDoc(window.firebaseDoc(firestore, 'systemUsers', userDoc.id), {
-                        lastLogin: window.firebaseTimestamp.now(),
-                        lastActivity: window.firebaseTimestamp.now(),
-                        loginCount: (userData.loginCount || 0) + 1
-                    });
-                } catch (updateError) {
-                    console.log('تحديث الدخول اختياري:', updateError);
+            // 🔥 نظام تسجيل الدخول المبسط والمباشر
+            const testUsers = {
+                // مديرين افتراضيين
+                'admin': { 
+                    password: 'Admin@123', 
+                    name: 'المدير العام', 
+                    role: 'admin',
+                    email: 'admin@election.com'
+                },
+                'مدير': { 
+                    password: 'Manager@123', 
+                    name: 'مدير النظام', 
+                    role: 'manager',
+                    email: 'manager@election.com'
+                },
+                // مراقبين تجريبيين
+                'مراقب1': { 
+                    password: 'Test123', 
+                    name: 'مراقب تجريبي', 
+                    role: 'monitor',
+                    email: 'monitor1@election.com'
+                },
+                'ahmed': { 
+                    password: 'Ahmed123', 
+                    name: 'أحمد محمد', 
+                    role: 'monitor',
+                    email: 'ahmed@election.com'
+                },
+                'sara': { 
+                    password: 'Sara123', 
+                    name: 'سارة علي', 
+                    role: 'monitor',
+                    email: 'sara@election.com'
                 }
+            };
+            
+            // تحقق من المستخدم
+            if (testUsers[username] && testUsers[username].password === password) {
+                // ✅ دخول ناجح
+                const userData = testUsers[username];
+                
+                console.log('✅ تسجيل دخول ناجح:', userData);
                 
                 // حفظ بيانات الجلسة
                 currentSession = {
-                    id: userDoc.id,
-                    username: userData.username,
+                    id: 'user_' + Date.now(),
+                    username: username,
+                    name: userData.name,
                     email: userData.email,
-                    role: userData.role || 'user',
-                    phone: userData.phone,
+                    role: userData.role,
                     loginTime: new Date().toISOString(),
-                    source: 'firestore'
+                    source: 'local'
                 };
                 
                 localStorage.setItem('electionSession', JSON.stringify(currentSession));
                 
                 // تحديث واجهة المستخدم
-                updateUserInterface(userData);
+                document.getElementById('currentUserName').textContent = userData.name;
+                document.getElementById('userAvatar').textContent = userData.name.charAt(0);
+                document.getElementById('userRole').textContent = getRoleName(userData.role);
                 
                 // إظهار لوحة التحكم
                 document.getElementById('loginSection').style.display = 'none';
@@ -1842,71 +1603,25 @@
                 // إظهار معلومات الجلسة
                 document.getElementById('sessionInfo').style.display = 'block';
                 document.getElementById('sessionText').textContent = 
-                    `جلسة نشطة: ${userData.username} - ${getRoleName(userData.role || 'user')}`;
+                    `جلسة نشطة: ${userData.name} - ${getRoleName(userData.role)}`;
                 
-                showNotification(`✅ مرحباً ${userData.username} - ${getRoleName(userData.role || 'user')}`, 'success');
+                showNotification(`✅ مرحباً ${userData.name} - ${getRoleName(userData.role)}`, 'success');
                 
                 // تشغيل النظام
                 await init();
                 
             } else {
-                // 🔍 المحاولة الثانية: استخدام Firebase Authentication (للتوافق)
-                try {
-                    const email = username.includes('@') ? username : `${username}@election.com`;
-                    
-                    const userCredential = await window.firebaseSignInWithEmailAndPassword(auth, email, password);
-                    currentUser = userCredential.user;
-                    
-                    // البحث عن المستخدم في Firestore بالبريد
-                    const emailQuery = window.firebaseQuery(
-                        usersRef,
-                        window.firebaseWhere('email', '==', email)
-                    );
-                    
-                    const emailSnapshot = await window.firebaseGetDocs(emailQuery);
-                    
-                    if (!emailSnapshot.empty) {
-                        const emailDoc = emailSnapshot.docs[0];
-                        const emailData = emailDoc.data();
-                        
-                        currentSession = {
-                            id: emailDoc.id,
-                            username: emailData.username || username,
-                            email: emailData.email,
-                            role: emailData.role || 'user',
-                            loginTime: new Date().toISOString(),
-                            source: 'auth'
-                        };
-                    } else {
-                        currentSession = {
-                            id: currentUser.uid,
-                            username: username,
-                            email: email,
-                            role: 'user',
-                            loginTime: new Date().toISOString(),
-                            source: 'auth_new'
-                        };
-                    }
-                    
-                    localStorage.setItem('electionSession', JSON.stringify(currentSession));
-                    
-                    // تحديث واجهة المستخدم
-                    document.getElementById('currentUserName').textContent = username;
-                    document.getElementById('userAvatar').textContent = username.charAt(0);
-                    document.getElementById('userRole').textContent = 'مستخدم';
-                    
-                    document.getElementById('loginSection').style.display = 'none';
-                    document.getElementById('dashboardSection').style.display = 'flex';
-                    
-                    showNotification(`✅ مرحباً ${username}`, 'success');
-                    
-                    // تشغيل النظام
-                    await init();
-                    
-                } catch (authError) {
-                    console.error('Auth login error:', authError);
-                    showLoginError('اسم المستخدم أو كلمة المرور غير صحيحة');
-                }
+                // ❌ بيانات خاطئة
+                showLoginError('اسم المستخدم أو كلمة المرور غير صحيحة');
+                
+                // اهتزاز الحقول
+                const inputs = document.querySelectorAll('#loginForm input');
+                inputs.forEach(input => {
+                    input.style.borderColor = 'var(--danger)';
+                    setTimeout(() => {
+                        input.style.borderColor = '';
+                    }, 1000);
+                });
             }
             
         } catch (error) {
@@ -1916,22 +1631,6 @@
             showLoader(false);
         }
     });
-
-    // دالة لتحديث واجهة المستخدم
-    function updateUserInterface(userData) {
-        const username = userData.username;
-        const role = userData.role || 'user';
-        
-        document.getElementById('currentUserName').textContent = 
-            role === 'admin' ? 'المدير العام' : 
-            role === 'monitor' ? 'مراقب' : 
-            username;
-        
-        document.getElementById('userAvatar').textContent = 
-            username?.charAt(0)?.toUpperCase() || 'م';
-        
-        document.getElementById('userRole').textContent = getRoleName(role);
-    }
 
     // دالة للحصول على اسم الدور
     function getRoleName(role) {
@@ -1949,26 +1648,11 @@
         const errorEl = document.getElementById('loginError');
         errorEl.textContent = message;
         errorEl.style.display = 'block';
-        
-        // اهتزاز الحقول
-        const inputs = document.querySelectorAll('#loginForm input');
-        inputs.forEach(input => {
-            input.style.borderColor = 'var(--danger)';
-            setTimeout(() => {
-                input.style.borderColor = '';
-            }, 1000);
-        });
     }
 
-    document.getElementById('logoutBtn').addEventListener('click', async function() {
+    // ====== تسجيل الخروج ======
+    document.getElementById('logoutBtn').addEventListener('click', function() {
         if (confirm('هل تريد تسجيل الخروج؟')) {
-            try {
-                // محاولة تسجيل الخروج من Auth
-                await window.firebaseSignOut(auth);
-            } catch (error) {
-                console.log('Auth logout optional');
-            }
-            
             // مسح الجلسة
             localStorage.removeItem('electionSession');
             currentSession = null;
@@ -1988,12 +1672,8 @@
                 currentSession = JSON.parse(savedSession);
                 
                 // تلقائياً إظهار لوحة التحكم
-                document.getElementById('currentUserName').textContent = 
-                    currentSession.role === 'admin' ? 'المدير العام' : currentSession.username;
-                
-                document.getElementById('userAvatar').textContent = 
-                    currentSession.username?.charAt(0)?.toUpperCase() || 'م';
-                
+                document.getElementById('currentUserName').textContent = currentSession.name || currentSession.username;
+                document.getElementById('userAvatar').textContent = (currentSession.name || currentSession.username).charAt(0);
                 document.getElementById('userRole').textContent = getRoleName(currentSession.role);
                 
                 document.getElementById('loginSection').style.display = 'none';
@@ -2002,7 +1682,7 @@
                 // إظهار معلومات الجلسة
                 document.getElementById('sessionInfo').style.display = 'block';
                 document.getElementById('sessionText').textContent = 
-                    `جلسة نشطة: ${currentSession.username} - ${getRoleName(currentSession.role)}`;
+                    `جلسة نشطة: ${currentSession.name || currentSession.username} - ${getRoleName(currentSession.role)}`;
                 
                 // تشغيل النظام
                 init();
@@ -2011,47 +1691,174 @@
                 console.error('Error parsing saved session:', error);
                 localStorage.removeItem('electionSession');
             }
-        } else {
-            // التحقق من جلسة Firebase Auth
-            window.firebaseOnAuthStateChanged(auth, async (user) => {
-                if (user) {
-                    currentUser = user;
-                    
-                    // إنشاء جلسة من Auth
-                    currentSession = {
-                        id: user.uid,
-                        username: user.email?.split('@')[0] || 'مستخدم',
-                        email: user.email,
-                        role: 'user',
-                        loginTime: new Date().toISOString(),
-                        source: 'auth'
-                    };
-                    
-                    localStorage.setItem('electionSession', JSON.stringify(currentSession));
-                    
-                    document.getElementById('currentUserName').textContent = currentSession.username;
-                    document.getElementById('userAvatar').textContent = currentSession.username.charAt(0);
-                    document.getElementById('userRole').textContent = getRoleName(currentSession.role);
-                    
-                    document.getElementById('loginSection').style.display = 'none';
-                    document.getElementById('dashboardSection').style.display = 'flex';
-                    
-                    // إظهار معلومات الجلسة
-                    document.getElementById('sessionInfo').style.display = 'block';
-                    document.getElementById('sessionText').textContent = 
-                        `جلسة نشطة: ${currentSession.username} - ${getRoleName(currentSession.role)}`;
-                    
-                    await init();
-                    
-                    showNotification('✅ مرحباً بعودتك!', 'success');
-                }
-            });
         }
     });
+
+    // ====== تهيئة النظام ======
+    async function init() {
+        try {
+            setupEventListeners();
+            updateCurrentTime();
+            
+            // تحميل بيانات تجريبية
+            await loadSampleMonitors();
+            
+            // تحديث الوقت كل دقيقة
+            setInterval(updateCurrentTime, 60000);
+            
+            // تحديث تلقائي للبيانات
+            setupAutoRefresh();
+            
+            // تحديث حالة الاتصال
+            setInterval(checkConnection, 10000);
+            
+            // إعداد زر العودة للأعلى
+            window.addEventListener('scroll', handleScroll);
+            
+            // تحديث الإحصائيات
+            updateStats();
+            
+            showNotification('✅ تم تحميل النظام بنجاح', 'success');
+        } catch (error) {
+            console.error('Error initializing:', error);
+            showNotification('⚠️ حدث خطأ في تحميل النظام', 'error');
+        }
+    }
+
+    // ====== تحميل بيانات تجريبية ======
+    async function loadSampleMonitors() {
+        try {
+            // بيانات مراقبين تجريبية
+            monitors = [
+                {
+                    id: 'MON001',
+                    code: 'MON001',
+                    name: 'أحمد محمد',
+                    phone: '07701234567',
+                    center: 'مدرسة النصر الابتدائية',
+                    createdAt: new Date().toISOString(),
+                    status: {
+                        arrived: true,
+                        voted: false,
+                        hasIssue: false,
+                        issueText: '',
+                        isOnline: true,
+                        lastUpdate: new Date().toISOString()
+                    },
+                    location: {
+                        lat: 31.0413665,
+                        lng: 31.2334333
+                    }
+                },
+                {
+                    id: 'MON002',
+                    code: 'MON002',
+                    name: 'سارة علي',
+                    phone: '07707654321',
+                    center: 'قاعة المؤتمرات المركزية',
+                    createdAt: new Date().toISOString(),
+                    status: {
+                        arrived: false,
+                        voted: true,
+                        hasIssue: true,
+                        issueText: 'نقص في أوراق الاقتراع',
+                        isOnline: false,
+                        lastUpdate: new Date().toISOString()
+                    }
+                },
+                {
+                    id: 'MON003',
+                    code: 'MON003',
+                    name: 'محمد حسن',
+                    phone: '07709876543',
+                    center: 'نادي المعلمين',
+                    createdAt: new Date().toISOString(),
+                    status: {
+                        arrived: true,
+                        voted: true,
+                        hasIssue: false,
+                        issueText: '',
+                        isOnline: true,
+                        lastUpdate: new Date().toISOString()
+                    },
+                    location: {
+                        lat: 31.0456789,
+                        lng: 31.2345678
+                    }
+                }
+            ];
+            
+            // بيانات تقارير تجريبية
+            reports = [
+                {
+                    id: 'REP001',
+                    issueType: 'نقص في أوراق الاقتراع',
+                    issueDetails: 'يوجد نقص في أوراق الاقتراع في المركز، نحتاج إلى تزويد إضافي',
+                    priority: 'high',
+                    monitorName: 'سارة علي',
+                    monitorCenter: 'قاعة المؤتمرات المركزية',
+                    status: 'pending',
+                    timestamp: new Date(Date.now() - 3600000).toISOString() // قبل ساعة
+                },
+                {
+                    id: 'REP002',
+                    issueType: 'مشكلة في النظام',
+                    issueDetails: 'النظام بطيء جداً ويحتاج إلى إعادة تشغيل',
+                    priority: 'normal',
+                    monitorName: 'أحمد محمد',
+                    monitorCenter: 'مدرسة النصر الابتدائية',
+                    status: 'resolved',
+                    timestamp: new Date(Date.now() - 7200000).toISOString() // قبل ساعتين
+                }
+            ];
+            
+            // بيانات تحديثات تجريبية
+            updates = [
+                {
+                    id: 'UPD001',
+                    code: 'MON001',
+                    name: 'أحمد محمد',
+                    action: 'arrived_true',
+                    timestamp: new Date(Date.now() - 1800000).toISOString() // قبل نصف ساعة
+                },
+                {
+                    id: 'UPD002',
+                    code: 'MON002',
+                    name: 'سارة علي',
+                    action: 'voted_true',
+                    timestamp: new Date(Date.now() - 900000).toISOString() // قبل 15 دقيقة
+                }
+            ];
+            
+            // إعدادات النظام
+            settings = {
+                autoRefresh: 30000,
+                soundAlerts: true,
+                desktopAlerts: false
+            };
+            
+            // تطبيق الإعدادات
+            document.getElementById('autoRefresh').value = settings.autoRefresh;
+            document.getElementById('soundAlerts').checked = settings.soundAlerts;
+            document.getElementById('desktopAlerts').checked = settings.desktopAlerts;
+            
+            // عرض البيانات
+            renderMonitors();
+            renderReports();
+            renderQuickUpdates(updates.slice(0, 5));
+            
+            console.log('✅ تم تحميل البيانات التجريبية');
+            
+        } catch (error) {
+            console.error('Error loading sample data:', error);
+            showNotification('⚠️ خطأ في تحميل البيانات', 'error');
+        }
+    }
 
     // ====== إدارة المراقبين ======
     function renderMonitors(searchTerm = '') {
         const tbody = document.getElementById('monitorsTableBody');
+        const noData = document.getElementById('noMonitorsData');
         
         if (!tbody) return;
         
@@ -2071,7 +1878,7 @@
         // عرض جدول المراقبين الرئيسي
         if (filteredMonitors.length === 0) {
             tbody.innerHTML = '';
-            document.getElementById('noMonitorsData').style.display = 'block';
+            noData.style.display = 'block';
         } else {
             tbody.innerHTML = filteredMonitors.map((monitor) => {
                 const status = monitor.status || {
@@ -2139,10 +1946,11 @@
                 </tr>
                 `;
             }).join('');
-            document.getElementById('noMonitorsData').style.display = 'none';
+            noData.style.display = 'none';
         }
     }
 
+    // ====== إضافة مراقب ======
     async function addMonitor(monitorData) {
         try {
             const monitor = {
@@ -2155,15 +1963,16 @@
                     isOnline: false,
                     lastUpdate: new Date().toISOString()
                 },
-                createdAt: new Date().toISOString()
+                createdAt: new Date().toISOString(),
+                id: 'MON' + (monitors.length + 1).toString().padStart(3, '0')
             };
             
-            // حفظ في Firebase
-            const newMonitorRef = window.firebaseRef(database, `monitors/${monitorData.code}`);
-            await window.firebaseSet(newMonitorRef, monitor);
+            // إضافة إلى القائمة
+            monitors.unshift(monitor);
             
-            // إضافة تحديث للسجل
-            await addUpdate({
+            // إضافة تحديث
+            updates.unshift({
+                id: 'UPD' + Date.now(),
                 code: monitor.code,
                 name: monitor.name,
                 action: 'monitor_added',
@@ -2171,37 +1980,53 @@
             });
             
             showNotification(`✅ تم إضافة المراقب ${monitor.name} بنجاح`, 'success');
-            console.log('Added monitor:', monitor);
+            
+            // تحديث الواجهة
+            renderMonitors();
+            updateStats();
+            renderQuickUpdates(updates.slice(0, 5));
+            
         } catch (error) {
             console.error('Error adding monitor:', error);
-            showNotification('خطأ في إضافة المراقب', 'error');
+            showNotification('❌ خطأ في إضافة المراقب', 'error');
         }
     }
 
+    // ====== حذف مراقب ======
     async function deleteMonitor(monitorId) {
-        if (confirm('هل أنت متأكد من حذف هذا المراقب؟')) {
-            try {
-                const monitor = monitors.find(m => m.id === monitorId);
-                
-                // حذف من Firebase
-                await window.firebaseRemove(window.firebaseRef(database, `monitors/${monitorId}`));
-                
-                // إضافة تحديث للسجل
-                await addUpdate({
-                    code: monitor?.code || monitorId,
-                    name: monitor?.name || 'مراقب',
-                    action: 'monitor_deleted',
-                    timestamp: new Date().toISOString()
-                });
-                
-                showNotification('✅ تم حذف المراقب', 'success');
-            } catch (error) {
-                console.error('Error deleting monitor:', error);
-                showNotification('خطأ في حذف المراقب', 'error');
-            }
+        if (!confirm('هل أنت متأكد من حذف هذا المراقب؟')) {
+            return;
+        }
+        
+        try {
+            const monitor = monitors.find(m => m.id === monitorId);
+            
+            // حذف من القائمة
+            monitors = monitors.filter(m => m.id !== monitorId);
+            
+            // إضافة تحديث
+            updates.unshift({
+                id: 'UPD' + Date.now(),
+                code: monitor?.code || monitorId,
+                name: monitor?.name || 'مراقب',
+                action: 'monitor_deleted',
+                timestamp: new Date().toISOString()
+            });
+            
+            showNotification('✅ تم حذف المراقب', 'success');
+            
+            // تحديث الواجهة
+            renderMonitors();
+            updateStats();
+            renderQuickUpdates(updates.slice(0, 5));
+            
+        } catch (error) {
+            console.error('Error deleting monitor:', error);
+            showNotification('❌ خطأ في حذف المراقب', 'error');
         }
     }
 
+    // ====== تبديل حالة الوصول ======
     async function toggleMonitorArrived(monitorId) {
         try {
             const monitor = monitors.find(m => m.id === monitorId);
@@ -2209,14 +2034,13 @@
             
             const newStatus = !(monitor.status?.arrived || false);
             
-            // تحديث في Firebase
-            await window.firebaseUpdate(window.firebaseRef(database, `monitors/${monitorId}/status`), {
-                arrived: newStatus,
-                lastUpdate: new Date().toISOString()
-            });
+            // تحديث الحالة
+            monitor.status.arrived = newStatus;
+            monitor.status.lastUpdate = new Date().toISOString();
             
-            // تحديث السجل
-            await addUpdate({
+            // إضافة تحديث
+            updates.unshift({
+                id: 'UPD' + Date.now(),
                 code: monitor.code,
                 name: monitor.name,
                 action: newStatus ? 'arrived_true' : 'arrived_false',
@@ -2225,11 +2049,18 @@
             
             const status = newStatus ? 'تم تحديد الوصول' : 'تم إلغاء الوصول';
             showNotification(`${monitor.name}: ${status}`, 'info');
+            
+            // تحديث الواجهة
+            renderMonitors();
+            updateStats();
+            renderQuickUpdates(updates.slice(0, 5));
+            
         } catch (error) {
             console.error('Error toggling arrived status:', error);
         }
     }
 
+    // ====== تبديل حالة التصويت ======
     async function toggleMonitorVoted(monitorId) {
         try {
             const monitor = monitors.find(m => m.id === monitorId);
@@ -2237,14 +2068,13 @@
             
             const newStatus = !(monitor.status?.voted || false);
             
-            // تحديث في Firebase
-            await window.firebaseUpdate(window.firebaseRef(database, `monitors/${monitorId}/status`), {
-                voted: newStatus,
-                lastUpdate: new Date().toISOString()
-            });
+            // تحديث الحالة
+            monitor.status.voted = newStatus;
+            monitor.status.lastUpdate = new Date().toISOString();
             
-            // تحديث السجل
-            await addUpdate({
+            // إضافة تحديث
+            updates.unshift({
+                id: 'UPD' + Date.now(),
                 code: monitor.code,
                 name: monitor.name,
                 action: newStatus ? 'voted_true' : 'voted_false',
@@ -2253,11 +2083,18 @@
             
             const status = newStatus ? 'تم التصويت' : 'لم يتم التصويت';
             showNotification(`${monitor.name}: ${status}`, 'info');
+            
+            // تحديث الواجهة
+            renderMonitors();
+            updateStats();
+            renderQuickUpdates(updates.slice(0, 5));
+            
         } catch (error) {
             console.error('Error toggling voted status:', error);
         }
     }
 
+    // ====== عرض مشكلة المراقب ======
     function viewMonitorIssue(monitorId) {
         const monitor = monitors.find(m => m.id === monitorId);
         if (monitor?.status?.hasIssue && monitor?.status?.issueText) {
@@ -2267,6 +2104,7 @@
         }
     }
 
+    // ====== عرض موقع المراقب ======
     function showMonitorLocation(monitorId) {
         const monitor = monitors.find(m => m.id === monitorId);
         
@@ -2285,20 +2123,19 @@
                 // التبديل إلى قسم الخريطة
                 switchSection('map');
                 
-                showNotification(`تم عرض موقع ${monitor?.name || 'المراقب'} على الخريطة`, 'info');
+                showNotification(`📍 تم عرض موقع ${monitor?.name || 'المراقب'} على الخريطة`, 'info');
             }
         } catch (error) {
             alert('خطأ في بيانات الموقع');
         }
     }
 
+    // ====== عرض صورة المراقب ======
     function viewMonitorPhoto(monitorId) {
         const monitor = monitors.find(m => m.id === monitorId);
         
-        if (!monitor?.photoUrl) {
-            alert('لا توجد صورة مخزنة لهذا المراقب');
-            return;
-        }
+        // صورة تجريبية (يمكن استبدالها بصور حقيقية)
+        const photoUrl = `https://via.placeholder.com/400x300/1a9bff/ffffff?text=صورة+${encodeURIComponent(monitor?.name || 'مراقب')}`;
         
         const photoModal = document.getElementById('photoModalBackdrop');
         const photoContent = document.getElementById('photoContent');
@@ -2306,7 +2143,7 @@
         photoContent.innerHTML = `
             <div style="text-align: center;">
                 <h4 style="margin-bottom: 20px;">صورة الشريط - ${monitor?.name || 'مراقب'}</h4>
-                <img src="${monitor.photoUrl}" style="max-width: 100%; max-height: 400px; border-radius: 10px;">
+                <img src="${photoUrl}" style="max-width: 100%; max-height: 400px; border-radius: 10px; border: 2px solid var(--border);">
                 <div style="margin-top: 20px;">
                     <button class="btn btn-primary" onclick="downloadMonitorPhoto('${monitorId}')">
                         <i class="fas fa-download"></i> تحميل الصورة
@@ -2318,26 +2155,27 @@
         photoModal.style.display = 'flex';
     }
 
+    // ====== إغلاق نافذة الصورة ======
     function closePhotoModal() {
         document.getElementById('photoModalBackdrop').style.display = 'none';
     }
 
+    // ====== تحميل صورة المراقب ======
     function downloadMonitorPhoto(monitorId) {
         const monitor = monitors.find(m => m.id === monitorId);
-        
-        if (!monitor?.photoUrl) {
-            alert('لا توجد صورة للتحميل');
-            return;
-        }
+        const photoUrl = `https://via.placeholder.com/400x300/1a9bff/ffffff?text=صورة+${encodeURIComponent(monitor?.name || 'مراقب')}`;
         
         const a = document.createElement('a');
-        a.href = monitor.photoUrl;
-        a.download = `strip_${monitor.code}_${Date.now()}.png`;
+        a.href = photoUrl;
+        a.download = `strip_${monitor?.code || 'unknown'}_${Date.now()}.png`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
+        
+        showNotification('✅ تم بدء تحميل الصورة', 'success');
     }
 
+    // ====== عرض تفاصيل المراقب ======
     function showMonitorDetails(code) {
         const monitor = monitors.find(m => m.code === code);
         const status = monitor?.status || {};
@@ -2361,22 +2199,14 @@ ${monitor?.location ? `الموقع: ${monitor.location.lat.toFixed(6)}, ${monit
         alert(message);
     }
 
-    async function addUpdate(updateData) {
-        try {
-            const newUpdateRef = window.firebasePush(updatesRef);
-            await window.firebaseSet(newUpdateRef, updateData);
-        } catch (error) {
-            console.error('Error adding update:', error);
-        }
-    }
-
     // ====== التقارير ======
     function renderReports() {
         const container = document.getElementById('reportsContainer');
+        const noData = document.getElementById('noReportsData');
         
         if (!reports || reports.length === 0) {
             container.innerHTML = '';
-            document.getElementById('noReportsData').style.display = 'block';
+            noData.style.display = 'block';
             return;
         }
         
@@ -2404,18 +2234,19 @@ ${monitor?.location ? `الموقع: ${monitor.location.lat.toFixed(6)}, ${monit
                 </div>
             `).join('');
         
-        document.getElementById('noReportsData').style.display = 'none';
+        noData.style.display = 'none';
     }
 
     // ====== التحديثات السريعة ======
     function renderQuickUpdates(updatesList) {
         const quickTbody = document.getElementById('quickTableBody');
+        const noData = document.getElementById('noQuickData');
         
         if (!quickTbody) return;
         
         if (!updatesList || updatesList.length === 0) {
             quickTbody.innerHTML = '';
-            document.getElementById('noQuickData').style.display = 'block';
+            noData.style.display = 'block';
             return;
         }
         
@@ -2449,7 +2280,7 @@ ${monitor?.location ? `الموقع: ${monitor.location.lat.toFixed(6)}, ${monit
             `;
         }).join('');
         
-        document.getElementById('noQuickData').style.display = 'none';
+        noData.style.display = 'none';
     }
 
     function getUpdateLabel(action) {
@@ -2539,9 +2370,9 @@ ${monitor?.location ? `الموقع: ${monitor.location.lat.toFixed(6)}, ${monit
         if (online !== isConnected) {
             isConnected = online;
             if (online) {
-                showNotification('تم استعادة الاتصال بالإنترنت', 'success');
+                showNotification('🌐 تم استعادة الاتصال بالإنترنت', 'success');
             } else {
-                showNotification('فقدان الاتصال بالإنترنت', 'warning');
+                showNotification('⚠️ فقدان الاتصال بالإنترنت', 'warning');
             }
         }
         
@@ -2609,7 +2440,6 @@ ${monitor?.location ? `الموقع: ${monitor.location.lat.toFixed(6)}, ${monit
         if (autoRefreshSelect) {
             autoRefreshSelect.addEventListener('change', function() {
                 settings.autoRefresh = parseInt(this.value);
-                saveSettings();
                 setupAutoRefresh();
                 showNotification('تم تحديث إعدادات التحديث التلقائي', 'success');
             });
@@ -2618,12 +2448,10 @@ ${monitor?.location ? `الموقع: ${monitor.location.lat.toFixed(6)}, ${monit
         // إعدادات التنبيهات
         document.getElementById('soundAlerts').addEventListener('change', function() {
             settings.soundAlerts = this.checked;
-            saveSettings();
         });
         
         document.getElementById('desktopAlerts').addEventListener('change', function() {
             settings.desktopAlerts = this.checked;
-            saveSettings();
             
             if (this.checked && Notification.permission === 'default') {
                 Notification.requestPermission();
@@ -2637,6 +2465,7 @@ ${monitor?.location ? `الموقع: ${monitor.location.lat.toFixed(6)}, ${monit
         });
     }
 
+    // ====== تبديل الأقسام ======
     function switchSection(section) {
         // إخفاء جميع الأقسام
         const sections = document.querySelectorAll('.section-content');
@@ -2662,16 +2491,19 @@ ${monitor?.location ? `الموقع: ${monitor.location.lat.toFixed(6)}, ${monit
         }
     }
 
+    // ====== فتح نافذة إضافة مراقب ======
     function openAddMonitorModal() {
         generateCode();
         document.getElementById('modalBackdrop').style.display = 'flex';
     }
 
+    // ====== إغلاق النافذة ======
     function closeModal() {
         document.getElementById('modalBackdrop').style.display = 'none';
         document.getElementById('addMonitorForm').reset();
     }
 
+    // ====== توليد كود للمراقب ======
     function generateCode() {
         const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
         let code = '';
@@ -2728,7 +2560,7 @@ ${monitor?.location ? `الموقع: ${monitor.location.lat.toFixed(6)}, ${monit
         if (settings.desktopAlerts && Notification.permission === 'granted') {
             new Notification(getNotificationTitle(type), {
                 body: message,
-                icon: '/favicon.ico'
+                icon: 'https://cdn-icons-png.flaticon.com/512/3062/3062634.png'
             });
         }
     }
@@ -2756,7 +2588,6 @@ ${monitor?.location ? `الموقع: ${monitor.location.lat.toFixed(6)}, ${monit
     function playNotificationSound(type) {
         try {
             const audio = new Audio();
-            // استخدام نغمات افتراضية
             if (type === 'error') {
                 audio.src = 'https://assets.mixkit.co/sfx/preview/mixkit-alarm-digital-clock-beep-989.mp3';
             } else if (type === 'success') {
@@ -2811,12 +2642,7 @@ ${monitor?.location ? `الموقع: ${monitor.location.lat.toFixed(6)}, ${monit
         }
     }
 
-    // تمكين الإشعارات إذا كان المستخدم يريد
-    if ('Notification' in window && Notification.permission === 'default') {
-        Notification.requestPermission();
-    }
-
-    // جعل الدوال متاحة عالمياً
+    // ====== جعل الدوال متاحة عالمياً ======
     window.toggleMonitorArrived = toggleMonitorArrived;
     window.toggleMonitorVoted = toggleMonitorVoted;
     window.viewMonitorIssue = viewMonitorIssue;
@@ -2831,6 +2657,14 @@ ${monitor?.location ? `الموقع: ${monitor.location.lat.toFixed(6)}, ${monit
     window.generateCode = generateCode;
     window.switchSection = switchSection;
     window.scrollToTop = scrollToTop;
+
+    // تمكين الإشعارات إذا كان المستخدم يريد
+    if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
+    }
+
+    // بدء النظام عند تحميل الصفحة
+    console.log('✅ النظام جاهز للتشغيل');
 </script>
 </body>
 </html>
