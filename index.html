@@ -9,6 +9,45 @@
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
+    <!-- Firebase SDK -->
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, set, get, update, remove, onValue, push } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDdiudUa5jjcZDwJgYBbLdC-YBNQ5rlqvU",
+            authDomain: "election-system-9cbb8.firebaseapp.com",
+            projectId: "election-system-9cbb8",
+            storageBucket: "election-system-9cbb8.firebasestorage.app",
+            messagingSenderId: "886706894008",
+            appId: "1:886706894008:web:270556771843614e56b04d",
+            databaseURL: "https://election-system-9cbb8-default-rtdb.firebaseio.com/"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+        const auth = getAuth(app);
+        
+        // جعل المتغيرات متاحة عالمياً
+        window.firebaseApp = app;
+        window.firebaseDatabase = database;
+        window.firebaseAuth = auth;
+        window.firebaseRef = ref;
+        window.firebaseSet = set;
+        window.firebaseGet = get;
+        window.firebaseUpdate = update;
+        window.firebaseRemove = remove;
+        window.firebaseOnValue = onValue;
+        window.firebasePush = push;
+        window.firebaseSignInWithEmailAndPassword = signInWithEmailAndPassword;
+        window.firebaseSignOut = signOut;
+        window.firebaseOnAuthStateChanged = onAuthStateChanged;
+    </script>
+    
     <style>
         :root {
             --primary: #1a9bff;
@@ -1474,100 +1513,234 @@
     let currentUser = null;
     let monitors = [];
     let reports = [];
+    let updates = [];
     let settings = {};
     let autoRefreshInterval = null;
     let isConnected = true;
+    
+    // ====== Firebase References ======
+    let database, auth;
+    let monitorsRef, reportsRef, updatesRef, settingsRef;
+
+    // ====== تهيئة Firebase ======
+    function initFirebase() {
+        // مراجع قاعدة البيانات
+        database = window.firebaseDatabase;
+        auth = window.firebaseAuth;
+        
+        monitorsRef = window.firebaseRef(database, 'monitors');
+        reportsRef = window.firebaseRef(database, 'reports');
+        updatesRef = window.firebaseRef(database, 'updates');
+        settingsRef = window.firebaseRef(database, 'adminSettings');
+    }
 
     // ====== تهيئة النظام ======
-    function init() {
-        loadSettings();
-        setupEventListeners();
-        updateCurrentTime();
-        loadMonitors();
-        loadReports();
+    async function init() {
+        try {
+            // انتظار تهيئة Firebase
+            await waitForFirebase();
+            initFirebase();
+            
+            await loadSettings();
+            setupEventListeners();
+            updateCurrentTime();
+            
+            // تحميل البيانات من Firebase
+            await loadMonitors();
+            await loadReports();
+            await loadUpdates();
+            
+            // تحديث الوقت كل دقيقة
+            setInterval(updateCurrentTime, 60000);
+            
+            // تحديث تلقائي للبيانات
+            setupAutoRefresh();
+            
+            // تحديث حالة الاتصال
+            setInterval(checkConnection, 10000);
+            
+            // إعداد زر العودة للأعلى
+            window.addEventListener('scroll', handleScroll);
+            
+            // تحديث الإحصائيات
+            updateStats();
+            
+            // الاستماع للتحديثات في الوقت الحقيقي
+            setupRealtimeListeners();
+            
+            showNotification('تم التوصيل بقاعدة البيانات', 'success');
+        } catch (error) {
+            console.error('Error initializing:', error);
+            showNotification('خطأ في تهيئة النظام. تحقق من اتصال الإنترنت.', 'error');
+        }
+    }
+
+    // ====== انتظار تهيئة Firebase ======
+    function waitForFirebase() {
+        return new Promise((resolve, reject) => {
+            const maxAttempts = 30;
+            let attempts = 0;
+            
+            const checkFirebase = () => {
+                if (window.firebaseDatabase && window.firebaseAuth) {
+                    resolve();
+                } else if (attempts >= maxAttempts) {
+                    reject(new Error('Firebase initialization timeout'));
+                } else {
+                    attempts++;
+                    setTimeout(checkFirebase, 100);
+                }
+            };
+            
+            checkFirebase();
+        });
+    }
+
+    // ====== الاستماع للتحديثات في الوقت الحقيقي ======
+    function setupRealtimeListeners() {
+        // الاستماع لتحديثات المراقبين
+        window.firebaseOnValue(monitorsRef, (snapshot) => {
+            if (snapshot.exists()) {
+                const data = snapshot.val();
+                monitors = Object.keys(data).map(key => ({
+                    id: key,
+                    ...data[key]
+                }));
+                renderMonitors();
+                updateStats();
+            } else {
+                monitors = [];
+                renderMonitors();
+            }
+        });
         
-        // تحديث الوقت كل دقيقة
-        setInterval(updateCurrentTime, 60000);
+        // الاستماع لتحديثات التقارير
+        window.firebaseOnValue(reportsRef, (snapshot) => {
+            if (snapshot.exists()) {
+                const data = snapshot.val();
+                reports = Object.keys(data).map(key => ({
+                    id: key,
+                    ...data[key]
+                }));
+                renderReports();
+                updateStats();
+            } else {
+                reports = [];
+                renderReports();
+            }
+        });
         
-        // تحديث تلقائي للبيانات
-        setupAutoRefresh();
-        
-        // تحديث حالة الاتصال
-        setInterval(checkConnection, 10000);
-        
-        // إعداد زر العودة للأعلى
-        window.addEventListener('scroll', handleScroll);
-        
-        // تحديث الإحصائيات
-        updateStats();
+        // الاستماع للتحديثات الفورية
+        window.firebaseOnValue(updatesRef, (snapshot) => {
+            if (snapshot.exists()) {
+                const data = snapshot.val();
+                updates = Object.keys(data).map(key => ({
+                    id: key,
+                    ...data[key]
+                }));
+                renderQuickUpdates(updates.slice(0, 5));
+            } else {
+                updates = [];
+                renderQuickUpdates([]);
+            }
+        });
     }
 
     // ====== إدارة البيانات ======
-    function loadMonitors() {
+    async function loadMonitors() {
         try {
-            const data = localStorage.getItem('election_monitors');
-            monitors = data ? JSON.parse(data) : [];
-            console.log('Loaded monitors:', monitors.length);
+            const snapshot = await window.firebaseGet(monitorsRef);
+            if (snapshot.exists()) {
+                const data = snapshot.val();
+                monitors = Object.keys(data).map(key => ({
+                    id: key,
+                    ...data[key]
+                }));
+                console.log('Loaded monitors from Firebase:', monitors.length);
+            } else {
+                monitors = [];
+                console.log('No monitors found in Firebase');
+            }
+            renderMonitors();
+            updateStats();
         } catch (error) {
-            monitors = [];
             console.error('Error loading monitors:', error);
-        }
-        renderMonitors();
-        updateStats();
-    }
-
-    function saveMonitors() {
-        try {
-            localStorage.setItem('election_monitors', JSON.stringify(monitors));
-            console.log('Saved monitors:', monitors.length);
-        } catch (error) {
-            console.error('Error saving monitors:', error);
-            showNotification('خطأ في حفظ بيانات المراقبين', 'error');
+            showNotification('خطأ في تحميل بيانات المراقبين', 'error');
         }
     }
 
-    function loadReports() {
+    async function loadReports() {
         try {
-            const data = localStorage.getItem('monitor_issues_list');
-            reports = data ? JSON.parse(data) : [];
+            const snapshot = await window.firebaseGet(reportsRef);
+            if (snapshot.exists()) {
+                const data = snapshot.val();
+                reports = Object.keys(data).map(key => ({
+                    id: key,
+                    ...data[key]
+                }));
+            } else {
+                reports = [];
+            }
+            renderReports();
         } catch (error) {
-            reports = [];
+            console.error('Error loading reports:', error);
         }
-        renderReports();
     }
 
-    function loadSettings() {
+    async function loadUpdates() {
         try {
-            const data = localStorage.getItem('admin_settings');
-            settings = data ? JSON.parse(data) : {
-                autoRefresh: 30000,
-                soundAlerts: true,
-                desktopAlerts: false
-            };
+            const snapshot = await window.firebaseGet(updatesRef);
+            if (snapshot.exists()) {
+                const data = snapshot.val();
+                updates = Object.keys(data).map(key => ({
+                    id: key,
+                    ...data[key]
+                }));
+            } else {
+                updates = [];
+            }
         } catch (error) {
+            console.error('Error loading updates:', error);
+        }
+    }
+
+    async function loadSettings() {
+        try {
+            const snapshot = await window.firebaseGet(settingsRef);
+            if (snapshot.exists()) {
+                settings = snapshot.val();
+            } else {
+                settings = {
+                    autoRefresh: 30000,
+                    soundAlerts: true,
+                    desktopAlerts: false
+                };
+            }
+            
+            // تطبيق الإعدادات
+            document.getElementById('autoRefresh').value = settings.autoRefresh;
+            document.getElementById('soundAlerts').checked = settings.soundAlerts;
+            document.getElementById('desktopAlerts').checked = settings.desktopAlerts;
+        } catch (error) {
+            console.error('Error loading settings:', error);
             settings = {
                 autoRefresh: 30000,
                 soundAlerts: true,
                 desktopAlerts: false
             };
         }
-        
-        // تطبيق الإعدادات
-        document.getElementById('autoRefresh').value = settings.autoRefresh;
-        document.getElementById('soundAlerts').checked = settings.soundAlerts;
-        document.getElementById('desktopAlerts').checked = settings.desktopAlerts;
     }
 
-    function saveSettings() {
+    async function saveSettings() {
         try {
-            localStorage.setItem('admin_settings', JSON.stringify(settings));
+            await window.firebaseSet(settingsRef, settings);
         } catch (error) {
             console.error('Error saving settings:', error);
         }
     }
 
     // ====== تسجيل دخول المدير ======
-    document.getElementById('loginForm').addEventListener('submit', function(e) {
+    document.getElementById('loginForm').addEventListener('submit', async function(e) {
         e.preventDefault();
         
         const username = document.getElementById('loginUser').value.trim();
@@ -1578,44 +1751,41 @@
             return;
         }
         
-        // بيانات المدير الثابتة
-        const adminUsers = [
-            { username: 'admin', password: 'admin123', name: 'مدير النظام' },
-            { username: 'مدير', password: '123456', name: 'مدير النظام' }
-        ];
+        showLoader(true);
         
-        const user = adminUsers.find(u => 
-            u.username.toLowerCase() === username.toLowerCase() && 
-            u.password === password
-        );
-        
-        if (!user) {
-            showLoginError('بيانات الدخول غير صحيحة');
-            return;
+        try {
+            // استخدام Firebase Authentication
+            // للمستخدمين: admin/Admin@123 , مدير/Manager@123
+            const email = username === 'admin' ? 'admin@election.com' : `${username}@election.com`;
+            
+            const userCredential = await window.firebaseSignInWithEmailAndPassword(auth, email, password);
+            currentUser = userCredential.user;
+            
+            // إعداد واجهة المستخدم
+            document.getElementById('currentUserName').textContent = username === 'admin' ? 'المدير العام' : 'مدير النظام';
+            document.getElementById('userAvatar').textContent = username.charAt(0);
+            
+            // إظهار لوحة التحكم
+            document.getElementById('loginSection').style.display = 'none';
+            document.getElementById('dashboardSection').style.display = 'flex';
+            
+            showNotification(`مرحباً ${username === 'admin' ? 'المدير العام' : 'مدير النظام'}`, 'success');
+            
+            // تشغيل النظام
+            await init();
+            
+        } catch (error) {
+            console.error('Login error:', error);
+            if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+                showLoginError('اسم المستخدم أو كلمة المرور غير صحيحة');
+            } else if (error.code === 'auth/too-many-requests') {
+                showLoginError('تم تجاوز عدد المحاولات المسموح بها. حاول مرة أخرى لاحقاً');
+            } else {
+                showLoginError('حدث خطأ أثناء تسجيل الدخول');
+            }
+        } finally {
+            showLoader(false);
         }
-        
-        // تسجيل الدخول
-        currentUser = user;
-        
-        // حفظ جلسة المستخدم
-        localStorage.setItem('admin_session', JSON.stringify({
-            username: currentUser.username,
-            name: currentUser.name,
-            timestamp: new Date().getTime()
-        }));
-        
-        // إعداد واجهة المستخدم
-        document.getElementById('currentUserName').textContent = currentUser.name;
-        document.getElementById('userAvatar').textContent = currentUser.name.charAt(0);
-        
-        // إظهار لوحة التحكم
-        document.getElementById('loginSection').style.display = 'none';
-        document.getElementById('dashboardSection').style.display = 'flex';
-        
-        showNotification(`مرحباً ${currentUser.name}`, 'success');
-        
-        // تشغيل النظام
-        init();
     });
 
     function showLoginError(message) {
@@ -1633,19 +1803,23 @@
         });
     }
 
-    document.getElementById('logoutBtn').addEventListener('click', function() {
+    document.getElementById('logoutBtn').addEventListener('click', async function() {
         if (confirm('هل تريد تسجيل الخروج؟')) {
-            localStorage.removeItem('admin_session');
-            location.reload();
+            try {
+                await window.firebaseSignOut(auth);
+                location.reload();
+            } catch (error) {
+                console.error('Logout error:', error);
+                showNotification('خطأ في تسجيل الخروج', 'error');
+            }
         }
     });
 
     // ====== إدارة المراقبين ======
     function renderMonitors(searchTerm = '') {
         const tbody = document.getElementById('monitorsTableBody');
-        const quickTbody = document.getElementById('quickTableBody');
         
-        if (!tbody || !quickTbody) return;
+        if (!tbody) return;
         
         // تصفية المراقبين
         const filteredMonitors = monitors.filter(monitor => {
@@ -1653,10 +1827,10 @@
             
             const search = searchTerm.toLowerCase();
             return (
-                monitor.name.toLowerCase().includes(search) ||
-                monitor.phone.includes(search) ||
-                monitor.center.toLowerCase().includes(search) ||
-                monitor.code.toLowerCase().includes(search)
+                monitor.name?.toLowerCase().includes(search) ||
+                monitor.phone?.includes(search) ||
+                monitor.center?.toLowerCase().includes(search) ||
+                monitor.code?.toLowerCase().includes(search)
             );
         });
         
@@ -1665,89 +1839,65 @@
             tbody.innerHTML = '';
             document.getElementById('noMonitorsData').style.display = 'block';
         } else {
-            tbody.innerHTML = filteredMonitors.map((monitor, index) => {
-                // جلب الحالة الحالية من التخزين المحلي
-                const statusKey = `monitor_status_${monitor.code}`;
-                const statusData = localStorage.getItem(statusKey);
-                let status = { arrived: false, voted: false, hasIssue: false };
-                
-                if (statusData) {
-                    try {
-                        status = JSON.parse(statusData);
-                    } catch (e) {
-                        console.error('Error parsing status:', e);
-                    }
-                }
-                
-                // جلب حالة الاتصال
-                const onlineKey = `monitor_online_${monitor.code}`;
-                const onlineStatus = localStorage.getItem(onlineKey);
-                const isOnline = onlineStatus === 'true';
-                
-                // جلب آخر تحديث
-                const lastSeenKey = `monitor_lastseen_${monitor.code}`;
-                const lastSeenData = localStorage.getItem(lastSeenKey);
-                let lastUpdate = monitor.lastUpdate;
-                
-                if (lastSeenData) {
-                    try {
-                        const lastSeen = JSON.parse(lastSeenData);
-                        lastUpdate = lastSeen.timestamp;
-                    } catch (e) {
-                        console.error('Error parsing last seen:', e);
-                    }
-                }
+            tbody.innerHTML = filteredMonitors.map((monitor) => {
+                const status = monitor.status || {
+                    arrived: false,
+                    voted: false,
+                    hasIssue: false,
+                    isOnline: false,
+                    lastUpdate: new Date().toISOString()
+                };
                 
                 return `
                 <tr>
                     <td>
                         <div class="monitor-info">
-                            <div class="monitor-avatar">${monitor.name.charAt(0)}</div>
+                            <div class="monitor-avatar">${monitor.name?.charAt(0) || '?'}</div>
                             <div class="monitor-details">
-                                <h4>${monitor.name}</h4>
-                                <p>${monitor.center}</p>
+                                <h4>${monitor.name || 'غير محدد'}</h4>
+                                <p>${monitor.center || 'غير محدد'}</p>
                             </div>
                         </div>
                     </td>
-                    <td>${monitor.phone}</td>
-                    <td>${monitor.center}</td>
-                    <td><code style="background: #f1f3fa; padding: 4px 8px; border-radius: 6px;">${monitor.code}</code></td>
+                    <td>${monitor.phone || 'غير محدد'}</td>
+                    <td>${monitor.center || 'غير محدد'}</td>
+                    <td><code style="background: #f1f3fa; padding: 4px 8px; border-radius: 6px;">${monitor.code || 'غير محدد'}</code></td>
                     <td>
-                        <span class="status-badge ${isOnline ? 'status-online' : 'status-offline'}">
-                            <i class="fas fa-${isOnline ? 'wifi' : 'wifi-slash'}"></i>
-                            ${isOnline ? 'متصل' : 'غير متصل'}
+                        <span class="status-badge ${status.isOnline ? 'status-online' : 'status-offline'}">
+                            <i class="fas fa-${status.isOnline ? 'wifi' : 'wifi-slash'}"></i>
+                            ${status.isOnline ? 'متصل' : 'غير متصل'}
                         </span>
                     </td>
                     <td>
                         <span class="action-badge ${status.arrived ? 'true' : 'false'}" 
                               title="${status.arrived ? 'تم الوصول' : 'لم يتم الوصول'}"
-                              onclick="toggleMonitorArrived('${monitor.code}')">
+                              onclick="toggleMonitorArrived('${monitor.id}')">
                             <i class="fas fa-${status.arrived ? 'check' : 'times'}"></i>
                         </span>
                     </td>
                     <td>
                         <span class="action-badge ${status.voted ? 'true' : 'false'}" 
                               title="${status.voted ? 'تم التصويت' : 'لم يتم التصويت'}"
-                              onclick="toggleMonitorVoted('${monitor.code}')">
+                              onclick="toggleMonitorVoted('${monitor.id}')">
                             <i class="fas fa-${status.voted ? 'check' : 'times'}"></i>
                         </span>
                     </td>
                     <td>
                         <span class="action-badge ${status.hasIssue ? 'true' : 'neutral'}" 
                               title="${status.hasIssue ? 'يوجد مشكلة' : 'لا توجد مشكلة'}"
-                              onclick="viewMonitorIssue('${monitor.code}')">
+                              onclick="viewMonitorIssue('${monitor.id}')">
                             <i class="fas fa-${status.hasIssue ? 'exclamation-triangle' : 'check'}"></i>
                         </span>
                     </td>
                     <td>
                         <div class="action-buttons">
-                            <button class="action-btn" onclick="showMonitorLocation('${monitor.code}')" title="عرض الموقع">
+                            <button class="action-btn" onclick="showMonitorLocation('${monitor.id}')" title="عرض الموقع">
                                 <i class="fas fa-map-marker-alt"></i>
                             </button>
-                            <button class="action-btn" onclick="viewMonitorPhoto('${monitor.code}')" title="عرض الصورة">
+                            <button class="action-btn" onclick="viewMonitorPhoto('${monitor.id}')" title="عرض الصورة">
                                 <i class="fas fa-camera"></i>
                             </button>
-                            <button class="action-btn" onclick="deleteMonitor(${index})" title="حذف المراقب">
+                            <button class="action-btn" onclick="deleteMonitor('${monitor.id}')" title="حذف المراقب">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </div>
@@ -1757,175 +1907,142 @@
             }).join('');
             document.getElementById('noMonitorsData').style.display = 'none';
         }
-        
-        // عرض آخر 5 نشاطات
-        const updatesList = JSON.parse(localStorage.getItem('monitor_updates_list') || '[]');
-        const recentUpdates = updatesList.slice(0, 5);
-        
-        if (recentUpdates.length === 0) {
-            quickTbody.innerHTML = '';
-            document.getElementById('noQuickData').style.display = 'block';
-        } else {
-            quickTbody.innerHTML = recentUpdates.map((update, index) => {
-                const monitor = monitors.find(m => m.code === update.code);
-                return `
-                <tr>
-                    <td>
-                        <div class="monitor-info">
-                            <div class="monitor-avatar">${monitor ? monitor.name.charAt(0) : '?'}</div>
-                            <div class="monitor-details">
-                                <h4>${update.name || monitor?.name || 'مراقب'}</h4>
-                                <p>${monitor?.center || 'غير محدد'}</p>
-                            </div>
-                        </div>
-                    </td>
-                    <td>
-                        <span class="status-badge status-pending">
-                            <i class="fas fa-sync-alt"></i>
-                            ${update.label}
-                        </span>
-                    </td>
-                    <td>${getLocationText(update.code)}</td>
-                    <td>${formatTime(update.timestamp)}</td>
-                    <td>
-                        <button class="action-btn" onclick="showMonitorDetails('${update.code}')">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                    </td>
-                </tr>
-                `;
-            }).join('');
-            document.getElementById('noQuickData').style.display = 'none';
-        }
     }
 
-    function getLocationText(code) {
-        const locationKey = `monitor_location_${code}`;
-        const locationData = localStorage.getItem(locationKey);
-        
-        if (!locationData) return 'غير محدد';
-        
+    async function addMonitor(monitorData) {
         try {
-            const location = JSON.parse(locationData);
-            return `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`;
-        } catch (e) {
-            return 'غير محدد';
+            const monitor = {
+                ...monitorData,
+                status: {
+                    arrived: false,
+                    voted: false,
+                    hasIssue: false,
+                    issueText: '',
+                    isOnline: false,
+                    lastUpdate: new Date().toISOString()
+                },
+                createdAt: new Date().toISOString()
+            };
+            
+            // حفظ في Firebase
+            const newMonitorRef = window.firebaseRef(database, `monitors/${monitorData.code}`);
+            await window.firebaseSet(newMonitorRef, monitor);
+            
+            // إضافة تحديث للسجل
+            await addUpdate({
+                code: monitor.code,
+                name: monitor.name,
+                action: 'monitor_added',
+                timestamp: new Date().toISOString()
+            });
+            
+            showNotification(`تم إضافة المراقب ${monitor.name} بنجاح`, 'success');
+            console.log('Added monitor:', monitor);
+        } catch (error) {
+            console.error('Error adding monitor:', error);
+            showNotification('خطأ في إضافة المراقب', 'error');
         }
     }
 
-    function addMonitor(monitorData) {
-        const monitor = {
-            id: generateId(),
-            ...monitorData,
-            createdAt: new Date().toISOString()
-        };
-        
-        monitors.push(monitor);
-        saveMonitors();
-        renderMonitors();
-        updateStats();
-        
-        // تهيئة الحالة الأولية للمراقب
-        const statusKey = `monitor_status_${monitor.code}`;
-        localStorage.setItem(statusKey, JSON.stringify({
-            arrived: false,
-            voted: false,
-            hasIssue: false,
-            issueText: '',
-            lastUpdate: new Date().toISOString(),
-            monitorName: monitor.name,
-            monitorCode: monitor.code,
-            monitorPhone: monitor.phone,
-            monitorCenter: monitor.center
-        }));
-        
-        showNotification(`تم إضافة المراقب ${monitor.name} بنجاح`, 'success');
-        console.log('Added monitor:', monitor);
-    }
-
-    function deleteMonitor(index) {
+    async function deleteMonitor(monitorId) {
         if (confirm('هل أنت متأكد من حذف هذا المراقب؟')) {
-            const monitor = monitors[index];
-            
-            // حذف البيانات المرتبطة
-            const statusKey = `monitor_status_${monitor.code}`;
-            localStorage.removeItem(statusKey);
-            
-            const onlineKey = `monitor_online_${monitor.code}`;
-            localStorage.removeItem(onlineKey);
-            
-            const locationKey = `monitor_location_${monitor.code}`;
-            localStorage.removeItem(locationKey);
-            
-            monitors.splice(index, 1);
-            saveMonitors();
-            renderMonitors();
-            updateStats();
-            
-            showNotification('تم حذف المراقب', 'success');
+            try {
+                const monitor = monitors.find(m => m.id === monitorId);
+                
+                // حذف من Firebase
+                await window.firebaseRemove(window.firebaseRef(database, `monitors/${monitorId}`));
+                
+                // إضافة تحديث للسجل
+                await addUpdate({
+                    code: monitor?.code || monitorId,
+                    name: monitor?.name || 'مراقب',
+                    action: 'monitor_deleted',
+                    timestamp: new Date().toISOString()
+                });
+                
+                showNotification('تم حذف المراقب', 'success');
+            } catch (error) {
+                console.error('Error deleting monitor:', error);
+                showNotification('خطأ في حذف المراقب', 'error');
+            }
         }
     }
 
-    function toggleMonitorArrived(code) {
-        const statusKey = `monitor_status_${code}`;
-        const currentStatus = JSON.parse(localStorage.getItem(statusKey) || '{}');
-        
-        currentStatus.arrived = !currentStatus.arrived;
-        currentStatus.lastUpdate = new Date().toISOString();
-        
-        localStorage.setItem(statusKey, JSON.stringify(currentStatus));
-        
-        // تحديث السجل
-        updateActivityLog(code, currentStatus.arrived ? 'arrived_true' : 'arrived_false');
-        
-        renderMonitors();
-        updateStats();
-        
-        const status = currentStatus.arrived ? 'تم تحديد الوصول' : 'تم إلغاء الوصول';
-        showNotification(`${currentStatus.monitorName || 'مراقب'}: ${status}`, 'info');
+    async function toggleMonitorArrived(monitorId) {
+        try {
+            const monitor = monitors.find(m => m.id === monitorId);
+            if (!monitor) return;
+            
+            const newStatus = !(monitor.status?.arrived || false);
+            
+            // تحديث في Firebase
+            await window.firebaseUpdate(window.firebaseRef(database, `monitors/${monitorId}/status`), {
+                arrived: newStatus,
+                lastUpdate: new Date().toISOString()
+            });
+            
+            // تحديث السجل
+            await addUpdate({
+                code: monitor.code,
+                name: monitor.name,
+                action: newStatus ? 'arrived_true' : 'arrived_false',
+                timestamp: new Date().toISOString()
+            });
+            
+            const status = newStatus ? 'تم تحديد الوصول' : 'تم إلغاء الوصول';
+            showNotification(`${monitor.name}: ${status}`, 'info');
+        } catch (error) {
+            console.error('Error toggling arrived status:', error);
+        }
     }
 
-    function toggleMonitorVoted(code) {
-        const statusKey = `monitor_status_${code}`;
-        const currentStatus = JSON.parse(localStorage.getItem(statusKey) || '{}');
-        
-        currentStatus.voted = !currentStatus.voted;
-        currentStatus.lastUpdate = new Date().toISOString();
-        
-        localStorage.setItem(statusKey, JSON.stringify(currentStatus));
-        
-        // تحديث السجل
-        updateActivityLog(code, currentStatus.voted ? 'voted_true' : 'voted_false');
-        
-        renderMonitors();
-        updateStats();
-        
-        const status = currentStatus.voted ? 'تم التصويت' : 'لم يتم التصويت';
-        showNotification(`${currentStatus.monitorName || 'مراقب'}: ${status}`, 'info');
+    async function toggleMonitorVoted(monitorId) {
+        try {
+            const monitor = monitors.find(m => m.id === monitorId);
+            if (!monitor) return;
+            
+            const newStatus = !(monitor.status?.voted || false);
+            
+            // تحديث في Firebase
+            await window.firebaseUpdate(window.firebaseRef(database, `monitors/${monitorId}/status`), {
+                voted: newStatus,
+                lastUpdate: new Date().toISOString()
+            });
+            
+            // تحديث السجل
+            await addUpdate({
+                code: monitor.code,
+                name: monitor.name,
+                action: newStatus ? 'voted_true' : 'voted_false',
+                timestamp: new Date().toISOString()
+            });
+            
+            const status = newStatus ? 'تم التصويت' : 'لم يتم التصويت';
+            showNotification(`${monitor.name}: ${status}`, 'info');
+        } catch (error) {
+            console.error('Error toggling voted status:', error);
+        }
     }
 
-    function viewMonitorIssue(code) {
-        const statusKey = `monitor_status_${code}`;
-        const currentStatus = JSON.parse(localStorage.getItem(statusKey) || '{}');
-        
-        if (currentStatus.hasIssue && currentStatus.issueText) {
-            alert(`مشكلة مبلغ عنها من ${currentStatus.monitorName || 'مراقب'}:\n\n${currentStatus.issueText}`);
+    function viewMonitorIssue(monitorId) {
+        const monitor = monitors.find(m => m.id === monitorId);
+        if (monitor?.status?.hasIssue && monitor?.status?.issueText) {
+            alert(`مشكلة مبلغ عنها من ${monitor.name || 'مراقب'}:\n\n${monitor.status.issueText}`);
         } else {
             alert('لا توجد مشكلة مبلغ عنها من هذا المراقب');
         }
     }
 
-    function showMonitorLocation(code) {
-        const locationKey = `monitor_location_${code}`;
-        const locationData = localStorage.getItem(locationKey);
+    function showMonitorLocation(monitorId) {
+        const monitor = monitors.find(m => m.id === monitorId);
         
-        if (!locationData) {
+        if (!monitor?.location) {
             alert('لا يوجد موقع مخزن لهذا المراقب');
             return;
         }
         
         try {
-            const location = JSON.parse(locationData);
+            const location = monitor.location;
             if (location.lat && location.lng) {
                 // تحديث رابط الخريطة
                 const mapIframe = document.getElementById('mainMap');
@@ -1934,7 +2051,6 @@
                 // التبديل إلى قسم الخريطة
                 switchSection('map');
                 
-                const monitor = monitors.find(m => m.code === code);
                 showNotification(`تم عرض موقع ${monitor?.name || 'المراقب'} على الخريطة`, 'info');
             }
         } catch (error) {
@@ -1942,11 +2058,10 @@
         }
     }
 
-    function viewMonitorPhoto(code) {
-        const photoKey = `monitor_photo_${code}`;
-        const photoData = localStorage.getItem(photoKey);
+    function viewMonitorPhoto(monitorId) {
+        const monitor = monitors.find(m => m.id === monitorId);
         
-        if (!photoData) {
+        if (!monitor?.photoUrl) {
             alert('لا توجد صورة مخزنة لهذا المراقب');
             return;
         }
@@ -1954,14 +2069,12 @@
         const photoModal = document.getElementById('photoModalBackdrop');
         const photoContent = document.getElementById('photoContent');
         
-        const monitor = monitors.find(m => m.code === code);
-        
         photoContent.innerHTML = `
             <div style="text-align: center;">
                 <h4 style="margin-bottom: 20px;">صورة الشريط - ${monitor?.name || 'مراقب'}</h4>
-                <img src="${photoData}" style="max-width: 100%; max-height: 400px; border-radius: 10px;">
+                <img src="${monitor.photoUrl}" style="max-width: 100%; max-height: 400px; border-radius: 10px;">
                 <div style="margin-top: 20px;">
-                    <button class="btn btn-primary" onclick="downloadMonitorPhoto('${code}')">
+                    <button class="btn btn-primary" onclick="downloadMonitorPhoto('${monitorId}')">
                         <i class="fas fa-download"></i> تحميل الصورة
                     </button>
                 </div>
@@ -1975,18 +2088,17 @@
         document.getElementById('photoModalBackdrop').style.display = 'none';
     }
 
-    function downloadMonitorPhoto(code) {
-        const photoKey = `monitor_photo_${code}`;
-        const photoData = localStorage.getItem(photoKey);
+    function downloadMonitorPhoto(monitorId) {
+        const monitor = monitors.find(m => m.id === monitorId);
         
-        if (!photoData) {
+        if (!monitor?.photoUrl) {
             alert('لا توجد صورة للتحميل');
             return;
         }
         
         const a = document.createElement('a');
-        a.href = photoData;
-        a.download = `strip_${code}_${Date.now()}.png`;
+        a.href = monitor.photoUrl;
+        a.download = `strip_${monitor.code}_${Date.now()}.png`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -1994,29 +2106,7 @@
 
     function showMonitorDetails(code) {
         const monitor = monitors.find(m => m.code === code);
-        const statusKey = `monitor_status_${code}`;
-        const statusData = localStorage.getItem(statusKey);
-        const locationKey = `monitor_location_${code}`;
-        const locationData = localStorage.getItem(locationKey);
-        
-        let status = { arrived: false, voted: false, hasIssue: false };
-        let location = null;
-        
-        if (statusData) {
-            try {
-                status = JSON.parse(statusData);
-            } catch (e) {
-                console.error('Error parsing status:', e);
-            }
-        }
-        
-        if (locationData) {
-            try {
-                location = JSON.parse(locationData);
-            } catch (e) {
-                console.error('Error parsing location:', e);
-            }
-        }
+        const status = monitor?.status || {};
         
         const message = `
 معلومات المراقب:
@@ -2029,11 +2119,21 @@
 الوصول للمركز: ${status.arrived ? '✅ تم' : '❌ لم يتم'}
 التصويت: ${status.voted ? '✅ تم' : '❌ لم يتم'}
 المشاكل: ${status.hasIssue ? '⚠ يوجد' : '✅ لا يوجد'}
+متصل الآن: ${status.isOnline ? '✅ نعم' : '❌ لا'}
 
-${location ? `الموقع: ${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}` : 'الموقع: غير محدد'}
+${monitor?.location ? `الموقع: ${monitor.location.lat.toFixed(6)}, ${monitor.location.lng.toFixed(6)}` : 'الموقع: غير محدد'}
         `;
         
         alert(message);
+    }
+
+    async function addUpdate(updateData) {
+        try {
+            const newUpdateRef = window.firebasePush(updatesRef);
+            await window.firebaseSet(newUpdateRef, updateData);
+        } catch (error) {
+            console.error('Error adding update:', error);
+        }
     }
 
     // ====== التقارير ======
@@ -2049,7 +2149,7 @@ ${location ? `الموقع: ${location.lat.toFixed(6)}, ${location.lng.toFixed(6
         container.innerHTML = reports
             .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
             .map(report => `
-                <div class="report-card ${report.priority}">
+                <div class="report-card ${report.priority || 'normal'}">
                     <div class="report-header">
                         <h4 class="report-title">${report.issueType || 'مشكلة'}</h4>
                         <div class="report-time">
@@ -2073,6 +2173,68 @@ ${location ? `الموقع: ${location.lat.toFixed(6)}, ${location.lng.toFixed(6
         document.getElementById('noReportsData').style.display = 'none';
     }
 
+    // ====== التحديثات السريعة ======
+    function renderQuickUpdates(updatesList) {
+        const quickTbody = document.getElementById('quickTableBody');
+        
+        if (!quickTbody) return;
+        
+        if (!updatesList || updatesList.length === 0) {
+            quickTbody.innerHTML = '';
+            document.getElementById('noQuickData').style.display = 'block';
+            return;
+        }
+        
+        quickTbody.innerHTML = updatesList.map((update) => {
+            const monitor = monitors.find(m => m.code === update.code);
+            return `
+            <tr>
+                <td>
+                    <div class="monitor-info">
+                        <div class="monitor-avatar">${update.name ? update.name.charAt(0) : '?'}</div>
+                        <div class="monitor-details">
+                            <h4>${update.name || monitor?.name || 'مراقب'}</h4>
+                            <p>${monitor?.center || 'غير محدد'}</p>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <span class="status-badge status-pending">
+                        <i class="fas fa-sync-alt"></i>
+                        ${getUpdateLabel(update.action)}
+                    </span>
+                </td>
+                <td>${getLocationFromCode(update.code)}</td>
+                <td>${formatTime(update.timestamp)}</td>
+                <td>
+                    <button class="action-btn" onclick="showMonitorDetails('${update.code}')">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </td>
+            </tr>
+            `;
+        }).join('');
+        
+        document.getElementById('noQuickData').style.display = 'none';
+    }
+
+    function getUpdateLabel(action) {
+        const labels = {
+            'monitor_added': 'تم الإضافة',
+            'monitor_deleted': 'تم الحذف',
+            'arrived_true': 'تم الوصول',
+            'arrived_false': 'لم يتم الوصول',
+            'voted_true': 'تم التصويت',
+            'voted_false': 'لم يتم التصويت'
+        };
+        return labels[action] || 'نشاط';
+    }
+
+    function getLocationFromCode(code) {
+        const monitor = monitors.find(m => m.code === code);
+        return monitor?.location ? `${monitor.location.lat.toFixed(6)}, ${monitor.location.lng.toFixed(6)}` : 'غير محدد';
+    }
+
     // ====== الإحصائيات والتحديثات ======
     function updateStats() {
         // حساب الإحصائيات
@@ -2081,45 +2243,31 @@ ${location ? `الموقع: ${location.lat.toFixed(6)}, ${location.lng.toFixed(6
         let online = 0;
         let arrived = 0;
         let issues = 0;
+        let located = 0;
         
         monitors.forEach(monitor => {
-            const onlineKey = `monitor_online_${monitor.code}`;
-            if (localStorage.getItem(onlineKey) === 'true') online++;
-            
-            const statusKey = `monitor_status_${monitor.code}`;
-            const statusData = localStorage.getItem(statusKey);
-            if (statusData) {
-                try {
-                    const status = JSON.parse(statusData);
-                    if (status.arrived) arrived++;
-                    if (status.hasIssue) issues++;
-                } catch (e) {
-                    console.error('Error parsing status for stats:', e);
-                }
-            }
+            const status = monitor.status || {};
+            if (status.isOnline) online++;
+            if (status.arrived) arrived++;
+            if (status.hasIssue) issues++;
+            if (monitor.location) located++;
         });
         
         document.getElementById('totalMonitors').textContent = total;
         document.getElementById('onlineMonitors').textContent = online;
         document.getElementById('arrivedMonitors').textContent = arrived;
         document.getElementById('issuesCount').textContent = issues;
-        
-        // تحديث المراقبين على الخريطة
-        const locatedMonitors = monitors.filter(monitor => {
-            const locationKey = `monitor_location_${monitor.code}`;
-            return localStorage.getItem(locationKey);
-        }).length;
-        document.getElementById('locatedMonitors').textContent = locatedMonitors;
+        document.getElementById('locatedMonitors').textContent = located;
         
         // تحديث آخر تحديث للموقع
-        const locationsList = JSON.parse(localStorage.getItem('monitor_locations_list') || '[]');
-        if (locationsList.length > 0) {
-            document.getElementById('lastLocationUpdate').textContent = formatTime(locationsList[0].timestamp);
+        if (updates.length > 0) {
+            const lastUpdate = updates[0];
+            document.getElementById('lastLocationUpdate').textContent = formatTime(lastUpdate.timestamp);
         }
         
         // تحديث التقارير
         const totalReports = reports.length;
-        const emergencyReports = reports.filter(r => r.priority === 'high').length;
+        const emergencyReports = reports.filter(r => r.priority === 'high' || r.priority === 'emergency').length;
         const resolvedReports = reports.filter(r => r.status === 'resolved').length;
         
         document.getElementById('totalReports').textContent = totalReports;
@@ -2163,26 +2311,7 @@ ${location ? `الموقع: ${location.lat.toFixed(6)}, ${location.lng.toFixed(6
             }
         }
         
-        // تحديث البيانات
-        loadMonitors();
-        loadReports();
         updateStats();
-    }
-
-    function updateActivityLog(code, action) {
-        const updatesList = JSON.parse(localStorage.getItem('monitor_updates_list') || '[]');
-        const monitor = monitors.find(m => m.code === code);
-        
-        updatesList.unshift({
-            code: code,
-            name: monitor?.name || 'مراقب',
-            action: action,
-            timestamp: new Date().toISOString()
-        });
-        
-        // الحفاظ على آخر 50 تحديث
-        if (updatesList.length > 50) updatesList.pop();
-        localStorage.setItem('monitor_updates_list', JSON.stringify(updatesList));
     }
 
     // ====== واجهة المستخدم ======
@@ -2214,14 +2343,14 @@ ${location ? `الموقع: ${location.lat.toFixed(6)}, ${location.lng.toFixed(6
         // حفظ مراقب جديد
         const addMonitorForm = document.getElementById('addMonitorForm');
         if (addMonitorForm) {
-            addMonitorForm.addEventListener('submit', function(e) {
+            addMonitorForm.addEventListener('submit', async function(e) {
                 e.preventDefault();
                 
                 const monitorData = {
                     name: document.getElementById('monitorName').value.trim(),
                     phone: document.getElementById('monitorPhone').value.trim(),
                     center: document.getElementById('monitorCenter').value.trim(),
-                    code: document.getElementById('monitorCode').value.trim()
+                    code: document.getElementById('monitorCode').value.trim().toUpperCase()
                 };
                 
                 if (!monitorData.name || !monitorData.phone || !monitorData.center || !monitorData.code) {
@@ -2236,7 +2365,7 @@ ${location ? `الموقع: ${location.lat.toFixed(6)}, ${location.lng.toFixed(6
                     return;
                 }
                 
-                addMonitor(monitorData);
+                await addMonitor(monitorData);
                 closeModal();
             });
         }
@@ -2296,9 +2425,6 @@ ${location ? `الموقع: ${location.lat.toFixed(6)}, ${location.lng.toFixed(6
             renderMonitors();
         } else if (section === 'reports') {
             renderReports();
-        } else if (section === 'map') {
-            // تحديث الخريطة
-            loadMonitors();
         }
     }
 
@@ -2321,8 +2447,18 @@ ${location ? `الموقع: ${location.lat.toFixed(6)}, ${location.lng.toFixed(6
         document.getElementById('monitorCode').value = code;
     }
 
-    function generateId() {
-        return Date.now().toString(36) + Math.random().toString(36).substr(2);
+    // ====== التحديث التلقائي ======
+    function setupAutoRefresh() {
+        if (autoRefreshInterval) {
+            clearInterval(autoRefreshInterval);
+        }
+        
+        const interval = settings.autoRefresh;
+        if (interval > 0) {
+            autoRefreshInterval = setInterval(() => {
+                updateStats();
+            }, interval);
+        }
     }
 
     // ====== التنبيهات والإشعارات ======
@@ -2384,24 +2520,20 @@ ${location ? `الموقع: ${location.lat.toFixed(6)}, ${location.lng.toFixed(6
     }
 
     function playNotificationSound(type) {
-        const audio = new Audio();
-        audio.src = type === 'error' ? 'error.mp3' : 'notification.mp3';
-        audio.play().catch(() => {});
-    }
-
-    // ====== التحديث التلقائي ======
-    function setupAutoRefresh() {
-        if (autoRefreshInterval) {
-            clearInterval(autoRefreshInterval);
-        }
-        
-        const interval = settings.autoRefresh;
-        if (interval > 0) {
-            autoRefreshInterval = setInterval(() => {
-                loadMonitors();
-                loadReports();
-                updateStats();
-            }, interval);
+        try {
+            const audio = new Audio();
+            // استخدام نغمات افتراضية
+            if (type === 'error') {
+                audio.src = 'https://assets.mixkit.co/sfx/preview/mixkit-alarm-digital-clock-beep-989.mp3';
+            } else if (type === 'success') {
+                audio.src = 'https://assets.mixkit.co/sfx/preview/mixkit-correct-answer-tone-2870.mp3';
+            } else {
+                audio.src = 'https://assets.mixkit.co/sfx/preview/mixkit-notification-951.mp3';
+            }
+            audio.volume = 0.3;
+            audio.play().catch(() => {});
+        } catch (error) {
+            console.error('Error playing notification sound:', error);
         }
     }
 
@@ -2438,84 +2570,88 @@ ${location ? `الموقع: ${location.lat.toFixed(6)}, ${location.lng.toFixed(6
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
+    function showLoader(show) {
+        const loader = document.getElementById('loader');
+        if (loader) {
+            loader.style.display = show ? 'flex' : 'none';
+        }
+    }
+
     // ====== التحقق من الجلسة عند التحميل ======
     window.addEventListener('load', function() {
-        // التحقق من جلسة المدير
-        const sessionData = localStorage.getItem('admin_session');
-        
-        if (sessionData) {
-            try {
-                const session = JSON.parse(sessionData);
-                // إذا كانت الجلسة حديثة (أقل من 8 ساعات)
-                if (Date.now() - session.timestamp < 8 * 60 * 60 * 1000) {
-                    currentUser = {
-                        username: session.username,
-                        name: session.name
-                    };
-                    
-                    document.getElementById('currentUserName').textContent = session.name;
-                    document.getElementById('userAvatar').textContent = session.name.charAt(0);
-                    
-                    document.getElementById('loginSection').style.display = 'none';
-                    document.getElementById('dashboardSection').style.display = 'flex';
-                    
-                    // تهيئة بيانات اختبارية إذا لزم الأمر
-                    initializeSampleData();
-                    
-                    init();
-                    
-                    showNotification('مرحباً بعودتك!', 'success');
-                    return;
-                }
-            } catch (error) {
-                console.error('Session error:', error);
+        // التحقق من جلسة المستخدم عبر Firebase Auth
+        window.firebaseOnAuthStateChanged(auth, async (user) => {
+            if (user) {
+                currentUser = user;
+                
+                document.getElementById('currentUserName').textContent = 'مدير النظام';
+                document.getElementById('userAvatar').textContent = 'م';
+                
+                document.getElementById('loginSection').style.display = 'none';
+                document.getElementById('dashboardSection').style.display = 'flex';
+                
+                await init();
+                
+                showNotification('مرحباً بعودتك!', 'success');
+            } else {
+                // لا توجد جلسة نشطة
+                document.getElementById('loginSection').style.display = 'flex';
+                document.getElementById('dashboardSection').style.display = 'none';
             }
-        }
-        
-        // لا توجد جلسة نشطة
-        document.getElementById('loginSection').style.display = 'flex';
-        document.getElementById('dashboardSection').style.display = 'none';
+        });
     });
 
-    // تهيئة بيانات عينة
-    function initializeSampleData() {
-        // فقط إذا لم تكن هناك بيانات
-        if (!localStorage.getItem('election_monitors')) {
-            const sampleMonitors = [
-                {
-                    id: '1',
-                    code: 'MON001',
-                    name: 'أحمد محمد',
-                    phone: '07701234567',
-                    center: 'مدرسة النصر الابتدائية',
-                    createdAt: new Date().toISOString()
-                },
-                {
-                    id: '2',
-                    code: 'MON002',
-                    name: 'سارة علي',
-                    phone: '07707654321',
-                    center: 'قاعة المؤتمرات المركزية',
-                    createdAt: new Date().toISOString()
+    // تهيئة بيانات عينة إذا كانت قاعدة البيانات فارغة
+    async function initializeSampleData() {
+        try {
+            const snapshot = await window.firebaseGet(monitorsRef);
+            if (!snapshot.exists()) {
+                const sampleMonitors = [
+                    {
+                        code: 'MON001',
+                        name: 'أحمد محمد',
+                        phone: '07701234567',
+                        center: 'مدرسة النصر الابتدائية',
+                        createdAt: new Date().toISOString(),
+                        status: {
+                            arrived: false,
+                            voted: false,
+                            hasIssue: false,
+                            issueText: '',
+                            isOnline: true,
+                            lastUpdate: new Date().toISOString()
+                        },
+                        location: {
+                            lat: 31.0413665,
+                            lng: 31.2334333
+                        }
+                    },
+                    {
+                        code: 'MON002',
+                        name: 'سارة علي',
+                        phone: '07707654321',
+                        center: 'قاعة المؤتمرات المركزية',
+                        createdAt: new Date().toISOString(),
+                        status: {
+                            arrived: true,
+                            voted: false,
+                            hasIssue: true,
+                            issueText: 'نقص في أوراق الاقتراع',
+                            isOnline: false,
+                            lastUpdate: new Date().toISOString()
+                        }
+                    }
+                ];
+                
+                // حفظ في Firebase
+                for (const monitor of sampleMonitors) {
+                    await window.firebaseSet(window.firebaseRef(database, `monitors/${monitor.code}`), monitor);
                 }
-            ];
-            localStorage.setItem('election_monitors', JSON.stringify(sampleMonitors));
-            
-            // تهيئة حالات المراقبين
-            sampleMonitors.forEach(monitor => {
-                const statusKey = `monitor_status_${monitor.code}`;
-                localStorage.setItem(statusKey, JSON.stringify({
-                    arrived: false,
-                    voted: false,
-                    hasIssue: false,
-                    issueText: '',
-                    lastUpdate: new Date().toISOString(),
-                    monitorName: monitor.name,
-                    monitorCode: monitor.code,
-                    monitorPhone: monitor.phone,
-                    monitorCenter: monitor.center
-                }));
-            });
+                
+                showNotification('تم تهيئة بيانات تجريبية', 'info');
+            }
+        } catch (error) {
+            console.error('Error initializing sample data:', error);
         }
     }
 
