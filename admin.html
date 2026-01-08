@@ -445,6 +445,52 @@
             border-radius: var(--radius);
         }
 
+        /* Toggle Switch */
+        .ios-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 26px;
+        }
+
+        .ios-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .ios-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .ios-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .ios-slider {
+            background-color: var(--success);
+        }
+
+        input:checked + .ios-slider:before {
+            transform: translateX(24px);
+        }
+
         @media (max-width: 768px) {
             .dashboard-grid {
                 grid-template-columns: 1fr;
@@ -719,11 +765,12 @@
         limit
     } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
 
-    // إعدادات Firebase
+    // ✅ إعدادات Firebase الصحيحة المحدثة
     const firebaseConfig = {
         apiKey: "AIzaSyDdiudUa5jjcZDwJgYBbLdC-YBNQ5rlqvU",
-        authDomain: "election-system-9cbb8.firebasestorage.app",
+        authDomain: "election-system-9cbb8.firebaseapp.com", // ✅ تم التصحيح
         projectId: "election-system-9cbb8",
+        storageBucket: "election-system-9cbb8.firebasestorage.app",
         messagingSenderId: "886706894008",
         appId: "1:886706894008:web:270556771843614e56b04d"
     };
