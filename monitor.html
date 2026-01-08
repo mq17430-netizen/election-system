@@ -6,6 +6,40 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Firebase Configuration -->
+    <script type="module">
+        // Import Firebase
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getStorage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+        
+        // Firebase Configuration - استبدل هذه القيم بقيم مشروعك
+        const firebaseConfig = {
+            apiKey: "AIzaSyDdiudUa5jjcZDwJgYBbLdC-YBNQ5rlqvU",
+            authDomain: "election-system-9cbb8.firebaseapp.com",
+            projectId: "election-system-9cbb8",
+            storageBucket: "election-system-9cbb8.firebasestorage.app",
+            messagingSenderId: "886706894008",
+            appId: "1:886706894008:web:270556771843614e56b04d"
+        };
+        
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const storage = getStorage(app);
+        
+        // Export to global scope
+        window.firebaseApp = app;
+        window.firebaseAuth = auth;
+        window.firebaseDB = db;
+        window.firebaseStorage = storage;
+        
+        console.log('Firebase initialized successfully');
+    </script>
+    
     <style>
         :root {
             --primary: #1a9bff;
@@ -699,10 +733,51 @@
     let locationInterval = null;
     let statusUpdateInterval = null;
 
+    // ====== نظام Firebase ======
+    
+    // دالة للحصول على Firebase Functions
+    async function getFirebaseFunctions() {
+        // استيراد الوظائف المطلوبة
+        const { 
+            getFirestore,
+            collection,
+            query,
+            where,
+            getDocs,
+            doc,
+            getDoc,
+            setDoc,
+            updateDoc,
+            addDoc,
+            serverTimestamp,
+            onSnapshot,
+            Timestamp
+        } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
+        
+        const {
+            getStorage,
+            ref,
+            uploadBytes,
+            getDownloadURL
+        } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js");
+        
+        const db = window.firebaseDB || getFirestore();
+        const storage = window.firebaseStorage || getStorage();
+        
+        return {
+            db,
+            storage,
+            collection, query, where, getDocs,
+            doc, getDoc, setDoc, updateDoc, addDoc,
+            serverTimestamp, onSnapshot, Timestamp,
+            ref, uploadBytes, getDownloadURL
+        };
+    }
+
     // ====== النظام الأساسي ======
 
-    // دالة تسجيل الدخول
-    function login() {
+    // دالة تسجيل الدخول مع Firebase
+    async function login() {
         const code = document.getElementById('uCode').value.trim();
         
         if (!code) {
@@ -712,27 +787,125 @@
         
         showLoading(true);
         
-        // محاكاة تأخير للواقعية
-        setTimeout(() => {
-            try {
-                // البحث عن المراقب في قاعدة البيانات المحلية
-                const monitors = JSON.parse(localStorage.getItem('election_monitors') || '[]');
-                const monitor = monitors.find(m => m.code === code);
+        try {
+            // الحصول على وظائف Firebase
+            const { 
+                db, 
+                collection, 
+                query, 
+                where, 
+                getDocs,
+                doc,
+                getDoc
+            } = await getFirebaseFunctions();
+            
+            // البحث عن المراقب في Firestore
+            const monitorsRef = collection(db, 'monitors');
+            const q = query(monitorsRef, where("code", "==", code));
+            const querySnapshot = await getDocs(q);
+            
+            if (querySnapshot.empty) {
+                showNotification('الكود غير صحيح أو غير مسجل', 'error');
+                showLoading(false);
                 
-                if (!monitor) {
-                    showNotification('الكود غير صحيح أو غير مسجل', 'error');
-                    showLoading(false);
-                    return;
+                // استخدام بيانات تجريبية للاختبار
+                if (code === 'TEST001') {
+                    await useTestData(code);
                 }
-                
-                currentUser = {
-                    code: code,
-                    name: monitor.name,
-                    phone: monitor.phone,
-                    center: monitor.center,
-                    id: monitor.id || Date.now().toString()
+                return;
+            }
+            
+            // الحصول على بيانات المراقب
+            const monitorDoc = querySnapshot.docs[0];
+            const monitor = monitorDoc.data();
+            
+            currentUser = {
+                id: monitorDoc.id,
+                code: monitor.code,
+                name: monitor.name,
+                phone: monitor.phone,
+                center: monitor.center,
+                centerId: monitor.centerId,
+                role: monitor.role || 'monitor'
+            };
+            
+            // تحميل بيانات الحالة الحالية
+            await loadMonitorStatus();
+            
+            // إظهار واجهة المراقب
+            document.getElementById('loginSection').style.display = 'none';
+            document.getElementById('monitorSection').style.display = 'block';
+            
+            // تحديث واجهة المستخدم
+            updateUI();
+            
+            // بدء مراقبة التحديثات في الوقت الحقيقي
+            startRealtimeUpdates();
+            
+            showNotification(`مرحباً ${currentUser.name}`, 'success');
+            
+        } catch (error) {
+            console.error('Login error:', error);
+            showNotification('حدث خطأ أثناء الدخول', 'error');
+        }
+        
+        showLoading(false);
+    }
+
+    // استخدام بيانات تجريبية للاختبار
+    async function useTestData(code) {
+        const testUser = {
+            id: 'test_' + Date.now(),
+            code: code,
+            name: 'مراقب تجريبي',
+            phone: '07700000000',
+            center: 'مركز تجريبي',
+            centerId: 'test_center',
+            role: 'monitor'
+        };
+        
+        currentUser = testUser;
+        
+        // إنشاء بيانات تجريبية
+        monitorData = {
+            ...testUser,
+            arrived: false,
+            voted: false,
+            hasIssue: false,
+            location: null,
+            lastUpdate: null,
+            isOnline: true
+        };
+        
+        // إظهار واجهة المراقب
+        document.getElementById('loginSection').style.display = 'none';
+        document.getElementById('monitorSection').style.display = 'block';
+        
+        updateUI();
+        showNotification(`مرحباً ${testUser.name} (وضع الاختبار)`, 'success');
+    }
+
+    // تحميل حالة المراقب من Firebase
+    async function loadMonitorStatus() {
+        try {
+            const { db, doc, getDoc, serverTimestamp, setDoc } = await getFirebaseFunctions();
+            
+            const statusRef = doc(db, 'status', currentUser.id);
+            const statusDoc = await getDoc(statusRef);
+            
+            if (statusDoc.exists()) {
+                const data = statusDoc.data();
+                monitorData = {
+                    ...currentUser,
+                    arrived: data.arrived || false,
+                    voted: data.voted || false,
+                    hasIssue: data.hasIssue || false,
+                    location: data.location || null,
+                    lastUpdate: data.lastUpdate?.toDate() || null,
+                    isOnline: true
                 };
-                
+            } else {
+                // إنشاء حالة أولية
                 monitorData = {
                     ...currentUser,
                     arrived: false,
@@ -743,142 +916,82 @@
                     isOnline: true
                 };
                 
-                // حفظ بيانات الجلسة
-                localStorage.setItem('monitor_current_session', JSON.stringify({
-                    code: code,
-                    timestamp: Date.now()
-                }));
-                
-                // حفظ معلومات المراقب
-                localStorage.setItem(`monitor_info_${code}`, JSON.stringify(currentUser));
-                
-                // إظهار واجهة المراقب
-                document.getElementById('loginSection').style.display = 'none';
-                document.getElementById('monitorSection').style.display = 'block';
-                
-                // تحديث واجهة المستخدم
-                updateUI();
-                
-                // تحديث حالة الاتصال للمدير
-                updateOnlineStatus(true);
-                
-                // بدء مراقبة الاتصال والتحديثات
-                startMonitoring();
-                
-                showNotification(`مرحباً ${monitorData.name}`, 'success');
-                
-            } catch (error) {
-                console.error('Login error:', error);
-                showNotification('حدث خطأ أثناء الدخول', 'error');
+                // حفظ الحالة الأولية
+                await setDoc(statusRef, {
+                    ...monitorData,
+                    lastUpdate: serverTimestamp(),
+                    createdAt: serverTimestamp()
+                });
             }
-            
-            showLoading(false);
-        }, 1000);
+        } catch (error) {
+            console.error('Error loading status:', error);
+        }
     }
 
     // ====== تحديث الحالة ======
 
     // تحديث حالة الوصول
-    function updateArrival() {
-        updateStatus('arrived', true, 'الوصول للمركز');
+    async function updateArrival() {
+        await updateStatus('arrived', true, 'الوصول للمركز');
     }
 
     // تحديث حالة التصويت
-    function updateVoting() {
-        updateStatus('voted', true, 'انتهاء التصويت');
+    async function updateVoting() {
+        await updateStatus('voted', true, 'انتهاء التصويت');
     }
 
-    // دالة عامة لتحديث الحالة
-    function updateStatus(field, value, label) {
+    // دالة عامة لتحديث الحالة مع Firebase
+    async function updateStatus(field, value, label) {
         if (!currentUser) return;
         
         showLoading(true);
         
-        setTimeout(() => {
-            try {
-                const timestamp = new Date().toISOString();
-                
-                // تحديث البيانات المحلية
-                monitorData[field] = value;
-                monitorData.lastUpdate = timestamp;
-                
-                // تحديث واجهة المستخدم
-                updateUI();
-                
-                // حفظ الحالة للمدير (التخزين المركزي)
-                saveStatusForAdmin(field, value, timestamp);
-                
-                // تحديث السجل العام
-                updateActivityLog(field, value, timestamp);
-                
-                showNotification(`تم تحديث ${label} بنجاح`, 'success');
-                
-                // إرسال إشعار للمدير
-                sendAdminNotification(`${monitorData.name}: ${label}`);
-                
-            } catch (error) {
-                console.error('Update error:', error);
-                showNotification('حدث خطأ في التحديث', 'error');
-            }
+        try {
+            const { 
+                db, 
+                doc, 
+                updateDoc, 
+                serverTimestamp, 
+                collection, 
+                addDoc 
+            } = await getFirebaseFunctions();
             
-            showLoading(false);
-        }, 500);
-    }
-
-    // حفظ الحالة للمدير
-    function saveStatusForAdmin(field, value, timestamp) {
-        const statusKey = `monitor_status_${currentUser.code}`;
+            // تحديث البيانات المحلية
+            monitorData[field] = value;
+            monitorData.lastUpdate = new Date();
+            
+            // تحديث واجهة المستخدم
+            updateUI();
+            
+            // تحديث Firebase
+            const statusRef = doc(db, 'status', currentUser.id);
+            await updateDoc(statusRef, {
+                [field]: value,
+                lastUpdate: serverTimestamp(),
+                updatedAt: serverTimestamp()
+            });
+            
+            // إضافة إلى سجل النشاط
+            const activityRef = collection(db, 'activities');
+            await addDoc(activityRef, {
+                monitorId: currentUser.id,
+                monitorName: monitorData.name,
+                monitorCode: monitorData.code,
+                action: field,
+                value: value,
+                label: label,
+                timestamp: serverTimestamp(),
+                center: monitorData.center
+            });
+            
+            showNotification(`تم تحديث ${label} بنجاح`, 'success');
+            
+        } catch (error) {
+            console.error('Update error:', error);
+            showNotification('حدث خطأ في التحديث', 'error');
+        }
         
-        // جلب الحالة الحالية أو إنشاء جديدة
-        const currentStatus = JSON.parse(localStorage.getItem(statusKey) || '{}');
-        
-        // تحديث الحالة
-        const newStatus = {
-            ...currentStatus,
-            [field]: value,
-            lastUpdate: timestamp,
-            monitorName: monitorData.name,
-            monitorCode: monitorData.code,
-            monitorPhone: monitorData.phone,
-            monitorCenter: monitorData.center,
-            timestamp: timestamp
-        };
-        
-        // حفظ الحالة المحدثة
-        localStorage.setItem(statusKey, JSON.stringify(newStatus));
-        
-        // إضافة إلى قائمة تحديثات المراقبين
-        const updatesList = JSON.parse(localStorage.getItem('monitor_updates_list') || '[]');
-        updatesList.unshift({
-            code: currentUser.code,
-            name: monitorData.name,
-            field: field,
-            value: value,
-            label: field === 'arrived' ? 'الوصول للمركز' : 'انتهاء التصويت',
-            timestamp: timestamp
-        });
-        
-        // الحفاظ على آخر 50 تحديث فقط
-        if (updatesList.length > 50) updatesList.pop();
-        localStorage.setItem('monitor_updates_list', JSON.stringify(updatesList));
-    }
-
-    // تحديث سجل النشاط
-    function updateActivityLog(action, value, timestamp) {
-        const logKey = `monitor_activity_${currentUser.code}`;
-        const currentLog = JSON.parse(localStorage.getItem(logKey) || '[]');
-        
-        currentLog.unshift({
-            action: action,
-            value: value,
-            timestamp: timestamp,
-            label: action === 'arrived' ? 'تحديث حالة الوصول' : 
-                   action === 'voted' ? 'تحديث حالة التصويت' : 'تحديث حالة'
-        });
-        
-        // الحفاظ على آخر 100 نشاط
-        if (currentLog.length > 100) currentLog.pop();
-        localStorage.setItem(logKey, JSON.stringify(currentLog));
+        showLoading(false);
     }
 
     // ====== الإبلاغ عن المشاكل ======
@@ -893,7 +1006,8 @@
         document.getElementById('issueDetails').value = '';
     }
 
-    function submitIssue() {
+    // إرسال المشاكل إلى Firebase
+    async function submitIssue() {
         const type = document.getElementById('issueType').value;
         const details = document.getElementById('issueDetails').value.trim();
         
@@ -909,64 +1023,58 @@
         
         showLoading(true);
         
-        setTimeout(() => {
-            try {
-                const timestamp = new Date().toISOString();
-                const issueId = `issue_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-                
-                // إنشاء بيانات المشكلة
-                const issueData = {
-                    id: issueId,
-                    monitorCode: currentUser.code,
-                    monitorName: monitorData.name,
-                    monitorPhone: monitorData.phone,
-                    monitorCenter: monitorData.center,
-                    issueType: type,
-                    issueDetails: details,
-                    priority: ['تزوير', 'أمني'].includes(type) ? 'high' : 'medium',
-                    status: 'new',
-                    timestamp: timestamp,
-                    location: monitorData.location || null,
-                    read: false
-                };
-                
-                // حفظ المشكلة في السجل العام
-                const issuesList = JSON.parse(localStorage.getItem('monitor_issues_list') || '[]');
-                issuesList.unshift(issueData);
-                localStorage.setItem('monitor_issues_list', JSON.stringify(issuesList));
-                
-                // تحديث حالة المراقب
-                monitorData.hasIssue = true;
-                monitorData.issueText = details;
-                monitorData.lastUpdate = timestamp;
-                
-                // حفظ في حالة المراقب الخاصة
-                const statusKey = `monitor_status_${currentUser.code}`;
-                const currentStatus = JSON.parse(localStorage.getItem(statusKey) || '{}');
-                currentStatus.hasIssue = true;
-                currentStatus.issueText = details;
-                currentStatus.lastIssueTime = timestamp;
-                localStorage.setItem(statusKey, JSON.stringify(currentStatus));
-                
-                showNotification('تم إرسال البلاغ بنجاح', 'success');
-                closeIssueModal();
-                updateUI();
-                
-                // إرسال إشعار عاجل للمدير
-                sendEmergencyNotification(type, details);
-                
-            } catch (error) {
-                console.error('Issue submission error:', error);
-                showNotification('حدث خطأ في إرسال البلاغ', 'error');
-            }
+        try {
+            const { 
+                db, 
+                collection, 
+                addDoc, 
+                serverTimestamp,
+                doc,
+                updateDoc
+            } = await getFirebaseFunctions();
             
-            showLoading(false);
-        }, 1000);
+            const issueData = {
+                monitorId: currentUser.id,
+                monitorName: monitorData.name,
+                monitorCode: monitorData.code,
+                monitorPhone: monitorData.phone,
+                monitorCenter: monitorData.center,
+                issueType: type,
+                issueDetails: details,
+                priority: ['تزوير', 'أمني'].includes(type) ? 'high' : 'medium',
+                status: 'new',
+                timestamp: serverTimestamp(),
+                location: monitorData.location || null,
+                read: false,
+                resolved: false
+            };
+            
+            const issuesRef = collection(db, 'issues');
+            await addDoc(issuesRef, issueData);
+            
+            // تحديث حالة المراقب
+            monitorData.hasIssue = true;
+            const statusRef = doc(db, 'status', currentUser.id);
+            await updateDoc(statusRef, {
+                hasIssue: true,
+                lastUpdate: serverTimestamp()
+            });
+            
+            showNotification('تم إرسال البلاغ بنجاح', 'success');
+            closeIssueModal();
+            updateUI();
+            
+        } catch (error) {
+            console.error('Issue submission error:', error);
+            showNotification('حدث خطأ في إرسال البلاغ', 'error');
+        }
+        
+        showLoading(false);
     }
 
     // ====== الموقع الجغرافي ======
 
-    function sendLocation() {
+    async function sendLocation() {
         if (!navigator.geolocation) {
             showNotification('المتصفح لا يدعم خدمة تحديد الموقع', 'error');
             return;
@@ -981,8 +1089,17 @@
         };
         
         navigator.geolocation.getCurrentPosition(
-            (position) => {
+            async (position) => {
                 try {
+                    const { 
+                        db, 
+                        doc, 
+                        updateDoc, 
+                        serverTimestamp,
+                        collection,
+                        addDoc
+                    } = await getFirebaseFunctions();
+                    
                     const location = {
                         lat: position.coords.latitude,
                         lng: position.coords.longitude,
@@ -997,8 +1114,24 @@
                     monitorData.location = location;
                     monitorData.lastUpdate = location.timestamp;
                     
-                    // حفظ الموقع للمدير
-                    saveLocationForAdmin(location);
+                    // تحديث Firebase
+                    const statusRef = doc(db, 'status', currentUser.id);
+                    await updateDoc(statusRef, {
+                        location: location,
+                        lastUpdate: serverTimestamp(),
+                        lastLocationUpdate: serverTimestamp()
+                    });
+                    
+                    // إضافة إلى سجل المواقع
+                    const locationRef = collection(db, 'locations');
+                    await addDoc(locationRef, {
+                        monitorId: currentUser.id,
+                        monitorName: monitorData.name,
+                        monitorCode: monitorData.code,
+                        location: location,
+                        timestamp: serverTimestamp(),
+                        center: monitorData.center
+                    });
                     
                     // تحديث واجهة المستخدم
                     updateUI();
@@ -1035,37 +1168,9 @@
         );
     }
 
-    // حفظ الموقع للمدير
-    function saveLocationForAdmin(location) {
-        const locationKey = `monitor_location_${currentUser.code}`;
-        
-        // حفظ الموقع
-        localStorage.setItem(locationKey, JSON.stringify(location));
-        
-        // إضافة إلى سجل المواقع
-        const locationsList = JSON.parse(localStorage.getItem('monitor_locations_list') || '[]');
-        locationsList.unshift({
-            code: currentUser.code,
-            name: monitorData.name,
-            location: location,
-            timestamp: location.timestamp
-        });
-        
-        // الحفاظ على آخر 50 موقع
-        if (locationsList.length > 50) locationsList.pop();
-        localStorage.setItem('monitor_locations_list', JSON.stringify(locationsList));
-        
-        // تحديث الحالة الحالية
-        const statusKey = `monitor_status_${currentUser.code}`;
-        const currentStatus = JSON.parse(localStorage.getItem(statusKey) || '{}');
-        currentStatus.location = location;
-        currentStatus.lastLocationUpdate = location.timestamp;
-        localStorage.setItem(statusKey, JSON.stringify(currentStatus));
-    }
-
     // ====== رفع الصور ======
 
-    function uploadPhoto() {
+    async function uploadPhoto() {
         const input = document.getElementById('photoInput');
         if (!input.files.length) return;
         
@@ -1085,98 +1190,58 @@
         
         showLoading(true);
         
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            try {
-                const photoData = e.target.result;
-                const timestamp = new Date().toISOString();
-                
-                // حفظ الصورة
-                const photoKey = `monitor_photo_${currentUser.code}_${Date.now()}`;
-                localStorage.setItem(photoKey, photoData);
-                
-                // تحديث المعاينة
-                document.getElementById('previewImage').src = photoData;
-                document.getElementById('photoPreview').style.display = 'block';
-                
-                // حفظ معلومات الصورة للمدير
-                const photoInfo = {
-                    code: currentUser.code,
-                    name: monitorData.name,
-                    photoKey: photoKey,
-                    timestamp: timestamp,
-                    type: file.type,
-                    size: file.size
-                };
-                
-                const photosList = JSON.parse(localStorage.getItem('monitor_photos_list') || '[]');
-                photosList.unshift(photoInfo);
-                localStorage.setItem('monitor_photos_list', JSON.stringify(photosList));
-                
-                // تحديث الحالة
-                const statusKey = `monitor_status_${currentUser.code}`;
-                const currentStatus = JSON.parse(localStorage.getItem(statusKey) || '{}');
-                currentStatus.lastPhoto = photoKey;
-                currentStatus.lastPhotoTime = timestamp;
-                localStorage.setItem(statusKey, JSON.stringify(currentStatus));
-                
-                showNotification('تم رفع الصورة بنجاح', 'success');
-                
-            } catch (error) {
-                console.error('Photo upload error:', error);
-                showNotification('حدث خطأ في رفع الصورة', 'error');
-            }
+        try {
+            const { 
+                storage, 
+                ref, 
+                uploadBytes, 
+                getDownloadURL, 
+                db, 
+                collection, 
+                addDoc, 
+                serverTimestamp 
+            } = await getFirebaseFunctions();
             
-            showLoading(false);
-        };
+            // إنشاء اسم فريد للملف
+            const fileName = `${currentUser.id}_${Date.now()}_${file.name}`;
+            const storageRef = ref(storage, `photos/${fileName}`);
+            
+            // رفع الملف
+            const snapshot = await uploadBytes(storageRef, file);
+            const downloadURL = await getDownloadURL(snapshot.ref);
+            
+            // تحديث المعاينة
+            document.getElementById('previewImage').src = downloadURL;
+            document.getElementById('photoPreview').style.display = 'block';
+            
+            // حفظ معلومات الصورة في Firestore
+            const photoInfo = {
+                monitorId: currentUser.id,
+                monitorName: monitorData.name,
+                monitorCode: monitorData.code,
+                photoURL: downloadURL,
+                fileName: fileName,
+                timestamp: serverTimestamp(),
+                type: file.type,
+                size: file.size,
+                center: monitorData.center
+            };
+            
+            const photosRef = collection(db, 'photos');
+            await addDoc(photosRef, photoInfo);
+            
+            // تحديث الحالة المحلية
+            if (!monitorData.photos) monitorData.photos = [];
+            monitorData.photos.push(photoInfo);
+            
+            showNotification('تم رفع الصورة بنجاح', 'success');
+            
+        } catch (error) {
+            console.error('Photo upload error:', error);
+            showNotification('حدث خطأ في رفع الصورة', 'error');
+        }
         
-        reader.readAsDataURL(file);
-    }
-
-    // ====== التواصل مع الإدارة ======
-
-    // إرسال إشعار للمدير
-    function sendAdminNotification(message) {
-        const notification = {
-            id: `notif_${Date.now()}`,
-            monitorCode: currentUser.code,
-            monitorName: monitorData.name,
-            message: message,
-            timestamp: new Date().toISOString(),
-            read: false,
-            type: 'info'
-        };
-        
-        const notifications = JSON.parse(localStorage.getItem('admin_notifications') || '[]');
-        notifications.unshift(notification);
-        
-        // الحفاظ على آخر 100 إشعار
-        if (notifications.length > 100) notifications.pop();
-        localStorage.setItem('admin_notifications', JSON.stringify(notifications));
-    }
-
-    // إرسال إشعار عاجل
-    function sendEmergencyNotification(type, details) {
-        const emergency = {
-            id: `emergency_${Date.now()}`,
-            monitorCode: currentUser.code,
-            monitorName: monitorData.name,
-            monitorPhone: monitorData.phone,
-            monitorCenter: monitorData.center,
-            type: type,
-            details: details,
-            timestamp: new Date().toISOString(),
-            priority: 'high',
-            status: 'unread',
-            alert: true
-        };
-        
-        const emergencies = JSON.parse(localStorage.getItem('admin_emergencies') || '[]');
-        emergencies.unshift(emergency);
-        localStorage.setItem('admin_emergencies', JSON.stringify(emergencies));
-        
-        // إضافة إشعار عادي أيضاً
-        sendAdminNotification(`🚨 حالة طارئة: ${type} - ${details.substring(0, 50)}...`);
+        showLoading(false);
     }
 
     // ====== مراقبة النظام ======
@@ -1212,8 +1277,8 @@
                 statusEl.className = 'connection-status connection-online';
                 showNotification('تم استعادة الاتصال بالإنترنت', 'success');
                 
-                // مزامنة البيانات مع المدير
-                syncDataWithAdmin();
+                // مزامنة البيانات مع Firebase
+                syncDataWithFirebase();
             } else {
                 statusEl.innerHTML = '<i class="fas fa-wifi-slash"></i> غير متصل';
                 statusEl.className = 'connection-status connection-offline';
@@ -1222,62 +1287,119 @@
         }
     }
 
-    function updateOnlineStatus() {
+    async function updateOnlineStatus() {
         if (!currentUser) return;
         
-        const onlineKey = `monitor_online_${currentUser.code}`;
-        localStorage.setItem(onlineKey, isConnected ? 'true' : 'false');
-        
-        const lastSeen = {
-            timestamp: new Date().toISOString(),
-            online: isConnected
-        };
-        localStorage.setItem(`monitor_lastseen_${currentUser.code}`, JSON.stringify(lastSeen));
-    }
-
-    function updateLocationPeriodically() {
-        if (!navigator.geolocation || !isConnected) return;
-        
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                const location = {
-                    lat: position.coords.latitude,
-                    lng: position.coords.longitude,
-                    accuracy: position.coords.accuracy,
-                    timestamp: new Date().toISOString()
-                };
-                
-                // تحديث الموقع بدون إشعار للمستخدم
-                monitorData.location = location;
-                saveLocationForAdmin(location);
-            },
-            () => {}, // تجاهل الأخطاء في التحديث التلقائي
-            { enableHighAccuracy: false, timeout: 5000, maximumAge: 30000 }
-        );
-    }
-
-    function syncDataWithAdmin() {
-        // هنا يمكن إضافة منطق لمزامنة البيانات مع خادم مركزي
-        console.log('Syncing data with admin...');
-    }
-
-    function checkForAdminMessages() {
-        // التحقق من رسائل المدير
-        const messagesKey = `admin_messages_${currentUser.code}`;
-        const messages = JSON.parse(localStorage.getItem(messagesKey) || '[]');
-        
-        // التحقق من الرسائل غير المقروءة
-        const unreadMessages = messages.filter(msg => !msg.read);
-        
-        if (unreadMessages.length > 0) {
-            // عرض آخر رسالة غير مقروءة
-            const lastMessage = unreadMessages[0];
-            showNotification(`رسالة من المدير: ${lastMessage.message}`, 'info');
+        try {
+            const { db, doc, updateDoc, serverTimestamp } = await getFirebaseFunctions();
             
-            // تعليم الرسالة كمقروءة
-            lastMessage.read = true;
-            localStorage.setItem(messagesKey, JSON.stringify(messages));
+            const statusRef = doc(db, 'status', currentUser.id);
+            await updateDoc(statusRef, {
+                isOnline: isConnected,
+                lastSeen: serverTimestamp()
+            });
+            
+        } catch (error) {
+            console.error('Error updating online status:', error);
         }
+    }
+
+    async function updateLocationPeriodically() {
+        if (!navigator.geolocation || !isConnected || !currentUser) return;
+        
+        try {
+            const { db, doc, updateDoc, serverTimestamp } = await getFirebaseFunctions();
+            
+            navigator.geolocation.getCurrentPosition(
+                async (position) => {
+                    const location = {
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude,
+                        accuracy: position.coords.accuracy,
+                        timestamp: new Date().toISOString()
+                    };
+                    
+                    // تحديث الموقع في Firebase
+                    const statusRef = doc(db, 'status', currentUser.id);
+                    await updateDoc(statusRef, {
+                        location: location,
+                        lastLocationUpdate: serverTimestamp()
+                    });
+                    
+                    // تحديث البيانات المحلية
+                    monitorData.location = location;
+                },
+                () => {}, // تجاهل الأخطاء في التحديث التلقائي
+                { enableHighAccuracy: false, timeout: 5000, maximumAge: 30000 }
+            );
+        } catch (error) {
+            console.error('Periodic location update error:', error);
+        }
+    }
+
+    async function syncDataWithFirebase() {
+        if (!currentUser) return;
+        
+        try {
+            const { db, doc, setDoc, serverTimestamp } = await getFirebaseFunctions();
+            
+            // مزامنة البيانات المحلية مع Firebase
+            const statusRef = doc(db, 'status', currentUser.id);
+            await setDoc(statusRef, {
+                ...monitorData,
+                lastUpdate: serverTimestamp(),
+                lastSync: serverTimestamp()
+            }, { merge: true });
+            
+            console.log('Data synced with Firebase');
+        } catch (error) {
+            console.error('Sync error:', error);
+        }
+    }
+
+    // الاستماع للتحديثات في الوقت الحقيقي
+    async function startRealtimeUpdates() {
+        if (!currentUser) return;
+        
+        try {
+            const { db, doc, onSnapshot } = await getFirebaseFunctions();
+            
+            // الاستماع لتحديثات حالة المراقب
+            const statusRef = doc(db, 'status', currentUser.id);
+            onSnapshot(statusRef, (doc) => {
+                if (doc.exists()) {
+                    const newData = doc.data();
+                    monitorData = { ...monitorData, ...newData };
+                    updateUI();
+                }
+            });
+            
+            // الاستماع لرسائل المدير
+            const messagesRef = collection(db, 'messages');
+            const q = query(messagesRef, 
+                where("monitorId", "==", currentUser.id),
+                where("read", "==", false)
+            );
+            
+            onSnapshot(q, async (snapshot) => {
+                snapshot.docChanges().forEach(async (change) => {
+                    if (change.type === 'added') {
+                        const message = change.doc.data();
+                        showNotification(`رسالة من المدير: ${message.text}`, 'info');
+                        
+                        // تعليم الرسالة كمقروءة
+                        await updateDoc(change.doc.ref, { read: true });
+                    }
+                });
+            });
+            
+        } catch (error) {
+            console.error('Realtime updates error:', error);
+        }
+    }
+
+    async function checkForAdminMessages() {
+        // سيتم التعامل مع الرسائل في startRealtimeUpdates
     }
 
     // ====== تحديث واجهة المستخدم ======
@@ -1308,7 +1430,7 @@
         
         // تحديث وقت آخر تحديث
         if (monitorData.lastUpdate) {
-            const date = new Date(monitorData.lastUpdate);
+            const date = monitorData.lastUpdate instanceof Date ? monitorData.lastUpdate : new Date(monitorData.lastUpdate);
             const timeStr = date.toLocaleTimeString('ar-EG', {
                 hour: '2-digit',
                 minute: '2-digit',
@@ -1372,26 +1494,26 @@
 
     // ====== إدارة الجلسة ======
 
-    function logout() {
+    async function logout() {
         if (confirm('هل تريد تسجيل الخروج؟')) {
-            // تحديث حالة الخروج للمدير
-            if (currentUser) {
-                localStorage.setItem(`monitor_online_${currentUser.code}`, 'false');
-                
-                const lastSeen = {
-                    timestamp: new Date().toISOString(),
-                    online: false,
-                    status: 'logged_out'
-                };
-                localStorage.setItem(`monitor_lastseen_${currentUser.code}`, JSON.stringify(lastSeen));
+            try {
+                // تحديث حالة الخروج في Firebase
+                if (currentUser) {
+                    const { db, doc, updateDoc, serverTimestamp } = await getFirebaseFunctions();
+                    
+                    const statusRef = doc(db, 'status', currentUser.id);
+                    await updateDoc(statusRef, {
+                        isOnline: false,
+                        lastSeen: serverTimestamp()
+                    });
+                }
+            } catch (error) {
+                console.error('Logout error:', error);
             }
             
             // إيقاف التحديثات
             if (locationInterval) clearInterval(locationInterval);
             if (statusUpdateInterval) clearInterval(statusUpdateInterval);
-            
-            // مسح جلسة المستخدم
-            localStorage.removeItem('monitor_current_session');
             
             // إعادة التحميل
             location.reload();
@@ -1401,21 +1523,6 @@
     // ====== التهيئة الأولية ======
 
     window.addEventListener('load', function() {
-        // التحقق من جلسة سابقة
-        const session = localStorage.getItem('monitor_current_session');
-        if (session) {
-            try {
-                const sessionData = JSON.parse(session);
-                // إذا كانت الجلسة حديثة (أقل من 24 ساعة)
-                if (Date.now() - sessionData.timestamp < 24 * 60 * 60 * 1000) {
-                    document.getElementById('uCode').value = sessionData.code;
-                    login();
-                }
-            } catch (e) {
-                console.log('Invalid session data');
-            }
-        }
-        
         // إضافة مستمعين لأحداث الاتصال
         window.addEventListener('online', () => {
             isConnected = true;
@@ -1427,31 +1534,25 @@
             updateConnectionStatus();
         });
         
-        // تهيئة بيانات اختبارية إذا لزم الأمر
-        initializeTestData();
+        // تحميل بيانات المراقبين الافتراضية إذا لزم الأمر
+        initializeDefaultData();
     });
 
-    // تهيئة بيانات اختبارية
-    function initializeTestData() {
-        // فقط إذا لم تكن هناك بيانات
-        if (!localStorage.getItem('election_monitors')) {
-            const testMonitors = [
-                {
-                    id: '1',
-                    code: 'MON001',
-                    name: 'أحمد محمد',
-                    phone: '07701234567',
-                    center: 'مدرسة النصر الابتدائية'
-                },
-                {
-                    id: '2',
-                    code: 'MON002',
-                    name: 'سارة علي',
-                    phone: '07707654321',
-                    center: 'قاعة المؤتمرات'
-                }
-            ];
-            localStorage.setItem('election_monitors', JSON.stringify(testMonitors));
+    // تهيئة بيانات افتراضية للاختبار
+    async function initializeDefaultData() {
+        try {
+            const { db, collection, getDocs } = await getFirebaseFunctions();
+            
+            const monitorsRef = collection(db, 'monitors');
+            const snapshot = await getDocs(monitorsRef);
+            
+            // إذا لم يكن هناك مراقبين، أضف بيانات تجريبية
+            if (snapshot.empty) {
+                console.log('No monitors found, you need to add them from Firebase console');
+                console.log('You can use code: TEST001 for testing');
+            }
+        } catch (error) {
+            console.log('Firebase not initialized or offline mode');
         }
     }
 
