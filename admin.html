@@ -706,10 +706,10 @@
         <div class="form-group">
             <label class="form-label">الدور</label>
             <select id="newUserRole" class="form-input">
-                <option value="user">مستخدم عادي</option>
                 <option value="admin">مدير نظام</option>
                 <option value="monitor">مراقب</option>
                 <option value="auditor">مدقق</option>
+                <option value="user">مستخدم عادي</option>
             </select>
         </div>
 
@@ -772,7 +772,8 @@
         projectId: "election-system-9cbb8",
         storageBucket: "election-system-9cbb8.firebasestorage.app",
         messagingSenderId: "886706894008",
-        appId: "1:886706894008:web:270556771843614e56b04d"
+        appId: "1:886706894008:web:270556771843614e56b04d",
+        databaseURL: "https://election-system-9cbb8-default-rtdb.firebaseio.com/" // ✅ مطلوب للتوافق
     };
 
     // تهيئة التطبيق
@@ -784,6 +785,182 @@
     let systemLogs = [];
     let currentTab = 'users';
 
+    // ============== الدوال المحسنة للنظام الموحد ==============
+
+    // دالة لإنشاء حساب Auth مع Firestore
+    async function createUserWithAuth(username, email, password, role, phone, notes) {
+        try {
+            // استيراد Authentication
+            const { getAuth, createUserWithEmailAndPassword } = await import(
+                "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js"
+            );
+            
+            const auth = getAuth(app);
+            
+            // 1. إنشاء حساب في Authentication
+            let authUser = null;
+            if (email && password) {
+                try {
+                    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                    authUser = userCredential.user;
+                    console.log('✅ تم إنشاء حساب Auth:', authUser.uid);
+                } catch (authError) {
+                    console.log('⚠️ إنشاء Auth اختياري:', authError.message);
+                }
+            }
+            
+            // 2. حفظ في Firestore
+            const userData = {
+                username,
+                email: email || `${username}@election.com`,
+                phone,
+                password,
+                role,
+                notes,
+                active: true,
+                authUID: authUser?.uid || null,
+                createdAt: Timestamp.now(),
+                lastActivity: Timestamp.now(),
+                lastLogin: null,
+                loginCount: 0
+            };
+            
+            const docRef = await addDoc(collection(db, "systemUsers"), userData);
+            
+            // 3. إضافة سجل
+            await addDoc(collection(db, "systemLogs"), {
+                action: 'إنشاء مستخدم جديد',
+                details: `تم إنشاء المستخدم ${username} - الدور: ${role}`,
+                user: username,
+                userId: docRef.id,
+                type: 'user_create',
+                timestamp: Timestamp.now()
+            });
+            
+            return { success: true, userId: docRef.id, authUID: authUser?.uid };
+            
+        } catch (error) {
+            console.error('❌ خطأ في إنشاء المستخدم:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    // إنشاء مستخدم افتراضي عند التهيئة
+    async function createDefaultAdmin() {
+        try {
+            const usersCol = collection(db, "systemUsers");
+            const q = query(usersCol, where("username", "==", "admin"));
+            const snapshot = await getDocs(q);
+            
+            if (snapshot.empty) {
+                console.log('جاري إنشاء المدير الافتراضي...');
+                
+                await createUserWithAuth(
+                    "admin",
+                    "admin@election.com",
+                    "Admin@123",
+                    "admin",
+                    "07701234567",
+                    "المدير العام للنظام - تم الإنشاء تلقائياً"
+                );
+                
+                console.log('✅ تم إنشاء المدير الافتراضي');
+            } else {
+                console.log('✅ المدير الافتراضي موجود بالفعل');
+            }
+        } catch (error) {
+            console.error('❌ خطأ في إنشاء المدير الافتراضي:', error);
+        }
+    }
+
+    // دالة مساعدة للحصول على اسم الدور
+    function getRoleName(role) {
+        const roles = {
+            'admin': 'مدير النظام',
+            'user': 'مستخدم عادي',
+            'monitor': 'مراقب',
+            'auditor': 'مدقق'
+        };
+        return roles[role] || role;
+    }
+
+    // تعديل دالة حفظ المستخدم
+    async function saveNewUser() {
+        const username = document.getElementById('newUserName').value.trim();
+        const email = document.getElementById('newUserEmail').value.trim();
+        const phone = document.getElementById('newUserPhone').value.trim();
+        const password = document.getElementById('newUserCode').value;
+        const role = document.getElementById('newUserRole').value;
+        const notes = document.getElementById('newUserNotes').value.trim();
+        
+        if (!username || !password) {
+            showNotification('يرجى إدخال اسم المستخدم والكود', 'error');
+            return;
+        }
+        
+        showLoading(true);
+        
+        try {
+            // التحقق من عدم تكرار اسم المستخدم
+            const usersCol = collection(db, "systemUsers");
+            const q = query(usersCol, where("username", "==", username));
+            const snapshot = await getDocs(q);
+            
+            if (!snapshot.empty) {
+                showNotification('اسم المستخدم موجود مسبقاً', 'error');
+                showLoading(false);
+                return;
+            }
+            
+            // إنشاء المستخدم
+            const result = await createUserWithAuth(
+                username, 
+                email || `${username}@election.com`, 
+                password, 
+                role, 
+                phone, 
+                notes
+            );
+            
+            if (result.success) {
+                showNotification(`✅ تم إنشاء المستخدم ${username} بنجاح`, 'success');
+                
+                // عرض معلومات الدخول
+                setTimeout(() => {
+                    alert(`✅ تم إنشاء المستخدم بنجاح!\n\n` +
+                          `📋 معلومات الدخول:\n` +
+                          `👤 اسم المستخدم: ${username}\n` +
+                          `🔑 كلمة المرور: ${password}\n` +
+                          `📧 البريد: ${email || `${username}@election.com`}\n` +
+                          `🎯 الدور: ${getRoleName(role)}\n\n` +
+                          `💡 يمكن استخدام هذه البيانات للدخول في:\n` +
+                          `1. لوحة المدير الرئيسية (هذه الصفحة)\n` +
+                          `2. لوحة مراقبة الانتخابات\n\n` +
+                          `⚡ تم تخزين المستخدم في قاعدة البيانات المشتركة`);
+                }, 500);
+                
+                // تحديث الجدول
+                await loadSystemUsers();
+                updateDashboardStats();
+                
+                // إغلاق وإعادة تعيين
+                closeAddUserModal();
+                resetAddUserForm();
+                
+            } else {
+                showNotification('حدث خطأ في إنشاء المستخدم', 'error');
+            }
+            
+        } catch (error) {
+            console.error('❌ خطأ في حفظ المستخدم:', error);
+            showNotification('حدث خطأ في حفظ المستخدم', 'error');
+        }
+        
+        showLoading(false);
+    }
+
+    // ============== الدوال الأصلية المعدلة ==============
+
     // تهيئة النظام
     async function init() {
         showLoading(true);
@@ -794,10 +971,10 @@
             updateDashboardStats();
             setupEventListeners();
             
-            showNotification('تم تحميل النظام بنجاح', 'success');
+            showNotification('✅ تم تحميل النظام بنجاح', 'success');
         } catch (error) {
-            console.error('خطأ في تهيئة النظام:', error);
-            showNotification('حدث خطأ في تحميل النظام', 'error');
+            console.error('❌ خطأ في تهيئة النظام:', error);
+            showNotification('⚠️ حدث خطأ في تحميل النظام', 'error');
         }
         
         showLoading(false);
@@ -818,8 +995,9 @@
             
             renderUsersTable();
         } catch (error) {
-            console.error('خطأ في تحميل المستخدمين:', error);
+            console.error('❌ خطأ في تحميل المستخدمين:', error);
             systemUsers = [];
+            showNotification('⚠️ خطأ في تحميل المستخدمين', 'error');
         }
     }
 
@@ -838,7 +1016,7 @@
             
             renderSystemLogs();
         } catch (error) {
-            console.error('خطأ في تحميل السجلات:', error);
+            console.error('❌ خطأ في تحميل السجلات:', error);
             systemLogs = [];
         }
     }
@@ -857,7 +1035,7 @@
         document.getElementById('activeUsers').textContent = activeUsers;
         document.getElementById('todayLogins').textContent = todayLogins;
         
-        // تحديث صحة النظام (مثال)
+        // تحديث صحة النظام
         const systemHealth = totalUsers > 0 ? 100 : 95;
         document.getElementById('systemHealth').textContent = systemHealth + '%';
     }
@@ -946,7 +1124,7 @@
                     ${log.details || 'لا توجد تفاصيل'}
                 </div>
                 <div style="font-size: 11px; color: var(--gray); margin-top: 5px;">
-                    المستخدم: ${log.user || 'غير معروف'} | IP: ${log.ip || 'غير معروف'}
+                    المستخدم: ${log.user || 'غير معروف'} | ID: ${log.userId || 'N/A'}
                 </div>
             </div>
         `).join('');
@@ -971,70 +1149,6 @@
         return code;
     }
 
-    // إضافة مستخدم جديد
-    async function saveNewUser() {
-        const username = document.getElementById('newUserName').value.trim();
-        const email = document.getElementById('newUserEmail').value.trim();
-        const phone = document.getElementById('newUserPhone').value.trim();
-        const password = document.getElementById('newUserCode').value;
-        const role = document.getElementById('newUserRole').value;
-        const notes = document.getElementById('newUserNotes').value.trim();
-        
-        if (!username) {
-            showNotification('يرجى إدخال اسم المستخدم', 'error');
-            return;
-        }
-        
-        if (!password) {
-            showNotification('يرجى توليد كود للمستخدم', 'error');
-            return;
-        }
-        
-        showLoading(true);
-        
-        try {
-            const userData = {
-                username,
-                email,
-                phone,
-                password,
-                role,
-                notes,
-                active: true,
-                createdAt: Timestamp.now(),
-                lastActivity: Timestamp.now()
-            };
-            
-            await addDoc(collection(db, "systemUsers"), userData);
-            
-            // إضافة سجل للنظام
-            await addDoc(collection(db, "systemLogs"), {
-                action: 'إنشاء مستخدم جديد',
-                details: `تم إنشاء المستخدم ${username}`,
-                user: username,
-                type: 'user_create',
-                timestamp: Timestamp.now(),
-                ip: '127.0.0.1'
-            });
-            
-            showNotification(`تم إضافة المستخدم ${username} بنجاح`, 'success');
-            
-            // تحديث البيانات
-            await loadSystemUsers();
-            updateDashboardStats();
-            
-            // إغلاق النافذة وإعادة التعيين
-            closeAddUserModal();
-            resetAddUserForm();
-            
-        } catch (error) {
-            console.error('خطأ في حفظ المستخدم:', error);
-            showNotification('حدث خطأ في حفظ المستخدم', 'error');
-        }
-        
-        showLoading(false);
-    }
-
     // تغيير حالة المستخدم
     async function toggleUserStatus(userId, isActive) {
         try {
@@ -1050,19 +1164,20 @@
                 action: `${action} مستخدم`,
                 details: `تم ${action} المستخدم ${user?.username || 'غير معروف'}`,
                 user: 'مدير النظام',
+                userId: userId,
                 type: 'user_status_change',
                 timestamp: Timestamp.now(),
                 ip: '127.0.0.1'
             });
             
-            showNotification(`تم ${action} المستخدم بنجاح`, 'success');
+            showNotification(`✅ تم ${action} المستخدم بنجاح`, 'success');
             
             // تحديث البيانات
             await loadSystemUsers();
             updateDashboardStats();
             
         } catch (error) {
-            console.error('خطأ في تغيير حالة المستخدم:', error);
+            console.error('❌ خطأ في تغيير حالة المستخدم:', error);
             showNotification('حدث خطأ في تغيير الحالة', 'error');
         }
     }
@@ -1152,7 +1267,7 @@
 
     // حذف مستخدم
     async function deleteUser(userId) {
-        if (!confirm('هل أنت متأكد من حذف هذا المستخدم؟ لا يمكن التراجع عن هذا الإجراء.')) {
+        if (!confirm('⚠️ هل أنت متأكد من حذف هذا المستخدم؟\n\nسيتم حذف المستخدم من النظام بالكامل ولا يمكن التراجع عن هذا الإجراء.')) {
             return;
         }
         
@@ -1168,19 +1283,20 @@
                 action: 'حذف مستخدم',
                 details: `تم حذف المستخدم ${user?.username || 'غير معروف'}`,
                 user: 'مدير النظام',
+                userId: userId,
                 type: 'user_delete',
                 timestamp: Timestamp.now(),
                 ip: '127.0.0.1'
             });
             
-            showNotification('تم حذف المستخدم بنجاح', 'success');
+            showNotification('✅ تم حذف المستخدم بنجاح', 'success');
             
             // تحديث البيانات
             await loadSystemUsers();
             updateDashboardStats();
             
         } catch (error) {
-            console.error('خطأ في حذف المستخدم:', error);
+            console.error('❌ خطأ في حذف المستخدم:', error);
             showNotification('حدث خطأ في حذف المستخدم', 'error');
         }
         
@@ -1209,7 +1325,7 @@
         document.getElementById('codeCopy').addEventListener('click', function() {
             const code = document.getElementById('newUserCode').value;
             navigator.clipboard.writeText(code).then(() => {
-                showNotification('تم نسخ الكود بنجاح', 'success');
+                showNotification('✅ تم نسخ الكود بنجاح', 'success');
             });
         });
         
@@ -1284,16 +1400,6 @@
     }
 
     // وظائف المساعدة
-    function getRoleName(role) {
-        const roles = {
-            'user': 'مستخدم',
-            'admin': 'مدير',
-            'monitor': 'مراقب',
-            'auditor': 'مدقق'
-        };
-        return roles[role] || role;
-    }
-
     function getRoleClass(role) {
         const classes = {
             'user': 'status-pending',
@@ -1348,19 +1454,19 @@
         Promise.all([loadSystemUsers(), loadSystemLogs()])
             .then(() => {
                 updateDashboardStats();
-                showNotification('تم تحديث البيانات بنجاح', 'success');
+                showNotification('✅ تم تحديث البيانات بنجاح', 'success');
                 showLoading(false);
             })
             .catch(error => {
-                console.error('خطأ في تحديث البيانات:', error);
+                console.error('❌ خطأ في تحديث البيانات:', error);
                 showNotification('حدث خطأ في تحديث البيانات', 'error');
                 showLoading(false);
             });
     }
 
     function exportLogs() {
-        // هنا يمكن تنفيذ تصدير السجلات
         showNotification('جاري تجهيز ملف التصدير...', 'info');
+        // هنا يمكن تنفيذ تصدير السجلات
     }
 
     function showLoading(show) {
@@ -1405,7 +1511,7 @@
     window.viewUserDetails = viewUserDetails;
     window.deleteUser = deleteUser;
     window.editUser = (userId) => {
-        showNotification('جاري تطوير خاصية التعديل', 'info');
+        showNotification('⚡ جاري تطوير خاصية التعديل', 'info');
     };
     window.showAddUserModal = showAddUserModal;
     window.closeAddUserModal = closeAddUserModal;
@@ -1415,8 +1521,13 @@
     window.refreshData = refreshData;
     window.exportLogs = exportLogs;
 
-    // تهيئة النظام عند تحميل الصفحة
-    document.addEventListener('DOMContentLoaded', init);
+    // تهيئة النظام عند تحميل الصفحة مع إنشاء المدير الافتراضي
+    document.addEventListener('DOMContentLoaded', async () => {
+        console.log('جاري تهيئة النظام...');
+        await init();
+        await createDefaultAdmin();
+        console.log('✅ النظام جاهز للاستخدام');
+    });
 </script>
 </body>
 </html>
